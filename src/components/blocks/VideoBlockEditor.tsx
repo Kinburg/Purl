@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useProjectStore, flattenAssets } from '../../store/projectStore';
 import type { VideoBlock } from '../../types';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
@@ -26,6 +27,15 @@ export function VideoBlockEditor({
   const t = useT();
   const videoAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'video');
   const cascadeClasses = ['tg-video', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const hasOverride =
+    !!project.settings.defaultBlockStyles?.video?.enabled ||
+    !!block.customStyle?.enabled;
+
+  // Track only *real* load failure (MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED = 4).
+  // Transient errors (decode hiccups, network blips) used to imperatively set
+  // `display: none` and kill the preview forever — guard against that.
+  const [loadFailed, setLoadFailed] = useState(false);
+  useEffect(() => { setLoadFailed(false); }, [block.src]);
 
   /**
    * Resolve a src string to a URL suitable for <video> preview in the editor.
@@ -110,15 +120,34 @@ export function VideoBlockEditor({
       {/* Preview — cascade-wrapped, mirrors export's <div class="tg-video"><video/></div>.
           `width` mirrors export's `<video width="X">` so border-radius/border-width
           render in the same proportions as the final story. No tailwind size/border
-          classes — the injected cascade CSS owns the visual. */}
-      {block.src && (
+          classes — the injected cascade CSS owns the visual.
+
+          When the source isn't set but a style override is active, show an empty
+          <video> as placeholder so the user can iterate on frame styling without
+          having to load a clip first. */}
+      {(block.src || hasOverride) && (
         <div className={cascadeClasses}>
-          <video
-            src={resolvePreviewSrc(block.src)}
-            controls
-            width={block.width > 0 ? block.width : undefined}
-            onError={e => { (e.target as HTMLVideoElement).style.display = 'none'; }}
-          />
+          {block.src && !loadFailed ? (
+            <video
+              key={block.src}
+              src={resolvePreviewSrc(block.src)}
+              controls
+              width={block.width > 0 ? block.width : undefined}
+              onError={e => {
+                // Only treat MEDIA_ERR_SRC_NOT_SUPPORTED (4) as a real failure
+                // and switch to the placeholder. Other codes (network blips,
+                // decode hiccups) are transient — let the element recover.
+                const err = (e.target as HTMLVideoElement).error;
+                if (err && err.code === 4) setLoadFailed(true);
+              }}
+            />
+          ) : (
+            <video
+              controls
+              width={block.width > 0 ? block.width : 240}
+              style={{ background: '#1a1a1a', minHeight: 80 }}
+            />
+          )}
         </div>
       )}
 
