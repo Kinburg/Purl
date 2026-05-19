@@ -3,7 +3,7 @@
   "author": "Dmytro Hrubnyk",
   "description": "No-code APP for creating SugarCube 2 stories",
   "private": true,
-  "version": "1.26.1",
+  "version": "1.27.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
