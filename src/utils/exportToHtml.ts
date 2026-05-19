@@ -3,7 +3,7 @@ import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
 import { blockToSC, buildStoryCaptionSC, buildPanelCSS, buildTooltipCSS, buildPanelScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
-import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss } from './styleCascade';
+import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,22 +60,8 @@ function buildSettingsScript(settings?: ProjectSettings): string {
 }
 
 // ─── Block type CSS hooks ─────────────────────────────────────────────────────
-
-function buildBlockTypesCSS(): string {
-  return [
-    '.tg-text { }',
-    '.tg-image { }',
-    '.tg-image img { }',
-    '.tg-video { }',
-    '.tg-video video { max-width: 100%; }',
-    '.tg-divider { border: none; border-top: var(--tg-div-thickness, 1px) solid var(--tg-div-color, #555555); margin: var(--tg-div-margin, 8px) 0; }',
-    '.tg-input-field { }',
-    '.tg-checkbox { }',
-    '.tg-radio { }',
-    '.tg-include { max-width: var(--tg-inc-max-width, none); border: var(--tg-inc-border-width, 0px) solid var(--tg-inc-border-color, transparent); border-radius: var(--tg-inc-radius, 0); padding: var(--tg-inc-padding, 0); background-color: var(--tg-inc-bg, transparent); }',
-    '.tg-table { display: flex; flex-direction: column; gap: var(--tg-tbl-gap, 4px); margin: 0; padding: 0; }',
-  ].join('\n');
-}
+// `buildBlockTypesCSS` now lives in styleCascade.ts so the editor preview can
+// reuse it (Phase 4 — preview parity).
 
 // ─── Passage builder ──────────────────────────────────────────────────────────
 
@@ -216,13 +202,14 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const charCSS      = withSection('Dialogue',      buildAllDialogueCss(characters));
   const panelCSS     = withSection('Sidebar Panel', buildPanelCSS(sidebarPanel));
   const buttonCSS    = withSection('Buttons',       buildButtonsCascadeCss(scenes, project.settings));
+  const simpleCSS    = withSection('Block overrides', buildSimpleBlocksCascadeCss(scenes, project.settings));
   const tipCSS       = withSection('Tooltips',      buildTooltipCSS());
   const globalCSS    = withSection('Global',        buildGlobalCSS(project.settings));
   const containerCSS = withSection('Containers',    buildContainerCSS());
   const paperdollCSS = withSection('Paperdoll',     buildPaperdollCSS(project));
   const inventoryCSS = withSection('Inventory',     buildInventoryCSS(project));
   const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
-  const combinedCSS = [globalCSS, charCSS, panelCSS, buttonCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS].filter(Boolean).join('\n\n');
+  const combinedCSS = [globalCSS, charCSS, panelCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
@@ -238,6 +225,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     buildPaperdollScript(project),
     hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
+    buildPopupClassSyncScript(scenes),
     buildPurlSignatureScript(),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load (audio + video)',

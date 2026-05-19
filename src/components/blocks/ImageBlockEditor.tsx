@@ -6,6 +6,12 @@ import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEditor';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  MEDIA_BLOCK_FIELD_SCHEMA,
+  MEDIA_BLOCK_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 // ─── Main editor ──────────────────────────────────────────────────────────────
 
@@ -24,6 +30,7 @@ export function ImageBlockEditor({
   const t = useT();
   const mode    = block.mode ?? 'static';
   const mapping = block.mapping ?? [];
+  const cascadeClasses = ['tg-image', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
 
   function resolvePreviewSrc(src: string): string {
     if (src.startsWith('assets/') && projectDir) {
@@ -73,12 +80,18 @@ export function ImageBlockEditor({
           </div>
 
           {block.src && (
-            <img
-              src={resolvePreviewSrc(block.src)}
-              alt={block.alt || 'preview'}
-              className="max-h-32 object-contain rounded border border-slate-700"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
+            /* Cascade-wrapped preview — `width` mirrors export's `<img width="X">`
+               so border-radius and border-width render in the same proportions
+               as the final story. No tailwind size/border classes here — the
+               injected cascade CSS owns the visual. */
+            <div className={cascadeClasses}>
+              <img
+                src={resolvePreviewSrc(block.src)}
+                alt={block.alt || 'preview'}
+                width={block.width > 0 ? block.width : undefined}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
           )}
         </>
       )}
@@ -131,6 +144,22 @@ export function ImageBlockEditor({
           onChange={e => update({ width: parseInt(e.target.value) || 0 })}
         />
       </div>
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={MEDIA_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={MEDIA_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
+
       <BlockEffectsPanel
         delay={block.delay}
         onDelayChange={v => update({ delay: v })}

@@ -42,14 +42,18 @@ interface Props {
   variableNodes: VariableTreeNode[];
   /** Disable bound mode (only allowed at common-custom layer). */
   allowBound?: boolean;
-  /** Schema describing the editable structured fields. */
-  fieldsSchema: ReadonlyArray<StyleFieldDescriptor>;
+  /**
+   * Schema describing editable structured fields. Pass empty array (or omit)
+   * when the block has no structured override fields — the FieldsEditor will
+   * be hidden and only RawCssEditor will be shown (Divider use case).
+   */
+  fieldsSchema?: ReadonlyArray<StyleFieldDescriptor>;
   /** Optional content for the raw-CSS help <details> panel. */
   rawCssHelp?: StyleRawCssHelp;
 }
 
 export function StyleOverrideEditor({
-  value, onChange, variableNodes, allowBound = true, fieldsSchema, rawCssHelp,
+  value, onChange, variableNodes, allowBound = true, fieldsSchema = [], rawCssHelp,
 }: Props) {
   const t = useT();
   const tt = t.styleOverride as any;
@@ -430,6 +434,9 @@ function FieldsEditor({
   const t = useT();
   const tt = t.styleOverride as any;
 
+  // Schema-less mode (e.g. Divider) — nothing to render, RawCssEditor handles all customisation.
+  if (schema.length === 0) return null;
+
   return (
     <div className="grid grid-cols-2 gap-2">
       {schema.map(f => {
@@ -454,6 +461,13 @@ function FieldsEditor({
             {f.type === 'boolean' && (
               <TristateInput
                 value={typeof fields?.[f.key] === 'boolean' ? (fields![f.key] as boolean) : undefined}
+                onChange={v => onChange(setFieldValue(fields, f.key, v))}
+              />
+            )}
+            {f.type === 'enum' && (
+              <EnumInput
+                value={typeof fields?.[f.key] === 'string' ? (fields![f.key] as string) : undefined}
+                options={f.options ?? []}
                 onChange={v => onChange(setFieldValue(fields, f.key, v))}
               />
             )}
@@ -495,6 +509,45 @@ function NumberFieldInput({
           title="Clear"
         >×</button>
       )}
+    </div>
+  );
+}
+
+function EnumInput({
+  value, options, onChange,
+}: {
+  value: string | undefined;
+  options: ReadonlyArray<{ value: string; labelKey: string }>;
+  onChange: (v: string | undefined) => void;
+}) {
+  const t = useT();
+  const tt = t.styleOverride as any;
+  return (
+    <div className="flex flex-wrap gap-0.5">
+      <button
+        type="button"
+        className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+          value === undefined
+            ? 'bg-slate-700 border-slate-600 text-slate-200'
+            : 'bg-slate-800 border-slate-600 text-slate-500 hover:text-slate-300'
+        }`}
+        onClick={() => onChange(undefined)}
+        title={tt.tristateUnset ?? '—'}
+      >—</button>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          type="button"
+          className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+            value === opt.value
+              ? 'bg-indigo-600 border-indigo-500 text-white'
+              : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-slate-200'
+          }`}
+          onClick={() => onChange(opt.value)}
+        >
+          {tt.options?.[opt.labelKey] ?? opt.labelKey}
+        </button>
+      ))}
     </div>
   );
 }

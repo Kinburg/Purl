@@ -4,6 +4,12 @@ import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  CONTENT_BLOCK_FIELD_SCHEMA,
+  CONTENT_BLOCK_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 export function CheckboxBlockEditor({
   block,
@@ -15,9 +21,13 @@ export function CheckboxBlockEditor({
   onUpdate?: (patch: Partial<CheckboxBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const { updateBlock, saveSnapshot, project } = useProjectStore();
   const variableNodes = useVariableNodes();
   const patch = onUpdate ?? ((p: Partial<CheckboxBlock>) => updateBlock(sceneId, block.id, p));
+  const cascadeClasses = ['tg-checkbox', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const hasOverride =
+    !!project.settings.defaultBlockStyles?.checkbox?.enabled ||
+    !!block.customStyle?.enabled;
 
   const patchOption = (optId: string, p: Partial<CheckboxOption>) =>
     patch({ options: block.options.map(o => o.id === optId ? { ...o, ...p } : o) });
@@ -139,6 +149,39 @@ export function CheckboxBlockEditor({
           </div>
         ))}
       </div>
+
+      {/* Live preview — only when an override changes the look. */}
+      {hasOverride && block.options.length > 0 && (
+        <div className="mt-1 pt-1 border-t border-slate-700/40">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Preview</div>
+          <div className={cascadeClasses}>
+            {block.label && <div>{block.label}</div>}
+            {block.options.slice(0, 3).map((opt, i) => (
+              <div key={opt.id}>
+                <input type="checkbox" id={`prv_${block.id}_${i}`} defaultChecked={i === 0} />
+                {' '}
+                <label htmlFor={`prv_${block.id}_${i}`}>{opt.label}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => patch({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={CONTENT_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={CONTENT_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
 
       <BlockEffectsPanel
         delay={block.delay}

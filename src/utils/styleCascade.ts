@@ -18,19 +18,30 @@ import type {
   Block,
   ButtonBlock,
   Character,
+  CheckboxBlock,
+  ChoiceBlock,
   DialogueBlock,
+  DividerBlock,
   FunctionBlock,
+  ImageBlock,
+  ImageGenBlock,
+  IncludeBlock,
+  InputFieldBlock,
   LinkBlock,
+  PopupBlock,
   Project,
   ProjectSettings,
+  RadioBlock,
   Scene,
+  TextBlock,
+  VideoBlock,
 } from '../types';
 import { getVariablePath } from './treeUtils';
 
 // ─── Field schemas (shared with StyleOverrideEditor) ─────────────────────────
 
 /** Type of a single editable field in a style override. */
-export type StyleFieldType = 'color' | 'number' | 'boolean';
+export type StyleFieldType = 'color' | 'number' | 'boolean' | 'enum';
 
 /**
  * Schema describing one editable field of `BlockStyleOverride.fields`.
@@ -46,6 +57,11 @@ export interface StyleFieldDescriptor {
   min?: number;
   max?: number;
   suffix?: string;
+  /**
+   * For type === 'enum'. Each option's `value` is stored as the field value;
+   * `labelKey` resolves to a label under `t.styleOverride.options`.
+   */
+  options?: ReadonlyArray<{ value: string; labelKey: string }>;
 }
 
 /** Help block shown inside the raw-CSS editor's <details> panel. */
@@ -96,6 +112,113 @@ export const DIALOGUE_RAW_CSS_HELP: StyleRawCssHelp = {
   placeholderKey: 'placeholderDialogue',
 };
 
+/**
+ * Media-block schema (Image / Video). Border / borderRadius / opacity target the
+ * inner media element by default (controlled by `borderTarget`). `align` picks
+ * how the media sits inside the wrapper.
+ */
+export const MEDIA_BLOCK_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  { key: 'bgColor',      type: 'color',  labelKey: 'bgColor' },
+  { key: 'align',        type: 'enum',   labelKey: 'align', options: [
+    { value: 'left',   labelKey: 'alignLeft' },
+    { value: 'center', labelKey: 'alignCenter' },
+    { value: 'right',  labelKey: 'alignRight' },
+  ] },
+  { key: 'borderColor',  type: 'color',  labelKey: 'borderColor' },
+  { key: 'borderWidth',  type: 'number', labelKey: 'borderWidth',  min: 0, max: 20,   suffix: 'px' },
+  { key: 'borderRadius', type: 'number', labelKey: 'borderRadius', min: 0, max: 100,  suffix: 'px' },
+  { key: 'borderTarget', type: 'enum',   labelKey: 'borderTarget', options: [
+    { value: 'content', labelKey: 'borderTargetContent' },
+    { value: 'wrapper', labelKey: 'borderTargetWrapper' },
+  ] },
+  { key: 'paddingV',     type: 'number', labelKey: 'paddingV',     min: 0, max: 80,   suffix: 'px' },
+  { key: 'paddingH',     type: 'number', labelKey: 'paddingH',     min: 0, max: 80,   suffix: 'px' },
+  { key: 'maxWidth',     type: 'number', labelKey: 'maxWidth',     min: 0, max: 2000, suffix: 'px' },
+  { key: 'opacity',      type: 'number', labelKey: 'opacity',      min: 0, max: 100,  suffix: '%' },
+];
+
+/**
+ * Choice schema. Two layers: wrapper layout (direction / gap) + per-option link
+ * styling (same field set as buttons, applied to each `<<link>>` → `<a>`).
+ */
+export const CHOICE_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  // Wrapper layout
+  { key: 'direction', type: 'enum',   labelKey: 'direction', options: [
+    { value: 'row',    labelKey: 'directionRow' },
+    { value: 'column', labelKey: 'directionColumn' },
+  ] },
+  { key: 'gap',          type: 'number',  labelKey: 'gap',          min: 0, max: 40,   suffix: 'px' },
+  // Per-link styling
+  { key: 'bgColor',      type: 'color',   labelKey: 'bgColor' },
+  { key: 'textColor',    type: 'color',   labelKey: 'textColor' },
+  { key: 'borderColor',  type: 'color',   labelKey: 'borderColor' },
+  { key: 'borderWidth',  type: 'number',  labelKey: 'borderWidth',  min: 0, max: 20,   suffix: 'px' },
+  { key: 'borderRadius', type: 'number',  labelKey: 'borderRadius', min: 0, max: 50,   suffix: 'px' },
+  { key: 'paddingV',     type: 'number',  labelKey: 'paddingV',     min: 0, max: 40,   suffix: 'px' },
+  { key: 'paddingH',     type: 'number',  labelKey: 'paddingH',     min: 0, max: 80,   suffix: 'px' },
+  { key: 'fontSize',     type: 'number',  labelKey: 'fontSize',     min: 6, max: 30,   suffix: '×0.1em' },
+  { key: 'bold',         type: 'boolean', labelKey: 'bold' },
+  { key: 'fullWidth',    type: 'boolean', labelKey: 'fullWidth' },
+];
+
+export const CHOICE_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)', descKey: 'selectorBlockSelf' },
+    { name: 'a',             descKey: 'selectorChoiceA' },
+    { name: 'a:hover',       descKey: 'selectorButtonAHover' },
+    { name: 'a:active',      descKey: 'selectorButtonAActive' },
+  ],
+  exampleCode:
+`/* spacing rules on the wrapper */
+{ background: rgba(255,255,255,0.04); padding: 12px; border-radius: 8px; }
+/* per-option hover */
+a:hover { transform: translateX(4px); }`,
+  placeholderKey: 'placeholderChoice',
+};
+
+/**
+ * Popup schema — only title / header / frame styling. Background and text of
+ * the popup body come from the popup-scene's own blocks, not from this override.
+ */
+export const POPUP_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  { key: 'titlebarBg',   type: 'color',   labelKey: 'titlebarBg' },
+  { key: 'titleColor',   type: 'color',   labelKey: 'titleColor' },
+  { key: 'borderColor',  type: 'color',   labelKey: 'borderColor' },
+  { key: 'borderWidth',  type: 'number',  labelKey: 'borderWidth',  min: 0, max: 20,   suffix: 'px' },
+  { key: 'borderRadius', type: 'number',  labelKey: 'borderRadius', min: 0, max: 50,   suffix: 'px' },
+  { key: 'maxWidth',     type: 'number',  labelKey: 'maxWidth',     min: 0, max: 2000, suffix: 'px' },
+];
+
+export const POPUP_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)',     descKey: 'selectorPopupDialog' },
+    { name: '#ui-dialog-titlebar', descKey: 'selectorPopupTitlebar' },
+    { name: '#ui-dialog-title',    descKey: 'selectorPopupTitle' },
+    { name: '#ui-dialog-close',    descKey: 'selectorPopupClose' },
+  ],
+  exampleCode:
+`/* dialog frame */
+{ box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+/* titlebar accent */
+#ui-dialog-titlebar { background: linear-gradient(90deg, #6366f1, transparent); }
+#ui-dialog-title { font-family: 'Georgia', serif; letter-spacing: 0.04em; }`,
+  placeholderKey: 'placeholderPopup',
+};
+
+export const MEDIA_BLOCK_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)', descKey: 'selectorBlockSelf' },
+    { name: 'img',           descKey: 'selectorBlockImg' },
+    { name: 'video',         descKey: 'selectorBlockVideo' },
+  ],
+  exampleCode:
+`/* clip child to wrapper's rounded corners */
+{ overflow: hidden; }
+/* effects on the media element itself */
+img, video { filter: saturate(1.2) contrast(1.05); }`,
+  placeholderKey: 'placeholderContent',
+};
+
 export const BUTTON_RAW_CSS_HELP: StyleRawCssHelp = {
   selectors: [
     { name: 'a',        descKey: 'selectorButtonA' },
@@ -107,6 +230,69 @@ export const BUTTON_RAW_CSS_HELP: StyleRawCssHelp = {
 a:hover { transform: translateY(-1px); filter: brightness(1.15); }
 a:active { transform: translateY(1px); }`,
   placeholderKey: 'placeholderButton',
+};
+
+/**
+ * Generic content-block schema (Text / Image / Include / Checkbox / Radio / InputField).
+ * Same set of CSS-mappable fields applied to the block's wrapper element.
+ */
+export const CONTENT_BLOCK_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  { key: 'bgColor',      type: 'color',  labelKey: 'bgColor' },
+  { key: 'textColor',    type: 'color',  labelKey: 'textColor' },
+  { key: 'borderColor',  type: 'color',  labelKey: 'borderColor' },
+  { key: 'borderWidth',  type: 'number', labelKey: 'borderWidth',  min: 0, max: 20,   suffix: 'px' },
+  { key: 'borderRadius', type: 'number', labelKey: 'borderRadius', min: 0, max: 100,  suffix: 'px' },
+  { key: 'paddingV',     type: 'number', labelKey: 'paddingV',     min: 0, max: 80,   suffix: 'px' },
+  { key: 'paddingH',     type: 'number', labelKey: 'paddingH',     min: 0, max: 80,   suffix: 'px' },
+  { key: 'maxWidth',     type: 'number', labelKey: 'maxWidth',     min: 0, max: 2000, suffix: 'px' },
+  { key: 'fontSize',     type: 'number', labelKey: 'fontSize',     min: 6, max: 40,   suffix: '×0.1em' },
+  { key: 'opacity',      type: 'number', labelKey: 'opacity',      min: 0, max: 100,  suffix: '%' },
+];
+
+/**
+ * Divider has no structured override fields — the inherent fields
+ * (color / thickness / marginV) are already editable in DividerBlockEditor's
+ * main UI, so the override panel only exposes raw CSS for advanced tweaks
+ * (dashed/dotted lines, gradients, double-line effects, etc.).
+ *
+ * Kept here as an empty array so callers can still pass `fieldsSchema={DIVIDER_FIELD_SCHEMA}`
+ * for consistency — StyleOverrideEditor hides the FieldsEditor when schema is empty.
+ */
+export const DIVIDER_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [];
+
+export const CONTENT_BLOCK_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)', descKey: 'selectorBlockSelf' },
+    { name: 'img',           descKey: 'selectorBlockImg' },
+    { name: 'input',         descKey: 'selectorBlockInput' },
+    { name: 'label',         descKey: 'selectorBlockLabel' },
+  ],
+  exampleCode:
+`/* applies to the block wrapper itself */
+{ box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+/* target inner elements (when present) */
+img { object-fit: cover; }
+input:focus { outline: 2px solid #6366f1; }`,
+  placeholderKey: 'placeholderContent',
+};
+
+export const DIVIDER_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)', descKey: 'selectorBlockSelf' },
+  ],
+  exampleCode:
+`/* dashed line */
+{ border-top-style: dashed; }
+
+/* gradient line */
+{ border: none; height: 2px; background: linear-gradient(90deg, transparent, #6366f1, transparent); }
+
+/* double-line via outer ring */
+{ border-top-style: double; border-top-width: 5px; }
+
+/* glowing line */
+{ box-shadow: 0 0 6px var(--tg-div-color, #6366f1); }`,
+  placeholderKey: 'placeholderDivider',
 };
 
 // ─── Dialogue field → CSS mapping ─────────────────────────────────────────────
@@ -625,6 +811,559 @@ export function buttonDataStyleBind(block: ButtonFamilyBlock, settings: ProjectS
   return '';
 }
 
+// ─── Block type base CSS (structural hooks) ───────────────────────────────────
+
+/**
+ * Base CSS for every block-type wrapper (`.tg-text`, `.tg-divider`, etc.).
+ * These are shared between HTML export (story.css) and the in-editor preview
+ * (`previewCss.ts`) so the editor mirrors the exported render exactly.
+ */
+export function buildBlockTypesCSS(): string {
+  return [
+    '.tg-text { }',
+    // Media wrappers are full-width and centre their inner element by default;
+    // user can override via the `align` field (left/center/right).
+    // `display: inline-block` on the media element is critical — it overrides
+    // tailwind's preflight (which sets `img/video { display: block }`) in the
+    // editor so `text-align: center` on the wrapper actually centres the media.
+    '.tg-image { text-align: center; }',
+    '.tg-image img { display: inline-block; vertical-align: middle; max-width: 100%; }',
+    '.tg-video { text-align: center; }',
+    '.tg-video video { display: inline-block; vertical-align: middle; max-width: 100%; }',
+    '.tg-divider { border: none; border-top: var(--tg-div-thickness, 1px) solid var(--tg-div-color, #555555); margin: var(--tg-div-margin, 8px) 0; }',
+    '.tg-input-field { }',
+    '.tg-checkbox { }',
+    '.tg-radio { }',
+    '.tg-include { max-width: var(--tg-inc-max-width, none); border: var(--tg-inc-border-width, 0px) solid var(--tg-inc-border-color, transparent); border-radius: var(--tg-inc-radius, 0); padding: var(--tg-inc-padding, 0); background-color: var(--tg-inc-bg, transparent); }',
+    '.tg-table { display: flex; flex-direction: column; gap: var(--tg-tbl-gap, 4px); margin: 0; padding: 0; }',
+  ].join('\n');
+}
+
+// ─── Simple block family (Text / Image / Include / Divider / Checkbox / Radio / InputField) ──
+//
+// Unlike the button family, these blocks don't carry a per-instance structured
+// style — their inherent Std rendering lives in the existing block CSS / inline
+// attributes. The cascade only adds two layers:
+//   - Common  → class `.tg-{type}-default` (or `-v-{idx}` in bound mode)
+//   - Spot    → class `.tg-{type}-spot-{shortId}` emitted as inline <style>
+//
+// The block's existing wrapper class (`tg-text`, `tg-include`, etc.) stays the
+// structural base.
+
+export type SimpleBlockType =
+  | 'text' | 'image' | 'image-gen' | 'video' | 'include' | 'divider'
+  | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup';
+
+type SimpleBlockBlock =
+  | TextBlock | ImageBlock | ImageGenBlock | VideoBlock | IncludeBlock | DividerBlock
+  | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock;
+
+interface SimpleBlockConfig {
+  /** The structural base class already emitted by the export. */
+  baseClass: string;
+  /**
+   * Builds the full CSS rule set for one scope (e.g. `.tg-image-spot-XXX`).
+   * Returns a concatenated string of one or more selectors+rules. May target
+   * multiple selectors (wrapper + inner media for Image/Video).
+   */
+  buildRules: (
+    scopeClass: string,
+    fields: Record<string, string | number | boolean>,
+    rawCss?: string,
+  ) => string;
+  /** Schema used by the StyleOverrideEditor (kept here for completeness; UI imports it directly.) */
+  schema: ReadonlyArray<StyleFieldDescriptor>;
+}
+
+/** Translate generic content-block fields into a single declaration string. */
+function contentBlockFieldsToDecls(fields: Record<string, string | number | boolean>): string {
+  const parts: string[] = [];
+  if (fields.bgColor   !== undefined && fields.bgColor   !== '') parts.push(`background: ${fields.bgColor}`);
+  if (fields.textColor !== undefined && fields.textColor !== '') parts.push(`color: ${fields.textColor}`);
+
+  const bw = fields.borderWidth;
+  const bc = fields.borderColor;
+  const hasBW = bw !== undefined && bw !== '';
+  const hasBC = bc !== undefined && bc !== '';
+  if (hasBW && hasBC) parts.push(`border: ${bw}px solid ${bc}`);
+  else if (hasBW)     parts.push(`border-width: ${bw}px; border-style: solid`);
+  else if (hasBC)     parts.push(`border: 1px solid ${bc}`);
+
+  if (fields.borderRadius !== undefined && fields.borderRadius !== '') parts.push(`border-radius: ${fields.borderRadius}px`);
+
+  const pv = fields.paddingV;
+  const ph = fields.paddingH;
+  const hasPV = pv !== undefined && pv !== '';
+  const hasPH = ph !== undefined && ph !== '';
+  if (hasPV && hasPH) parts.push(`padding: ${pv}px ${ph}px`);
+  else if (hasPV)     parts.push(`padding-top: ${pv}px; padding-bottom: ${pv}px`);
+  else if (hasPH)     parts.push(`padding-left: ${ph}px; padding-right: ${ph}px`);
+
+  if (fields.maxWidth !== undefined && fields.maxWidth !== '' && Number(fields.maxWidth) > 0) {
+    parts.push(`max-width: ${fields.maxWidth}px`);
+  }
+  if (fields.fontSize !== undefined && fields.fontSize !== '') {
+    const n = Number(fields.fontSize);
+    if (Number.isFinite(n)) parts.push(`font-size: ${(n / 10).toFixed(1)}em`);
+  }
+  if (fields.opacity !== undefined && fields.opacity !== '') {
+    const n = Number(fields.opacity);
+    if (Number.isFinite(n)) parts.push(`opacity: ${(n / 100).toFixed(2)}`);
+  }
+  return parts.join('; ');
+}
+
+/** Divider fields → border-top / margin overrides on the `<hr>`. */
+function dividerFieldsToDecls(fields: Record<string, string | number | boolean>): string {
+  const parts: string[] = [];
+  if (fields.lineColor !== undefined && fields.lineColor !== '') parts.push(`border-top-color: ${fields.lineColor}`);
+  if (fields.thickness !== undefined && fields.thickness !== '') parts.push(`border-top-width: ${fields.thickness}px`);
+  if (fields.marginV   !== undefined && fields.marginV   !== '') parts.push(`margin: ${fields.marginV}px 0`);
+  return parts.join('; ');
+}
+
+/**
+ * Single-selector rule builder used by content blocks. Wraps the declarations
+ * from `fieldsToDeclsFn` in `.${scope} { … }` and appends auto-scoped raw CSS.
+ */
+function buildSingleSelectorRules(
+  fieldsToDeclsFn: (fields: Record<string, string | number | boolean>) => string,
+): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const parts: string[] = [];
+    const decls = fieldsToDeclsFn(fields);
+    if (decls) parts.push(`.${scopeClass} { ${decls}; }`);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(`.${scopeClass}`, rawCss));
+    return parts.join('\n');
+  };
+}
+
+/**
+ * Media block rule builder (Image / Video). Splits declarations between wrapper
+ * (background, padding, max-width, alignment) and inner media element
+ * (border, border-radius, opacity) — controlled by the `borderTarget` field
+ * which defaults to `'content'`.
+ */
+function buildMediaBlockRules(mediaSelector: string): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const wrap: string[] = [];
+    const media: string[] = [];
+
+    // ── Wrapper-level: background, padding, max-width, alignment ────────────
+    if (fields.bgColor !== undefined && fields.bgColor !== '') wrap.push(`background: ${fields.bgColor}`);
+
+    const align = typeof fields.align === 'string' ? fields.align : undefined;
+    if (align === 'left' || align === 'center' || align === 'right') {
+      wrap.push(`text-align: ${align}`);
+    }
+
+    const pvSet = fields.paddingV !== undefined && fields.paddingV !== '';
+    const phSet = fields.paddingH !== undefined && fields.paddingH !== '';
+    if (pvSet && phSet) wrap.push(`padding: ${fields.paddingV}px ${fields.paddingH}px`);
+    else if (pvSet)    wrap.push(`padding-top: ${fields.paddingV}px; padding-bottom: ${fields.paddingV}px`);
+    else if (phSet)    wrap.push(`padding-left: ${fields.paddingH}px; padding-right: ${fields.paddingH}px`);
+
+    if (fields.maxWidth !== undefined && fields.maxWidth !== '' && Number(fields.maxWidth) > 0) {
+      wrap.push(`max-width: ${fields.maxWidth}px`);
+    }
+
+    // ── Border + radius — by default on content (img / video); opt out via borderTarget=wrapper ──
+    const borderTarget = fields.borderTarget === 'wrapper' ? 'wrapper' : 'content';
+    const bw = fields.borderWidth;
+    const bc = fields.borderColor;
+    const hasBW = bw !== undefined && bw !== '';
+    const hasBC = bc !== undefined && bc !== '';
+    let borderDecl = '';
+    if (hasBW && hasBC) borderDecl = `border: ${bw}px solid ${bc}`;
+    else if (hasBW)     borderDecl = `border-width: ${bw}px; border-style: solid`;
+    else if (hasBC)     borderDecl = `border: 1px solid ${bc}`;
+
+    const radiusDecl = (fields.borderRadius !== undefined && fields.borderRadius !== '')
+      ? `border-radius: ${fields.borderRadius}px`
+      : '';
+
+    if (borderTarget === 'content') {
+      if (borderDecl) media.push(borderDecl);
+      if (radiusDecl) media.push(radiusDecl);
+    } else {
+      if (borderDecl) wrap.push(borderDecl);
+      if (radiusDecl) wrap.push(radiusDecl);
+    }
+
+    // ── Opacity — always on media element ───────────────────────────────────
+    if (fields.opacity !== undefined && fields.opacity !== '') {
+      const n = Number(fields.opacity);
+      if (Number.isFinite(n)) media.push(`opacity: ${(n / 100).toFixed(2)}`);
+    }
+
+    const parts: string[] = [];
+    if (wrap.length)  parts.push(`.${scopeClass} { ${wrap.join('; ')}; }`);
+    if (media.length) parts.push(`.${scopeClass} ${mediaSelector} { ${media.join('; ')}; }`);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(`.${scopeClass}`, rawCss));
+    return parts.join('\n');
+  };
+}
+
+/**
+ * Choice block rule builder. Splits wrapper layout (direction / gap) from
+ * per-option link styling (applied to `a` inside the wrapper).
+ */
+function buildChoiceBlockRules(): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const wrap: string[] = [];
+    const a: string[] = [];
+
+    // ── Wrapper layout (flex direction / gap) ───────────────────────────────
+    const dir = typeof fields.direction === 'string' ? fields.direction : undefined;
+    if (dir === 'row' || dir === 'column') {
+      wrap.push(`display: flex`);
+      wrap.push(`flex-direction: ${dir}`);
+    }
+    if (fields.gap !== undefined && fields.gap !== '') {
+      // Implicit display:flex when gap is set without explicit direction.
+      if (!dir) wrap.push(`display: flex; flex-direction: column`);
+      wrap.push(`gap: ${fields.gap}px`);
+    }
+
+    // ── Per-link styling on <a> ─────────────────────────────────────────────
+    if (fields.bgColor      !== undefined && fields.bgColor      !== '') a.push(`background: ${fields.bgColor}`);
+    if (fields.textColor    !== undefined && fields.textColor    !== '') a.push(`color: ${fields.textColor}`);
+
+    const bw = fields.borderWidth;
+    const bc = fields.borderColor;
+    const hasBW = bw !== undefined && bw !== '';
+    const hasBC = bc !== undefined && bc !== '';
+    if (hasBW && hasBC) a.push(`border: ${bw}px solid ${bc}`);
+    else if (hasBW)     a.push(`border: ${bw}px solid currentColor`);
+    else if (hasBC)     a.push(`border: 1px solid ${bc}`);
+
+    if (fields.borderRadius !== undefined && fields.borderRadius !== '') a.push(`border-radius: ${fields.borderRadius}px`);
+
+    const pvSet = fields.paddingV !== undefined && fields.paddingV !== '';
+    const phSet = fields.paddingH !== undefined && fields.paddingH !== '';
+    if (pvSet && phSet) a.push(`padding: ${fields.paddingV}px ${fields.paddingH}px`);
+    else if (pvSet)     a.push(`padding-top: ${fields.paddingV}px; padding-bottom: ${fields.paddingV}px`);
+    else if (phSet)     a.push(`padding-left: ${fields.paddingH}px; padding-right: ${fields.paddingH}px`);
+
+    if (fields.fontSize !== undefined && fields.fontSize !== '') {
+      const n = Number(fields.fontSize);
+      if (Number.isFinite(n)) a.push(`font-size: ${(n / 10).toFixed(1)}em`);
+    }
+    if (fields.bold === true)  a.push(`font-weight: bold`);
+    if (fields.bold === false) a.push(`font-weight: normal`);
+
+    // ── Full width: make each <a> stretch (flex-column) ─────────────────────
+    let widthRules = '';
+    if (fields.fullWidth === true) {
+      a.push(`display: block`);
+      a.push(`text-align: center`);
+      a.push(`box-sizing: border-box`);
+      widthRules = `.${scopeClass} a { width: 100%; }`;
+    }
+
+    const parts: string[] = [];
+    if (wrap.length) parts.push(`.${scopeClass} { ${wrap.join('; ')}; }`);
+    if (a.length)    parts.push(`.${scopeClass} a { ${a.join('; ')}; }`);
+    if (widthRules)  parts.push(widthRules);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(`.${scopeClass}`, rawCss));
+    return parts.join('\n');
+  };
+}
+
+/**
+ * Popup block rule builder. Targets the SugarCube `#ui-dialog` element
+ * (id+class for high specificity against core dialog styles). Note: the cascade
+ * class is added to `#ui-dialog-body` by `Dialog.setup()`; the runtime script
+ * (`buildPopupClassSyncScript`) mirrors it onto `#ui-dialog` on `:dialogopened`.
+ *
+ * Only title / header / frame are styled here — body bg / text come from the
+ * popup-scene's own blocks.
+ */
+function buildPopupBlockRules(): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const frame: string[] = [];
+    const titlebar: string[] = [];
+    const title: string[] = [];
+
+    // ── Frame (the dialog itself) ─────────────────────────────────────────
+    const bw = fields.borderWidth;
+    const bc = fields.borderColor;
+    const hasBW = bw !== undefined && bw !== '';
+    const hasBC = bc !== undefined && bc !== '';
+    if (hasBW && hasBC) frame.push(`border: ${bw}px solid ${bc}`);
+    else if (hasBW)     frame.push(`border-width: ${bw}px; border-style: solid`);
+    else if (hasBC)     frame.push(`border: 1px solid ${bc}`);
+
+    const hasRadius = fields.borderRadius !== undefined && fields.borderRadius !== '';
+    if (hasRadius) frame.push(`border-radius: ${fields.borderRadius}px`);
+    if (fields.maxWidth !== undefined && fields.maxWidth !== '' && Number(fields.maxWidth) > 0) {
+      frame.push(`max-width: ${fields.maxWidth}px`);
+    }
+
+    // When the user puts a custom border or radius on the frame, clip the
+    // inner titlebar + body to the rounded shape and remove SugarCube's default
+    // padding so content sits flush against the frame edge.
+    if (hasBW || hasBC || hasRadius) {
+      frame.push(`overflow: hidden`);
+      frame.push(`padding: 0`);
+    }
+
+    // ── Titlebar (header strip) ──────────────────────────────────────────
+    if (fields.titlebarBg !== undefined && fields.titlebarBg !== '') titlebar.push(`background: ${fields.titlebarBg}`);
+
+    // ── Title text ───────────────────────────────────────────────────────
+    if (fields.titleColor !== undefined && fields.titleColor !== '') title.push(`color: ${fields.titleColor}`);
+
+    const dialogSel = `#ui-dialog.${scopeClass}`;
+
+    const parts: string[] = [];
+    if (frame.length)    parts.push(`${dialogSel} { ${frame.join('; ')}; }`);
+    if (titlebar.length) parts.push(`${dialogSel} #ui-dialog-titlebar { ${titlebar.join('; ')}; }`);
+    if (title.length)    parts.push(`${dialogSel} #ui-dialog-title { ${title.join('; ')}; }`);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(dialogSel, rawCss));
+    return parts.join('\n');
+  };
+}
+
+/**
+ * Runtime script that syncs cascade classes from `#ui-dialog-body` (where
+ * SugarCube places them via `Dialog.setup()`) onto `#ui-dialog` (the frame),
+ * so CSS rules scoped to `#ui-dialog.tg-popup-*` actually match.
+ *
+ * Hooks `:dialogopened` (fires after Dialog.open finishes). Cleans previous
+ * popup classes on each open so two popups don't leak styles into each other.
+ *
+ * Returns '' when the project has no popup blocks (no need for the hook).
+ */
+export function buildPopupClassSyncScript(scenes: Scene[]): string {
+  // Detect whether any popup block exists at all (otherwise no need for the script).
+  function hasPopupAnywhere(blocks: Block[]): boolean {
+    for (const b of blocks) {
+      if (b.type === 'popup') return true;
+      if (b.type === 'condition') {
+        for (const br of b.branches) if (hasPopupAnywhere(br.blocks)) return true;
+      }
+      if (b.type === 'dialogue' && b.innerBlocks) {
+        if (hasPopupAnywhere(b.innerBlocks)) return true;
+      }
+    }
+    return false;
+  }
+  let anyPopup = false;
+  for (const s of scenes) { if (hasPopupAnywhere(s.blocks)) { anyPopup = true; break; } }
+  if (!anyPopup) return '';
+
+  return [
+    '// Popup class sync — mirror tg-popup-* from #ui-dialog-body to #ui-dialog frame.',
+    '$(document).on(":dialogopened", function() {',
+    '  var bodyCls = ($("#ui-dialog-body").attr("class") || "").split(/\\s+/);',
+    '  var popupCls = bodyCls.filter(function(c) { return c && /^tg-popup-/.test(c); });',
+    '  var $frame = $("#ui-dialog");',
+    '  // Strip any previous tg-popup-* classes from the frame, then add the current ones.',
+    '  var frameCls = (($frame.attr("class") || "").split(/\\s+/)).filter(function(c) { return c && !/^tg-popup-/.test(c); });',
+    '  $frame.attr("class", frameCls.concat(popupCls).join(" "));',
+    '});',
+  ].join('\n');
+}
+
+const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
+  text:          { baseClass: 'tg-text',         buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
+  image:         { baseClass: 'tg-image',        buildRules: buildMediaBlockRules('img'),                          schema: MEDIA_BLOCK_FIELD_SCHEMA },
+  // image-gen exports as `<div class="tg-image"><img/></div>` (same wrapper as image), so it shares the
+  // tg-image base CSS; cascade default/spot classes get their own `tg-image-gen-*` namespace.
+  'image-gen':   { baseClass: 'tg-image',        buildRules: buildMediaBlockRules('img'),                          schema: MEDIA_BLOCK_FIELD_SCHEMA },
+  video:         { baseClass: 'tg-video',        buildRules: buildMediaBlockRules('video'),                        schema: MEDIA_BLOCK_FIELD_SCHEMA },
+  include:       { baseClass: 'tg-include',      buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
+  divider:       { baseClass: 'tg-divider',      buildRules: buildSingleSelectorRules(dividerFieldsToDecls),      schema: DIVIDER_FIELD_SCHEMA },
+  checkbox:      { baseClass: 'tg-checkbox',     buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
+  radio:         { baseClass: 'tg-radio',        buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
+  'input-field': { baseClass: 'tg-input-field',  buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
+  // Choice — wrapping <div class="tg-choice"> around the list of <<link>>s, plus per-link <a> styling.
+  choice:        { baseClass: 'tg-choice',       buildRules: buildChoiceBlockRules(),                              schema: CHOICE_FIELD_SCHEMA },
+  // Popup — cascade classes go onto SugarCube's #ui-dialog via Dialog.setup; rules are scoped to that element.
+  popup:         { baseClass: 'tg-popup',        buildRules: buildPopupBlockRules(),                               schema: POPUP_FIELD_SCHEMA },
+};
+
+/** Returns the structural base class for a simple block type. */
+export function simpleBlockBaseClass(type: SimpleBlockType): string {
+  return SIMPLE_BLOCK_CONFIGS[type].baseClass;
+}
+
+function simpleShortId(id: string): string {
+  return id.replace(/-/g, '').substring(0, 12);
+}
+
+export function simpleBlockDefaultClass(type: SimpleBlockType): string {
+  return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-default`;
+}
+
+export function simpleBlockDefaultVariantClass(type: SimpleBlockType, variantKey: string): string {
+  return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-default-v-${variantKey}`;
+}
+
+export function simpleBlockSpotClass(type: SimpleBlockType, blockId: string): string {
+  return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-spot-${simpleShortId(blockId)}`;
+}
+
+
+/** Collect simple-block instances from a scene tree. */
+export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
+  const result: SimpleBlockBlock[] = [];
+  for (const b of blocks) {
+    if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video'
+        || b.type === 'include' || b.type === 'divider'
+        || b.type === 'checkbox' || b.type === 'radio' || b.type === 'input-field'
+        || b.type === 'choice' || b.type === 'popup') {
+      result.push(b as SimpleBlockBlock);
+    }
+    if (b.type === 'condition') {
+      for (const br of b.branches) result.push(...collectSimpleBlocks(br.blocks));
+    }
+    if (b.type === 'dialogue') {
+      result.push(...collectSimpleBlocks(b.innerBlocks ?? []));
+    }
+  }
+  return result;
+}
+
+/**
+ * Emit per-type Common rules (and bound variants) for all simple block types.
+ * Spot rules are emitted separately per block by `buildSimpleBlockSpotStyleBlock`.
+ */
+export function buildSimpleBlocksCascadeCss(_scenes: Scene[], settings: ProjectSettings): string {
+  const defaults = settings.defaultBlockStyles ?? {};
+  const parts: string[] = [];
+
+  for (const type of Object.keys(SIMPLE_BLOCK_CONFIGS) as SimpleBlockType[]) {
+    const cs = defaults[type];
+    if (!cs?.enabled) continue;
+    const cfg = SIMPLE_BLOCK_CONFIGS[type];
+
+    if ((cs.mode ?? 'static') === 'static') {
+      const rule = cfg.buildRules(simpleBlockDefaultClass(type), cs.fields ?? {}, cs.rawCss);
+      if (rule) parts.push(rule);
+    } else {
+      // Bound: default + per-variant
+      const defaultRule = cfg.buildRules(
+        simpleBlockDefaultVariantClass(type, 'default'),
+        cs.defaultFields ?? {},
+        cs.defaultRawCss,
+      );
+      if (defaultRule) parts.push(defaultRule);
+      (cs.mapping ?? []).forEach((entry, idx) => {
+        const rule = cfg.buildRules(
+          simpleBlockDefaultVariantClass(type, String(idx)),
+          entry.fields ?? {},
+          entry.rawCss,
+        );
+        if (rule) parts.push(rule);
+      });
+    }
+  }
+
+  return parts.filter(Boolean).join('\n\n');
+}
+
+/** Emit `<style>` block for a single block's spot override. '' when none. */
+export function buildSimpleBlockSpotStyleBlock(block: SimpleBlockBlock): string {
+  const cs = block.customStyle;
+  if (!cs?.enabled) return '';
+  const fields = cs.fields ?? {};
+  const rawCss = cs.rawCss;
+  if (Object.keys(fields).length === 0 && (!rawCss || !rawCss.trim())) return '';
+
+  const type = block.type as SimpleBlockType;
+  const cfg = SIMPLE_BLOCK_CONFIGS[type];
+  const rules = cfg.buildRules(simpleBlockSpotClass(type, block.id), fields, rawCss);
+  return rules ? `<style>${rules}</style>` : '';
+}
+
+// ─── Aggregate spot rules for editor preview ─────────────────────────────────
+//
+// Spot rules live in <style> blocks inside each passage on export. For the
+// in-editor preview we collect them into one CSS string that gets injected
+// into document.head, so previews see the same scoped overrides.
+
+function stripStyleTags(s: string): string {
+  if (!s) return '';
+  return s.replace(/^<style>/, '').replace(/<\/style>$/, '');
+}
+
+/**
+ * Walks every block in every scene (recursing through condition branches and
+ * dialogue inner blocks) and collects per-block spot override CSS rules.
+ * Returns concatenated rules (no <style> wrapper).
+ */
+export function buildAllSpotStyleRules(scenes: Scene[]): string {
+  const out: string[] = [];
+
+  function emitFor(block: Block): void {
+    let raw = '';
+    if (block.type === 'dialogue') {
+      raw = buildDialogueSpotStyleBlock(block);
+    } else if (block.type === 'button' || block.type === 'link' || block.type === 'function') {
+      raw = buildButtonSpotStyleBlock(block);
+    } else if (
+      block.type === 'text'      || block.type === 'image'     ||
+      block.type === 'image-gen' || block.type === 'video'     ||
+      block.type === 'include'   || block.type === 'divider'   ||
+      block.type === 'checkbox'  || block.type === 'radio'     ||
+      block.type === 'input-field' ||
+      block.type === 'choice'    || block.type === 'popup'
+    ) {
+      raw = buildSimpleBlockSpotStyleBlock(block as SimpleBlockBlock);
+    }
+    const rules = stripStyleTags(raw);
+    if (rules) out.push(rules);
+  }
+
+  function walk(blocks: Block[]): void {
+    for (const b of blocks) {
+      emitFor(b);
+      if (b.type === 'condition') {
+        for (const br of b.branches) walk(br.blocks);
+      }
+      if (b.type === 'dialogue' && b.innerBlocks) {
+        walk(b.innerBlocks);
+      }
+    }
+  }
+
+  for (const s of scenes) walk(s.blocks);
+  return out.join('\n\n');
+}
+
+/** Cascade classes to append to the block's wrapper (base class is emitted elsewhere). */
+export function simpleBlockCascadeClasses(block: SimpleBlockBlock, settings: ProjectSettings): string[] {
+  const type = block.type as SimpleBlockType;
+  const out: string[] = [];
+  const cs = settings.defaultBlockStyles?.[type];
+  if (cs?.enabled) {
+    if ((cs.mode ?? 'static') === 'bound') {
+      out.push(simpleBlockDefaultVariantClass(type, 'default'));
+    } else {
+      out.push(simpleBlockDefaultClass(type));
+    }
+  }
+  if (block.customStyle?.enabled) {
+    out.push(simpleBlockSpotClass(type, block.id));
+  }
+  return out;
+}
+
+/** `data-style-bind` value for this block (or '' when not bound). */
+export function simpleBlockDataStyleBind(block: SimpleBlockBlock, settings: ProjectSettings): string {
+  const type = block.type as SimpleBlockType;
+  const cs = settings.defaultBlockStyles?.[type];
+  if (cs?.enabled && (cs.mode ?? 'static') === 'bound') return `default-${type}`;
+  return '';
+}
+
+/** Returns the field schema for a simple block type (used by editor UI to pick fields). */
+export function simpleBlockSchema(type: SimpleBlockType): ReadonlyArray<StyleFieldDescriptor> {
+  return SIMPLE_BLOCK_CONFIGS[type].schema;
+}
+
 // ─── Runtime style-bind script ───────────────────────────────────────────────
 
 interface RuntimeBinding {
@@ -719,6 +1458,38 @@ function collectRuntimeBindings(project: Project): RuntimeBinding[] {
       classPrefix: `tg-btn-default-${type}-v-`,
       variants,
       defaultCls: buttonDefaultVariantClass(type, 'default'),
+    });
+  }
+
+  // ─── Simple block family (per type) ───────────────────────────────────────
+  for (const type of Object.keys(SIMPLE_BLOCK_CONFIGS) as SimpleBlockType[]) {
+    const cs = defaults[type];
+    if (!cs?.enabled || (cs.mode ?? 'static') !== 'bound') continue;
+    if (!cs.variableId) continue;
+    const varPath = getVariablePath(cs.variableId, project.variableNodes);
+    if (!varPath) continue;
+
+    const variants: RuntimeBinding['variants'] = [];
+    (cs.mapping ?? []).forEach((entry, idx) => {
+      const cls = simpleBlockDefaultVariantClass(type, String(idx));
+      if (entry.matchType === 'exact') {
+        const v = Number(entry.value);
+        if (Number.isFinite(v)) variants.push({ kind: 'exact', value: v, cls });
+      } else {
+        const min = Number(entry.rangeMin);
+        const max = Number(entry.rangeMax);
+        if (Number.isFinite(min) && Number.isFinite(max)) {
+          variants.push({ kind: 'range', min, max, cls });
+        }
+      }
+    });
+
+    bindings.push({
+      key: `default-${type}`,
+      varPath,
+      classPrefix: `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-default-v-`,
+      variants,
+      defaultCls: simpleBlockDefaultVariantClass(type, 'default'),
     });
   }
 
@@ -835,6 +1606,10 @@ export function hasStyleBindings(project: Project): boolean {
   }
   const defaults = project.settings.defaultBlockStyles ?? {};
   for (const type of ['button', 'link', 'function'] as const) {
+    const cs = defaults[type];
+    if (cs?.enabled && (cs.mode ?? 'static') === 'bound' && cs.variableId) return true;
+  }
+  for (const type of Object.keys(SIMPLE_BLOCK_CONFIGS) as SimpleBlockType[]) {
     const cs = defaults[type];
     if (cs?.enabled && (cs.mode ?? 'static') === 'bound' && cs.variableId) return true;
   }

@@ -38,10 +38,12 @@ export default function App() {
     usePluginStore.getState().loadFromDisk(projectDir);
   }, [projectDir]);
 
-  // Inject story preview CSS into the editor whenever characters change.
+  // Inject story preview CSS into the editor whenever the relevant project state
+  // changes. Covers characters (dialogue cascade), scenes (per-block Std + spot
+  // styles), and settings (project-wide Common defaults / bound overrides).
   useEffect(() => {
-    injectPreviewCSS(project.characters);
-  }, [project.characters]);
+    injectPreviewCSS(project);
+  }, [project.characters, project.scenes, project.settings]);
 
   // Show project settings modal on first launch (no folder selected = brand new session)
   useEffect(() => {

@@ -16,7 +16,16 @@ import {
 } from '../shared/ModalShell';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
-import { BUTTON_FIELD_SCHEMA, BUTTON_RAW_CSS_HELP } from '../../utils/styleCascade';
+import {
+  BUTTON_FIELD_SCHEMA, BUTTON_RAW_CSS_HELP,
+  CONTENT_BLOCK_FIELD_SCHEMA, CONTENT_BLOCK_RAW_CSS_HELP,
+  MEDIA_BLOCK_FIELD_SCHEMA, MEDIA_BLOCK_RAW_CSS_HELP,
+  DIVIDER_FIELD_SCHEMA, DIVIDER_RAW_CSS_HELP,
+  CHOICE_FIELD_SCHEMA, CHOICE_RAW_CSS_HELP,
+  POPUP_FIELD_SCHEMA, POPUP_RAW_CSS_HELP,
+} from '../../utils/styleCascade';
+import type { StyleFieldDescriptor, StyleRawCssHelp } from '../../utils/styleCascade';
+import type { BlockType } from '../../types';
 
 /** AI-button label: sparkle SVG followed by the action text. */
 function AiLabel({ children }: { children: React.ReactNode }) {
@@ -1010,6 +1019,32 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 // ─── Block defaults tab ─────────────────────────────────────────────────────
 
+/** One row in the Block defaults tab — wraps a single block-type section. */
+interface BlockDefaultRow {
+  type: BlockType;
+  titleKey: string;          // key under projectSettings (with sectionBlockDefaults* fallback)
+  descKey: string;           // key under projectSettings (with blockDefaults*Desc fallback)
+  schema: ReadonlyArray<StyleFieldDescriptor>;
+  help: StyleRawCssHelp;
+}
+
+const BLOCK_DEFAULT_ROWS: ReadonlyArray<BlockDefaultRow> = [
+  { type: 'button',      titleKey: 'sectionBlockDefaultsButton',      descKey: 'blockDefaultsButtonDesc',      schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'link',        titleKey: 'sectionBlockDefaultsLink',        descKey: 'blockDefaultsLinkDesc',        schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'function',    titleKey: 'sectionBlockDefaultsFunction',    descKey: 'blockDefaultsFunctionDesc',    schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'choice',      titleKey: 'sectionBlockDefaultsChoice',      descKey: 'blockDefaultsChoiceDesc',      schema: CHOICE_FIELD_SCHEMA,        help: CHOICE_RAW_CSS_HELP },
+  { type: 'popup',       titleKey: 'sectionBlockDefaultsPopup',       descKey: 'blockDefaultsPopupDesc',       schema: POPUP_FIELD_SCHEMA,         help: POPUP_RAW_CSS_HELP },
+  { type: 'text',        titleKey: 'sectionBlockDefaultsText',        descKey: 'blockDefaultsTextDesc',        schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'image',       titleKey: 'sectionBlockDefaultsImage',       descKey: 'blockDefaultsImageDesc',       schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'image-gen',   titleKey: 'sectionBlockDefaultsImageGen',    descKey: 'blockDefaultsImageGenDesc',    schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'video',       titleKey: 'sectionBlockDefaultsVideo',       descKey: 'blockDefaultsVideoDesc',       schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'include',     titleKey: 'sectionBlockDefaultsInclude',     descKey: 'blockDefaultsIncludeDesc',     schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'divider',     titleKey: 'sectionBlockDefaultsDivider',     descKey: 'blockDefaultsDividerDesc',     schema: DIVIDER_FIELD_SCHEMA,       help: DIVIDER_RAW_CSS_HELP },
+  { type: 'checkbox',    titleKey: 'sectionBlockDefaultsCheckbox',    descKey: 'blockDefaultsCheckboxDesc',    schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'radio',       titleKey: 'sectionBlockDefaultsRadio',       descKey: 'blockDefaultsRadioDesc',       schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'input-field', titleKey: 'sectionBlockDefaultsInputField',  descKey: 'blockDefaultsInputFieldDesc',  schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+];
+
 function BlockDefaultsTab({
   defaultBlockStyles,
   onChange,
@@ -1020,9 +1055,9 @@ function BlockDefaultsTab({
   variableNodes: VariableTreeNode[];
 }) {
   const t = useT();
-  const ps = t.projectSettings;
+  const ps = t.projectSettings as any;
 
-  const patchEntry = (type: 'button' | 'link' | 'function', value: BlockStyleOverride | undefined) => {
+  const patchEntry = (type: BlockType, value: BlockStyleOverride | undefined) => {
     const next = { ...(defaultBlockStyles ?? {}) };
     if (value === undefined) delete next[type];
     else next[type] = value;
@@ -1031,47 +1066,21 @@ function BlockDefaultsTab({
 
   return (
     <>
-      <ModalSection title={(ps as any).sectionBlockDefaultsButton ?? 'Button defaults'}>
-        <p className="text-xs text-slate-400 leading-relaxed mb-3">
-          {(ps as any).blockDefaultsButtonDesc ?? ps.blockDefaultsDescription}
-        </p>
-        <StyleOverrideEditor
-          value={defaultBlockStyles?.button}
-          onChange={v => patchEntry('button', v)}
-          variableNodes={variableNodes}
-          allowBound={true}
-          fieldsSchema={BUTTON_FIELD_SCHEMA}
-          rawCssHelp={BUTTON_RAW_CSS_HELP}
-        />
-      </ModalSection>
-
-      <ModalSection title={(ps as any).sectionBlockDefaultsLink ?? 'Link defaults'}>
-        <p className="text-xs text-slate-400 leading-relaxed mb-3">
-          {(ps as any).blockDefaultsLinkDesc ?? ps.blockDefaultsDescription}
-        </p>
-        <StyleOverrideEditor
-          value={defaultBlockStyles?.link}
-          onChange={v => patchEntry('link', v)}
-          variableNodes={variableNodes}
-          allowBound={true}
-          fieldsSchema={BUTTON_FIELD_SCHEMA}
-          rawCssHelp={BUTTON_RAW_CSS_HELP}
-        />
-      </ModalSection>
-
-      <ModalSection title={(ps as any).sectionBlockDefaultsFunction ?? 'Function defaults'}>
-        <p className="text-xs text-slate-400 leading-relaxed mb-3">
-          {(ps as any).blockDefaultsFunctionDesc ?? ps.blockDefaultsDescription}
-        </p>
-        <StyleOverrideEditor
-          value={defaultBlockStyles?.function}
-          onChange={v => patchEntry('function', v)}
-          variableNodes={variableNodes}
-          allowBound={true}
-          fieldsSchema={BUTTON_FIELD_SCHEMA}
-          rawCssHelp={BUTTON_RAW_CSS_HELP}
-        />
-      </ModalSection>
+      {BLOCK_DEFAULT_ROWS.map(row => (
+        <ModalSection key={row.type} title={ps[row.titleKey] ?? row.type}>
+          {ps[row.descKey] && (
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">{ps[row.descKey]}</p>
+          )}
+          <StyleOverrideEditor
+            value={defaultBlockStyles?.[row.type]}
+            onChange={v => patchEntry(row.type, v)}
+            variableNodes={variableNodes}
+            allowBound={true}
+            fieldsSchema={row.schema}
+            rawCssHelp={row.help}
+          />
+        </ModalSection>
+      ))}
     </>
   );
 }

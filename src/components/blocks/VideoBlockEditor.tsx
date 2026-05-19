@@ -3,6 +3,13 @@ import type { VideoBlock } from '../../types';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
+import { useVariableNodes } from '../shared/VariableScope';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  MEDIA_BLOCK_FIELD_SCHEMA,
+  MEDIA_BLOCK_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 export function VideoBlockEditor({
   block,
@@ -14,9 +21,11 @@ export function VideoBlockEditor({
   onUpdate?: (patch: Partial<VideoBlock>) => void;
 }) {
   const { project, projectDir, updateBlock } = useProjectStore();
+  const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<VideoBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
   const videoAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'video');
+  const cascadeClasses = ['tg-video', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
 
   /**
    * Resolve a src string to a URL suitable for <video> preview in the editor.
@@ -98,15 +107,37 @@ export function VideoBlockEditor({
         ))}
       </div>
 
-      {/* Preview */}
+      {/* Preview — cascade-wrapped, mirrors export's <div class="tg-video"><video/></div>.
+          `width` mirrors export's `<video width="X">` so border-radius/border-width
+          render in the same proportions as the final story. No tailwind size/border
+          classes — the injected cascade CSS owns the visual. */}
       {block.src && (
-        <video
-          src={resolvePreviewSrc(block.src)}
-          controls
-          className="max-h-32 rounded border border-slate-700 w-full"
-          onError={e => { (e.target as HTMLVideoElement).style.display = 'none'; }}
-        />
+        <div className={cascadeClasses}>
+          <video
+            src={resolvePreviewSrc(block.src)}
+            controls
+            width={block.width > 0 ? block.width : undefined}
+            onError={e => { (e.target as HTMLVideoElement).style.display = 'none'; }}
+          />
+        </div>
       )}
+
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={MEDIA_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={MEDIA_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
+
       <BlockEffectsPanel
         delay={block.delay}
         onDelayChange={v => update({ delay: v })}

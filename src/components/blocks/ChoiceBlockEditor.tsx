@@ -8,6 +8,12 @@ import { VarInsertButton } from '../shared/VarInsertButton';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
 import { flattenVariables } from '../../utils/treeUtils';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  CHOICE_FIELD_SCHEMA,
+  CHOICE_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 // ─── Operators ────────────────────────────────────────────────────────────────
 
@@ -257,6 +263,16 @@ export function ChoiceBlockEditor({
   const scenes = project.scenes.filter(s => !s.tags.some(tag => (SYSTEM_TAGS as readonly string[]).includes(tag)));
   const t = useT();
   const vars = flattenVariables(variableNodes);
+  const cascadeClasses = ['tg-choice', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const hasOverride =
+    !!project.settings.defaultBlockStyles?.choice?.enabled ||
+    !!block.customStyle?.enabled;
+  const previewOptions = block.options.length > 0
+    ? block.options.slice(0, 3)
+    : [
+        { id: 'prv1', label: t.choiceBlock.defaultOption + ' 1', targetSceneId: '', condition: '' },
+        { id: 'prv2', label: t.choiceBlock.defaultOption + ' 2', targetSceneId: '', condition: '' },
+      ];
 
   const handleAddOption = onUpdate
     ? () => {
@@ -349,6 +365,44 @@ export function ChoiceBlockEditor({
       >
         {t.choiceBlock.addOption}
       </button>
+
+      {/* Live preview — cascade-wrapped sample options. Only shown when an
+          override is active; otherwise the option rows above are the visual. */}
+      {hasOverride && (
+        <div className="mt-1 pt-1 border-t border-slate-700/40">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Preview</div>
+          <div className={cascadeClasses}>
+            {previewOptions.map(opt => (
+              <a
+                key={opt.id}
+                href="#"
+                onClick={e => e.preventDefault()}
+                style={{ cursor: 'default', userSelect: 'none', textDecoration: 'none' }}
+              >
+                {opt.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spot-level style override (static only — bound is at project-defaults level) */}
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => onUpdate ? onUpdate({ customStyle: v }) : updateBlock(sceneId, block.id, { customStyle: v } as never)}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={CHOICE_FIELD_SCHEMA}
+            rawCssHelp={CHOICE_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
+
       <BlockEffectsPanel
         delay={block.delay}
         onDelayChange={v => onUpdate ? onUpdate({ delay: v }) : updateBlock(sceneId, block.id, { delay: v } as never)}

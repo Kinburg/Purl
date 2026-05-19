@@ -24,6 +24,11 @@ import {
   buildButtonSpotStyleBlock,
   buttonElementClasses,
   buttonDataStyleBind,
+  buildSimpleBlocksCascadeCss,
+  buildSimpleBlockSpotStyleBlock,
+  simpleBlockCascadeClasses,
+  simpleBlockDataStyleBind,
+  buildPopupClassSyncScript,
 } from './styleCascade';
 
 // ─── Plugin registry (set by exportToTwee / buildPassages at start of export) ─
@@ -247,12 +252,21 @@ export function blockToSC(block: Block, chars: Character[], vars: Variable[], no
 
 function blockToSCInner(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
   switch (block.type) {
-    case 'text':
+    case 'text': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
       if (block.live) {
         const attr = htmlAttr(block.content);
-        return `${indent}<span class="tg-live" data-wiki="${attr}">${block.content}</span>`;
+        const classes = ['tg-text', 'tg-live', ...extra].join(' ');
+        return `${spotPrefix}${indent}<span class="${classes}" data-wiki="${attr}"${bindAttr}>${block.content}</span>`;
       }
-      return `${indent}<div class="tg-text">${block.content}</div>`;
+      const classes = ['tg-text', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${block.content}</div>`;
+    }
 
     case 'dialogue': {
       const char = chars.find(c => c.id === block.characterId);
@@ -333,10 +347,17 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         const raw = opt.targetSceneId || '';
         const target = raw ? sceneTarget(raw, idToName) : '"Start"';
         const link = `<<link "${opt.label}" ${target}>><</link>>`;
-        if (cond) return `${indent}<<if ${cond}>>${link}<</if>>`;
-        return `${indent}${link}`;
+        if (cond) return `${indent}  <<if ${cond}>>${link}<</if>>`;
+        return `${indent}  ${link}`;
       });
-      return lines.join('\n');
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-choice', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${lines.join('\n')}\n${indent}</div>`;
     }
 
     case 'condition': {
@@ -429,6 +450,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     }
 
     case 'image': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-image', ...extra].join(' ');
+
       const w   = block.width > 0 ? ` width="${block.width}"` : '';
       const alt = block.alt ? ` alt="${block.alt}"` : '';
       const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
@@ -454,14 +483,22 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
         if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
         cases.push(`${indent}<</if>>`);
-        return `${indent}<div class="tg-image">\n${cases.join('\n')}\n${indent}</div>`;
+        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
       }
 
       // ── Static mode ──────────────────────────────────────────────────────
-      return `${indent}<div class="tg-image">${imgTag(block.src)}</div>`;
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
     }
 
     case 'image-gen': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-image', ...extra].join(' ');
+
       const w   = block.width > 0 ? ` width="${block.width}"` : '';
       const alt = block.alt ? ` alt="${block.alt}"` : '';
       const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
@@ -486,10 +523,10 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
         if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
         cases.push(`${indent}<</if>>`);
-        return `${indent}<div class="tg-image">\n${cases.join('\n')}\n${indent}</div>`;
+        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
       }
 
-      return `${indent}<div class="tg-image">${imgTag(block.src)}</div>`;
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
     }
 
     case 'video': {
@@ -499,7 +536,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         block.loop ? 'loop' : '',
         block.width > 0 ? `width="${block.width}"` : '',
       ].filter(Boolean).join(' ');
-      return `${indent}<div class="tg-video"><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-video', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
     }
 
     case 'input-field': {
@@ -517,7 +561,15 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const inner: string[] = [];
       if (block.label) inner.push(block.label);
       inner.push(`<<${macro} "${vname}" ${defVal}>>`);
-      return `${indent}<div class="tg-input-field">${inner.join('\n')}</div>`;
+
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-input-field', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${inner.join('\n')}</div>`;
     }
 
     case 'raw':
@@ -546,14 +598,28 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         cssVars.push(`--tg-inc-bg:${block.bgColor}`);
 
       const styleAttr = cssVars.length > 0 ? ` style="${cssVars.join(';')}"` : '';
-      return `${indent}<div class="tg-include"${styleAttr}>${include}</div>`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-include', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}${styleAttr}>${include}</div>`;
     }
 
     case 'divider': {
       const color     = block.color     ?? '#555555';
       const thickness = block.thickness ?? 1;
       const marginV   = block.marginV   ?? 8;
-      return `${indent}<hr class="tg-divider" style="--tg-div-color:${color};--tg-div-thickness:${thickness}px;--tg-div-margin:${marginV}px">`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-divider', ...extra].join(' ');
+      return `${spotPrefix}${indent}<hr class="${classes}"${bindAttr} style="--tg-div-color:${color};--tg-div-thickness:${thickness}px;--tg-div-margin:${marginV}px">`;
     }
 
     case 'note':
@@ -699,7 +765,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         }).join('');
         lines.push(`${indent}<<script>>setTimeout(function(){${handlers}},0);<</script>>`);
       }
-      return `${indent}<div class="tg-checkbox">${lines.join('\n')}</div>`;
+      const cbSettings = project?.settings;
+      const cbExtra = cbSettings ? simpleBlockCascadeClasses(cb, cbSettings) : [];
+      const cbBindKey = cbSettings ? simpleBlockDataStyleBind(cb, cbSettings) : '';
+      const cbBindAttr = cbBindKey ? ` data-style-bind="${cbBindKey}"` : '';
+      const cbSpotStyle = buildSimpleBlockSpotStyleBlock(cb);
+      const cbSpotPrefix = cbSpotStyle ? `${indent}${cbSpotStyle}\n` : '';
+      const cbClasses = ['tg-checkbox', ...cbExtra].join(' ');
+      return `${cbSpotPrefix}${indent}<div class="${cbClasses}"${cbBindAttr}>${lines.join('\n')}</div>`;
     }
 
     case 'radio': {
@@ -712,13 +785,27 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       for (const opt of rb.options) {
         lines.push(`${indent}<<radiobutton "${vname}" "${opt.value}" autocheck>> ${opt.label}`);
       }
-      return `${indent}<div class="tg-radio">${lines.join('\n')}</div>`;
+      const rbSettings = project?.settings;
+      const rbExtra = rbSettings ? simpleBlockCascadeClasses(rb, rbSettings) : [];
+      const rbBindKey = rbSettings ? simpleBlockDataStyleBind(rb, rbSettings) : '';
+      const rbBindAttr = rbBindKey ? ` data-style-bind="${rbBindKey}"` : '';
+      const rbSpotStyle = buildSimpleBlockSpotStyleBlock(rb);
+      const rbSpotPrefix = rbSpotStyle ? `${indent}${rbSpotStyle}\n` : '';
+      const rbClasses = ['tg-radio', ...rbExtra].join(' ');
+      return `${rbSpotPrefix}${indent}<div class="${rbClasses}"${rbBindAttr}>${lines.join('\n')}</div>`;
     }
 
     case 'popup': {
       const name = (idToName?.get(block.targetSceneId) ?? block.targetSceneId) || '???';
       const title = block.title ?? '';
-      return `${indent}<<run Dialog.setup("${title}"); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      // Drop the structural `tg-popup` base — it's only the cascade namespace.
+      const dlgClasses = extra.join(' ').trim();
+      const classArg = dlgClasses ? `, "${dlgClasses}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      return `${spotPrefix}${indent}<<run Dialog.setup("${title}"${classArg}); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
     }
 
     case 'audio': {
@@ -2017,12 +2104,13 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const charCSS      = buildAllDialogueCss(characters);
   const panelCSS     = buildPanelCSS(sidebarPanel);
   const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
+  const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
   const animCSS      = buildAnimationCSS(scenes);
   const tipCSS       = buildTooltipCSS();
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const allCSS    = [charCSS, panelCSS, buttonCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const allCSS    = [charCSS, panelCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
   if (allCSS) parts.push(`::StoryStylesheet [stylesheet]\n${allCSS}\n`);
 
   // StoryScript (lightbox + input debounce) — single passage
@@ -2037,6 +2125,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     buildPaperdollScript(project),
     hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
+    buildPopupClassSyncScript(scenes),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load',
       '$(document).on(":passagedisplay", function() {',

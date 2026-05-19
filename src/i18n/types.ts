@@ -100,6 +100,8 @@ export interface Translations {
     rawCssPlaceholder: string;     // generic fallback textarea placeholder
     placeholderDialogue: string;   // textarea placeholder for dialogue overrides
     placeholderButton: string;     // textarea placeholder for button/link/function overrides
+    placeholderContent: string;    // placeholder for text/image/include/checkbox/radio/input
+    placeholderDivider: string;    // placeholder for divider
     rawCssScopedNote: string;      // hint that rules are auto-scoped
     rawCssHelpToggle: string;      // "Show supported selectors & example"
     rawCssHelpIntro: string;       // intro line for help block
@@ -142,6 +144,33 @@ export interface Translations {
       fontSize:     string;
       bold:         string;
       fullWidth:    string;
+      // Content-block specific
+      borderWidth:  string;
+      maxWidth:     string;
+      opacity:      string;
+      // Divider specific
+      lineColor:    string;
+      thickness:    string;
+      marginV:      string;
+      // Media-block specific
+      align:        string;
+      borderTarget: string;
+      // Choice-specific
+      direction:    string;
+      gap:          string;
+      // Popup-specific
+      titlebarBg:   string;
+      titleColor:   string;
+    };
+    // Enum option labels — keyed by StyleFieldDescriptor.options[i].labelKey
+    options: {
+      alignLeft:            string;
+      alignCenter:          string;
+      alignRight:           string;
+      borderTargetContent:  string;
+      borderTargetWrapper:  string;
+      directionRow:         string;
+      directionColumn:      string;
     };
     // Raw-CSS help selector descriptions — keyed by StyleRawCssHelp.selectors[i].descKey
     selectors: {
@@ -152,7 +181,24 @@ export interface Translations {
       selectorButtonA:        string;
       selectorButtonAHover:   string;
       selectorButtonAActive:  string;
+      // Simple-block selectors
+      selectorBlockSelf:      string;
+      selectorBlockImg:       string;
+      selectorBlockVideo:     string;
+      selectorBlockInput:     string;
+      selectorBlockLabel:     string;
+      // Choice
+      selectorChoiceA:        string;
+      // Popup (#ui-dialog)
+      selectorPopupDialog:    string;
+      selectorPopupTitlebar:  string;
+      selectorPopupTitle:     string;
+      selectorPopupBody:      string;
+      selectorPopupClose:     string;
     };
+    // Block-specific raw-CSS placeholders (used by StyleRawCssHelp.placeholderKey)
+    placeholderChoice?:       string;
+    placeholderPopup?:        string;
   };
 
   block: {
@@ -1428,12 +1474,34 @@ export interface Translations {
     sectionBlockDefaults:        string;  // legacy single section title
     blockDefaultsDescription:    string;
     // Per-type section titles + descriptions for Phase 2 Block defaults tab
-    sectionBlockDefaultsButton:  string;
-    sectionBlockDefaultsLink:    string;
-    sectionBlockDefaultsFunction:string;
-    blockDefaultsButtonDesc:     string;
-    blockDefaultsLinkDesc:       string;
-    blockDefaultsFunctionDesc:   string;
+    sectionBlockDefaultsButton:     string;
+    sectionBlockDefaultsLink:       string;
+    sectionBlockDefaultsFunction:   string;
+    sectionBlockDefaultsChoice:     string;
+    sectionBlockDefaultsPopup:      string;
+    sectionBlockDefaultsText:       string;
+    sectionBlockDefaultsImage:      string;
+    sectionBlockDefaultsImageGen:   string;
+    sectionBlockDefaultsVideo:      string;
+    sectionBlockDefaultsInclude:    string;
+    sectionBlockDefaultsDivider:    string;
+    sectionBlockDefaultsCheckbox:   string;
+    sectionBlockDefaultsRadio:      string;
+    sectionBlockDefaultsInputField: string;
+    blockDefaultsButtonDesc:        string;
+    blockDefaultsLinkDesc:          string;
+    blockDefaultsFunctionDesc:      string;
+    blockDefaultsChoiceDesc:        string;
+    blockDefaultsPopupDesc:         string;
+    blockDefaultsTextDesc:          string;
+    blockDefaultsImageDesc:         string;
+    blockDefaultsImageGenDesc:      string;
+    blockDefaultsVideoDesc:         string;
+    blockDefaultsIncludeDesc:       string;
+    blockDefaultsDividerDesc:       string;
+    blockDefaultsCheckboxDesc:      string;
+    blockDefaultsRadioDesc:         string;
+    blockDefaultsInputFieldDesc:    string;
     sectionColors:          string;
     fieldLore:              string;
     fieldLorePlaceholder:   string;

@@ -89,6 +89,8 @@ export interface TextBlock {
   delay?: BlockDelay;
   typewriter?: BlockTypewriter;
   generationHistory?: GenerationHistoryEntry[];
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.text). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface DialogueBlock {
@@ -127,6 +129,8 @@ export interface ChoiceBlock {
   type: 'choice';
   options: ChoiceOption[];
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.choice). */
+  customStyle?: BlockStyleOverride;
 }
 
 export type ConditionOperator =
@@ -248,6 +252,8 @@ export interface ImageBlock {
   variableId?: string;
   mapping?: ImageBoundMapping[];
   defaultSrc?: string;   // fallback when no mapping matches
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.image). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface ImageGenHistoryEntry {
@@ -296,6 +302,8 @@ export interface ImageGenBlock {
   genSettings?: AvatarGenSettings;
   /** When true (bound + ComfyUI), pass the default-slot image as ${base64Image} into variant generations. */
   useRefImage?: boolean;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles['image-gen']). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface VideoBlock {
@@ -307,6 +315,8 @@ export interface VideoBlock {
   controls: boolean;
   width: number;
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.video). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ── Audio block ──────────────────────────────────────────────────────────────
@@ -426,6 +436,8 @@ export interface InputFieldBlock {
   placeholder: string;  // default value pre-filled in the field
   /** Array accessor — only kind: 'index' is valid here. */
   accessor?: ArrayAccessor;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.input-field). */
+  customStyle?: BlockStyleOverride;
 }
 
 /**
@@ -493,6 +505,8 @@ export interface IncludeBlock {
   padding?: number;       // inner padding px
   bgColor?: string;       // background color; undefined = transparent
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.include). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface DividerBlock {
@@ -502,6 +516,8 @@ export interface DividerBlock {
   thickness?: number;  // px, default 1
   marginV?: number;    // vertical margin (top + bottom) in px, default 8
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.divider). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── Checkbox block ──────────────────────────────────────────────────────────
@@ -528,6 +544,8 @@ export interface CheckboxBlock {
   options: CheckboxOption[];
   variableId?: string;       // array mode only: the target array variable
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.checkbox). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── Radio block ─────────────────────────────────────────────────────────────
@@ -549,6 +567,8 @@ export interface RadioBlock {
   options: RadioOption[];
   variableId: string;      // the string variable to set
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.radio). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── System tags ──────────────────────────────────────────────────────────────
@@ -579,6 +599,8 @@ export interface PopupBlock {
   /** Optional dialog title bar text. Empty string = no title bar. */
   title?: string;
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.popup). */
+  customStyle?: BlockStyleOverride;
 }
 
 /**

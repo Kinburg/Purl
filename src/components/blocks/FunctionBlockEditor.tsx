@@ -8,7 +8,12 @@ import { VarInsertButton } from '../shared/VarInsertButton';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
-import { BUTTON_FIELD_SCHEMA, BUTTON_RAW_CSS_HELP } from '../../utils/styleCascade';
+import {
+  BUTTON_FIELD_SCHEMA,
+  BUTTON_RAW_CSS_HELP,
+  buttonElementClasses,
+} from '../../utils/styleCascade';
+import type { ProjectSettings } from '../../types';
 
 const OPERATORS: { value: VarOperator; label: string }[] = [
   { value: '=',  label: '=' },
@@ -73,7 +78,14 @@ function NumberInput({
   );
 }
 
-function StyleEditor({ style, onChange }: { style: ButtonStyle; onChange: (patch: Partial<ButtonStyle>) => void }) {
+function StyleEditor({
+  style, onChange, block, settings,
+}: {
+  style: ButtonStyle;
+  onChange: (patch: Partial<ButtonStyle>) => void;
+  block: FunctionBlock;
+  settings: ProjectSettings;
+}) {
   const t = useT();
   return (
     <div className="flex flex-col gap-2 bg-slate-800/50 border border-slate-700 rounded p-3">
@@ -122,26 +134,18 @@ function StyleEditor({ style, onChange }: { style: ButtonStyle; onChange: (patch
         </label>
       </div>
 
-      {/* Live preview */}
+      {/* Live preview — cascade classes, styled by injected preview CSS. */}
       <div className="mt-2 pt-2 border-t border-slate-700">
         <div className="text-xs text-slate-500 mb-1.5">{t.buttonBlock.previewTitle}</div>
-        <div style={{ width: style.fullWidth ? '100%' : 'fit-content' }}>
-          <span
-            style={{
-              display: style.fullWidth ? 'block' : 'inline-block',
-              background: style.bgColor,
-              color: style.textColor,
-              border: `1px solid ${style.borderColor}`,
-              borderRadius: `${style.borderRadius}px`,
-              padding: `${style.paddingV}px ${style.paddingH}px`,
-              fontSize: `${(style.fontSize / 10).toFixed(1)}em`,
-              fontWeight: style.bold ? 'bold' : 'normal',
-              textAlign: style.fullWidth ? 'center' : undefined,
-              cursor: 'default',
-              userSelect: 'none',
-            }}
-          >
-            {t.buttonBlock.defaultButtonLabel}
+        <div className="tg-preview-wrapper">
+          <span className={buttonElementClasses(block, settings).join(' ')}>
+            <a
+              href="#"
+              onClick={e => e.preventDefault()}
+              style={{ cursor: 'default', userSelect: 'none', textDecoration: 'none' }}
+            >
+              {block.label || t.buttonBlock.defaultButtonLabel}
+            </a>
           </span>
         </div>
       </div>
@@ -426,7 +430,7 @@ export function FunctionBlockEditor({
       </div>
 
       {/* Style */}
-      <StyleEditor style={block.style} onChange={patchStyle} />
+      <StyleEditor style={block.style} onChange={patchStyle} block={block} settings={project.settings} />
 
       {/* Actions */}
       <div className="flex flex-col gap-1.5">
