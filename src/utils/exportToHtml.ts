@@ -209,7 +209,9 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const paperdollCSS = withSection('Paperdoll',     buildPaperdollCSS(project));
   const inventoryCSS = withSection('Inventory',     buildInventoryCSS(project));
   const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
-  const combinedCSS = [globalCSS, charCSS, panelCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS].filter(Boolean).join('\n\n');
+  const userCSSRaw    = (project.customCss ?? '').trim();
+  const userCSS       = userCSSRaw ? `/* ─── User CSS ─── */\n${userCSSRaw}` : '';
+  const combinedCSS   = [globalCSS, charCSS, panelCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, userCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
@@ -237,6 +239,9 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
       '  }',
       '});',
     ].join('\n') : '',
+    ((project.customScript ?? '').trim())
+      ? `/* ─── User script ─── */\n${(project.customScript ?? '').trim()}`
+      : '',
   ].filter(Boolean).join('\n\n');
 
   return { passages, startPid, combinedCSS, scriptContent };

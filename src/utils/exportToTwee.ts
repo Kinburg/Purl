@@ -56,7 +56,12 @@ function buildJSRef(path: string): string {
 
 /** Convert a variable default value to a SugarCube literal string */
 export function defaultValueLiteral(v: Variable): string {
-  if (v.varType === 'string' || v.varType === 'datetime') return `"${v.defaultValue}"`;
+  if (v.varType === 'string' || v.varType === 'datetime') {
+    // JSON.stringify wraps in double quotes AND escapes embedded ", \, newlines, etc.
+    // Plain `"${...}"` would produce `"He said "hi""` for inputs that contain quotes
+    // and SugarCube would throw `<<set>>: bad evaluation: Unexpected identifier 'hi'`.
+    return JSON.stringify(v.defaultValue ?? '');
+  }
   if (v.varType === 'boolean') return v.defaultValue === 'true' ? 'true' : 'false';
   if (v.varType === 'array') return v.defaultValue || '[]';
   return v.defaultValue || '0';
@@ -2110,7 +2115,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const allCSS    = [charCSS, panelCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, panelCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const userCSS      = (project.customCss ?? '').trim();
+  const allCSS       = userCSS
+    ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
+    : generatedCSS;
   if (allCSS) parts.push(`::StoryStylesheet [stylesheet]\n${allCSS}\n`);
 
   // StoryScript (lightbox + input debounce) — single passage
@@ -2135,7 +2144,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     ].join('\n') : '',
     buildPurlSignatureScript(),
   ].filter(Boolean).join('\n\n');
-  if (storyScript) parts.push(`::StoryScript [script]\n${storyScript}\n`);
+  const userScript = (project.customScript ?? '').trim();
+  const fullScript = userScript
+    ? (storyScript ? `${storyScript}\n\n/* User script */\n${userScript}` : userScript)
+    : storyScript;
+  if (fullScript) parts.push(`::StoryScript [script]\n${fullScript}\n`);
 
   // StoryCaption
   const captionSC = buildStoryCaptionSC(sidebarPanel, variables, variableNodes, idToName, characters, project.items);

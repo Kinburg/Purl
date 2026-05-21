@@ -1,4 +1,3 @@
-import { useCallback, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useT } from '../../i18n';
 import { SceneList } from '../scenes/SceneList';
@@ -15,9 +14,8 @@ import { SIDEBAR_SVG_ICONS } from './SidebarIcons';
 type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'panel' | 'watchers' | 'items' | 'containers' | 'plugins';
 
 export function Sidebar() {
-  const { activeSidebarTab, setSidebarTab, sidebarWidth, setSidebarWidth } = useProjectStore();
+  const { activeSidebarTab, setSidebarTab, sidebarWidth } = useProjectStore();
   const t = useT();
-  const dragging = useRef(false);
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'scenes',     label: t.sidebar.scenes },
@@ -31,32 +29,9 @@ export function Sidebar() {
     { id: 'watchers',   label: t.sidebar.watchers },
   ];
 
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    const startX = e.clientX;
-    const startW = sidebarWidth;
-
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      setSidebarWidth(startW + (ev.clientX - startX));
-    };
-    const onUp = () => {
-      dragging.current = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, [sidebarWidth, setSidebarWidth]);
-
   return (
     <aside
-      className="flex flex-col shrink-0 bg-slate-900 border-r border-slate-700 overflow-hidden relative"
+      className="flex flex-col shrink-0 bg-slate-900 border-r border-slate-700 overflow-hidden"
       style={{ width: sidebarWidth }}
     >
       {/* Tab bar */}
@@ -96,12 +71,6 @@ export function Sidebar() {
         {activeSidebarTab === 'panel'       && <PanelEditor />}
         {activeSidebarTab === 'watchers'    && <WatcherManager />}
       </div>
-
-      {/* Resize handle */}
-      <div
-        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-indigo-500/30 active:bg-indigo-500/50 transition-colors z-10"
-        onMouseDown={onMouseDown}
-      />
     </aside>
   );
 }

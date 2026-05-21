@@ -442,6 +442,31 @@ export interface Translations {
     successExportTwee: string;
     unapprovedImagesTitle: string;
     unapprovedImagesMessage: (scenes: string[]) => string;
+    importFromTwee: string;
+    importFromTweeDesc: string;
+    dialogImportTwee: string;
+    errorImport: (e: unknown) => string;
+    successImport: string;
+  };
+
+  importSummary: {
+    title: string;
+    intro: string;
+    format: (name: string) => string;
+    scenes: (n: number) => string;
+    blocksTotal: (n: number) => string;
+    rawBlocks: (n: number) => string;
+    blocksBreakdown: string;
+    variables: (n: number) => string;
+    variablesTodo: (n: number) => string;
+    variablesAutoCreated: (n: number) => string;
+    customCss: (bytes: string) => string;
+    customScript: (bytes: string) => string;
+    warningsTitle: string;
+    warningsHidden: (n: number) => string;
+    cancel: string;
+    openProject: string;
+    phase1Note: string;
   };
 
   // ─── Asset manager ──────────────────────────────────────────────────────────
@@ -1033,6 +1058,10 @@ export interface Translations {
 
   rawBlock: {
     hint: string;
+    recognizeButton: string;
+    recognizeTitle: string;
+    recognizeNothing: string;
+    recognizeSuccess: (n: number) => string;
   };
 
   dividerBlock: {

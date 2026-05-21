@@ -409,6 +409,31 @@ const en: Translations = {
     closeConfirmSaveMessage:'Your project will be saved automatically.',
     closeConfirmSaveAndExit:'Save & Exit',
     closeConfirmExit:       'Exit',
+    importFromTwee:         'Import from .twee / .html…',
+    importFromTweeDesc:     'Open a SugarCube story written outside Purl',
+    dialogImportTwee:       'Import Twine story',
+    errorImport:            (e) => `Import error: ${e}`,
+    successImport:          'Project imported. Use Save to write it to disk.',
+  },
+
+  importSummary: {
+    title:                'Import summary',
+    intro:                'The story was imported. Review the results below.',
+    format:               (name) => `Format: ${name}`,
+    scenes:               (n) => `${n} scene${n === 1 ? '' : 's'}`,
+    blocksTotal:          (n) => `${n} block${n === 1 ? '' : 's'} produced`,
+    rawBlocks:            (n) => `${n} kept as raw code (couldn't recognize the structure)`,
+    blocksBreakdown:      'Recognized block types',
+    variables:            (n) => `${n} variable${n === 1 ? '' : 's'} recovered from StoryInit`,
+    variablesTodo:        (n) => `${n} variable${n === 1 ? '' : 's'} couldn't be evaluated — stored as raw strings for you to fix`,
+    variablesAutoCreated: (n) => `${n} variable${n === 1 ? '' : 's'} auto-created from passage usage`,
+    customCss:            (bytes) => `Custom CSS preserved (${bytes})`,
+    customScript:         (bytes) => `Custom JS preserved (${bytes})`,
+    warningsTitle:        'Warnings',
+    warningsHidden:       (n) => `…and ${n} more`,
+    cancel:               'Cancel',
+    openProject:          'Open',
+    phase1Note:           'Phase 2 (in progress): scene content is being unpacked into typed blocks where possible. Anything not yet recognized stays as a Raw Code block — fully editable, still exports correctly.',
   },
 
   assets: {
@@ -984,7 +1009,11 @@ const en: Translations = {
   },
 
   rawBlock: {
-    hint: 'Inserted into export as-is, without changes',
+    hint:              'Inserted into export as-is, without changes',
+    recognizeButton:   'Try to parse',
+    recognizeTitle:    'Re-run the importer recognizer on this code and replace this block with the typed result',
+    recognizeNothing:  'Nothing recognized — keeping the raw block.',
+    recognizeSuccess:  (n) => `Recognized — produced ${n} block${n === 1 ? '' : 's'}.`,
   },
 
   dividerBlock: {

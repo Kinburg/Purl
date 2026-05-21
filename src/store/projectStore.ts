@@ -1008,6 +1008,10 @@ function migrateProject(raw: any): Project {
   if (p.settings.historyControls === undefined) p.settings.historyControls = DEFAULT_PROJECT_SETTINGS.historyControls;
   if (p.settings.saveLoadMenu === undefined) p.settings.saveLoadMenu = DEFAULT_PROJECT_SETTINGS.saveLoadMenu;
 
+  // Custom CSS / JS preserved from imports (or hand-edited). Empty string when absent.
+  if (typeof p.customCss !== 'string') p.customCss = '';
+  if (typeof p.customScript !== 'string') p.customScript = '';
+
   // Migrate targetSceneId / navigate.sceneId from scene NAMES → scene IDs
   p = migrateSceneLinks(p as Project);
 
@@ -1078,6 +1082,9 @@ interface ProjectState {
   // Blocks
   addBlock: (sceneId: string, block: Block, insertIndex?: number) => void;
   updateBlock: (sceneId: string, blockId: string, patch: Partial<Block>) => void;
+  /** Replace a top-level block with zero or more new blocks (and optionally set
+   *  a fresh variableNodes tree — used by the "Re-recognize raw block" action). */
+  replaceBlock: (sceneId: string, blockId: string, newBlocks: Block[], newVariableNodes?: VariableTreeNode[]) => void;
   deleteBlock: (sceneId: string, blockId: string) => void;
   reorderBlocks: (sceneId: string, blocks: Block[]) => void;
   duplicateBlock: (sceneId: string, blockId: string) => void;
@@ -1578,6 +1585,23 @@ export const useProjectStore = create<ProjectState>()(
               updateBlockInScene(sc, blockId, b => ({ ...b, ...patch } as Block))
             ),
           })),
+
+        replaceBlock: (sceneId, blockId, newBlocks, newVariableNodes) => {
+          get().saveSnapshot();
+          set(s => {
+            const proj = updateScene(s.project, sceneId, sc => {
+              const idx = sc.blocks.findIndex(b => b.id === blockId);
+              if (idx < 0) return sc;
+              const blocks = [...sc.blocks.slice(0, idx), ...newBlocks, ...sc.blocks.slice(idx + 1)];
+              return { ...sc, blocks };
+            });
+            return {
+              project: newVariableNodes !== undefined
+                ? { ...proj, variableNodes: newVariableNodes }
+                : proj,
+            };
+          });
+        },
 
         deleteBlock: (sceneId, blockId) => {
           get().saveSnapshot();

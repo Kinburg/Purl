@@ -1328,4 +1328,8 @@ export interface Project {
   assetNodes: AssetTreeNode[];
   sidebarPanel: SidebarPanel;
   watchers: Watcher[];
+  /** Raw user CSS appended to the generated StoryStylesheet (preserved from imports / hand-edited). */
+  customCss?: string;
+  /** Raw user JS appended to the generated StoryScript (preserved from imports / hand-edited). */
+  customScript?: string;
 }
