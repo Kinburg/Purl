@@ -89,7 +89,13 @@ function splitPassages(twee: string): RawPassage[] {
 
   const flush = () => {
     if (current) {
-      current.body = bodyLines.join('\n').replace(/^\n+/, '').replace(/\n+$/, '');
+      let body = bodyLines.join('\n').replace(/^\n+/, '').replace(/\n+$/, '');
+      // Strip Twine graph-hint that Purl (and other tools) append for the
+      // Twine editor to draw connections — `<<if false>>[[T1]][[T2]]<</if>>`
+      // at the end of the passage body. SugarCube never runs it; on re-import
+      // it would otherwise become a stray RawBlock.
+      body = body.replace(/\s*<<if\s+false>>(?:\[\[[^\]\n]+\]\])+<<\/if>>\s*$/i, '');
+      current.body = body;
       out.push(current);
     }
     current = null;

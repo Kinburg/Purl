@@ -208,6 +208,8 @@ export interface Translations {
     choice: string;
     condition: string;
     variableSet: string;
+    setObject: string;
+    forLoop: string;
     button: string;
     link: string;
     inputField: string;
@@ -259,6 +261,8 @@ export interface Translations {
     choice:      { label: string; desc: string };
     condition:   { label: string; desc: string };
     variableSet: { label: string; desc: string };
+    setObject:   { label: string; desc: string };
+    forLoop:     { label: string; desc: string };
     button:      { label: string; desc: string };
     link:        { label: string; desc: string };
     inputField:  { label: string; desc: string };
@@ -362,6 +366,9 @@ export interface Translations {
     rangeToggle:         string;  // tooltip for range-mode button
     rangeMinPlaceholder: string;
     rangeMaxPlaceholder: string;
+    rawExpressionPlaceholder: string;
+    toRaw:                   string;
+    toStructured:            string;
     opContains:    string;  // 'contains'
     opNotContains: string;  // '!contains'
     opEmpty:       string;  // 'empty'
@@ -463,10 +470,8 @@ export interface Translations {
     customCss: (bytes: string) => string;
     customScript: (bytes: string) => string;
     warningsTitle: string;
-    warningsHidden: (n: number) => string;
     cancel: string;
     openProject: string;
-    phase1Note: string;
   };
 
   // ─── Asset manager ──────────────────────────────────────────────────────────
@@ -1062,6 +1067,19 @@ export interface Translations {
     recognizeTitle: string;
     recognizeNothing: string;
     recognizeSuccess: (n: number) => string;
+  };
+
+  setObject: {
+    varPlaceholder: string;
+    keyPlaceholder: string;
+    valuePlaceholder: string;
+    addEntry: string;
+    removeEntry: string;
+    pickVariableHint: string;
+  };
+
+  forBlock: {
+    bodyLabel: string;
   };
 
   dividerBlock: {

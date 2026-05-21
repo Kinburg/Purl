@@ -13,8 +13,10 @@ interface SetEntry {
   rhs: string;
 }
 
-function makeVar(name: string, varType: VariableType, defaultValue: string): Variable {
-  return { kind: 'variable', id: uid(), name, varType, defaultValue, description: '' };
+function makeVar(name: string, varType: VariableType, defaultValue: string, isExpression?: boolean): Variable {
+  const v: Variable = { kind: 'variable', id: uid(), name, varType, defaultValue, description: '' };
+  if (isExpression) v.isExpression = true;
+  return v;
 }
 
 function makeGroup(name: string, children: VariableTreeNode[] = []): VariableGroup {
@@ -61,6 +63,28 @@ function inferType(value: unknown): VariableType | null {
 function defaultLiteral(value: unknown, type: VariableType): string {
   if (type === 'array') return JSON.stringify(value);
   return String(value);
+}
+
+/**
+ * Heuristic: does this RHS look like a SC expression worth preserving as a
+ * raw string + isExpression flag? Covers function calls (`random(...)`,
+ * `either(...)`, `Math.*`), arithmetic (`40+random(...)`), and string concat
+ * (`"hi " + $name`). Anything that gets a real "computation" feel.
+ */
+function looksLikeExpression(rhs: string): boolean {
+  if (!rhs.trim()) return false;
+  const hasMathOp   = /[+\-*/%]/.test(rhs);
+  const hasFuncCall = /[A-Za-z_$][\w$.]*\s*\(/.test(rhs);
+  const hasVarRef   = /\$[A-Za-z_$]/.test(rhs);
+  return hasMathOp || hasFuncCall || hasVarRef;
+}
+
+/** Infer the variable type from an expression RHS that didn't safeEval. */
+function inferExprType(rhs: string): VariableType {
+  // If it contains string literals → result is probably a string.
+  if (/['"`]/.test(rhs)) return 'string';
+  // Otherwise assume numeric (random, math, $other refs, etc.).
+  return 'number';
 }
 
 // Insert a leaf variable at a nested path inside `nodes`, creating groups along the way.
@@ -130,13 +154,22 @@ export function parseStoryInit(text: string): StoryInitResult {
 
     let varType: VariableType;
     let def: string;
+    let isExpr = false;
     if (value === undefined) {
-      // RHS couldn't eval (refs to other $vars, function calls, etc.).
-      // Preserve the raw expression as a string variable so the user can fix later.
-      varType = 'string';
-      def     = rhs;
-      warnings.push(`<<set $${path.join('.')} to ${rhs}>> — couldn't evaluate, stored as string`);
-      unparsedCount++;
+      // RHS couldn't eval — usually SC helpers (`random`, `either`, `Math.*`)
+      // or `$other` refs. If it LOOKS like an expression, preserve it verbatim
+      // with isExpression=true so the exporter emits it unquoted.
+      if (looksLikeExpression(rhs)) {
+        varType = inferExprType(rhs);
+        def     = rhs;
+        isExpr  = true;
+        warnings.push(`<<set $${path.join('.')} to ${rhs}>> — kept as expression`);
+      } else {
+        varType = 'string';
+        def     = rhs;
+        warnings.push(`<<set $${path.join('.')} to ${rhs}>> — couldn't evaluate, stored as string`);
+        unparsedCount++;
+      }
     } else if (value === null) {
       varType = 'string';
       def     = '';
@@ -150,7 +183,7 @@ export function parseStoryInit(text: string): StoryInitResult {
         def     = defaultLiteral(value, t);
       }
     }
-    nodes = insertAt(nodes, groupPath, makeVar(leafName, varType, def));
+    nodes = insertAt(nodes, groupPath, makeVar(leafName, varType, def, isExpr));
   }
 
   return { nodes, warnings, unparsedCount };

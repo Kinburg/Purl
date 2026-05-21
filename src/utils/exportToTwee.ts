@@ -56,6 +56,9 @@ function buildJSRef(path: string): string {
 
 /** Convert a variable default value to a SugarCube literal string */
 export function defaultValueLiteral(v: Variable): string {
+  // Expression mode: emit verbatim regardless of varType. The importer sets
+  // this for `<<set $x to random(3,10)>>`, `either(...)`, string concat, etc.
+  if (v.isExpression && v.defaultValue) return v.defaultValue;
   if (v.varType === 'string' || v.varType === 'datetime') {
     // JSON.stringify wraps in double quotes AND escapes embedded ", \, newlines, etc.
     // Plain `"${...}"` would produce `"He said "hi""` for inputs that contain quotes
@@ -67,12 +70,37 @@ export function defaultValueLiteral(v: Variable): string {
   return v.defaultValue || '0';
 }
 
+/**
+ * Recursively build a JS object literal string from SetObjectBlock entries.
+ * Keys that aren't valid JS identifiers are quoted via JSON.stringify.
+ */
+export function buildSetObjectLiteral(entries: import('../types').SetObjectEntry[]): string {
+  if (entries.length === 0) return '{}';
+  const parts = entries.map(e => {
+    const keyStr = /^[A-Za-z_$][\w$]*$/.test(e.key) ? e.key : JSON.stringify(e.key);
+    let valueStr: string;
+    switch (e.valueType) {
+      case 'string':  valueStr = JSON.stringify(e.value ?? ''); break;
+      case 'number':  valueStr = (e.value && e.value.trim() !== '') ? e.value : '0'; break;
+      case 'boolean': valueStr = e.value === 'true' ? 'true' : 'false'; break;
+      case 'array':   valueStr = (e.value && e.value.trim() !== '') ? e.value : '[]'; break;
+      case 'object':  valueStr = buildSetObjectLiteral(e.entries ?? []); break;
+    }
+    return `${keyStr}: ${valueStr}`;
+  });
+  return `{ ${parts.join(', ')} }`;
+}
+
 /** Recursively build a JS object literal from a VariableGroup for StoryInit export */
 export function buildObjectLiteral(group: VariableGroup, allNodes: VariableTreeNode[]): string {
   const entries = group.children
     .map(n => {
-      if (n.kind === 'variable') return `${n.name}: ${defaultValueLiteral(n)}`;
-      if (n.kind === 'group' && hasLeafVariables(n)) return `${n.name}: ${buildObjectLiteral(n, allNodes)}`;
+      // Keys with spaces / special chars (e.g. "Tailored Suit") must be JSON-quoted —
+      // bare identifiers like `Tailored Suit:` parse as two separate identifiers and
+      // SugarCube throws `<<set>>: bad evaluation: Unexpected identifier 'Suit'`.
+      const key = /^[A-Za-z_$][\w$]*$/.test(n.name) ? n.name : JSON.stringify(n.name);
+      if (n.kind === 'variable') return `${key}: ${defaultValueLiteral(n)}`;
+      if (n.kind === 'group' && hasLeafVariables(n)) return `${key}: ${buildObjectLiteral(n, allNodes)}`;
       return null;
     })
     .filter(Boolean);
@@ -370,6 +398,38 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return block.branches
         .map((branch, i) => branchToSC(branch, chars, vars, nodes, indent, i === 0, idToName, project))
         .join('\n') + `\n${indent}<</if>>`;
+    }
+
+    case 'for': {
+      let header: string;
+      if (block.mode === 'range') {
+        const value = block.valueVar || '_value';
+        const loopVars = block.keyVar ? `${block.keyVar}, ${value}` : value;
+        const src  = block.source || '[]';
+        header = `<<for ${loopVars} range ${src}>>`;
+      } else if (block.mode === 'while') {
+        header = `<<for ${block.whileCondition ?? 'false'}>>`;
+      } else { // cstyle
+        const init = block.initExpr ?? '';
+        const cond = block.cstyleCondition ?? 'false';
+        const step = block.stepExpr ?? '';
+        header = `<<for ${init}; ${cond}; ${step}>>`;
+      }
+      const body = block.blocks
+        .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
+        .filter(Boolean)
+        .join('\n');
+      return body
+        ? `${indent}${header}\n${body}\n${indent}<</for>>`
+        : `${indent}${header}${indent}<</for>>`;
+    }
+
+    case 'set-object': {
+      const v = vars.find(x => x.id === block.variableId);
+      if (!v) return `${indent}/* variable not found */`;
+      const path = varPath(v, nodes);
+      const literal = buildSetObjectLiteral(block.entries);
+      return `${indent}<<set $${path} = ${literal}>>`;
     }
 
     case 'variable-set': {
@@ -912,6 +972,17 @@ function branchToSC(
     return `${indent}<<else>>\n${innerLines}`;
   }
 
+  // Raw expression escape-hatch — used when import couldn't structurally
+  // parse the condition (compound or-chains, LHS expressions, function calls).
+  // Emits the SC expression verbatim.
+  if (branch.rawExpression !== undefined && branch.rawExpression !== '') {
+    const expr = branch.rawExpression;
+    if (branch.branchType === 'if' || isFirst) {
+      return `${indent}<<if ${expr}>>\n${innerLines}`;
+    }
+    return `${indent}<<elseif ${expr}>>\n${innerLines}`;
+  }
+
   // Plugin param virtual variables: branch.variableId starts with 'param:'.
   // Emit directly as a temp-var reference (_key) without going through the
   // project variable tree — scene kind params are excluded from paramVars.
@@ -961,7 +1032,16 @@ function branchToSC(
     expr = `${varName}.length ${branch.operator} ${branch.value}`;
   } else {
     let val = branch.value;
-    if (v?.varType === 'string' || v?.varType === 'datetime') val = `"${val}"`;
+    // Quote only when the value is genuinely a string literal — not when it
+    // looks like a SC reference (`$other` / `_tempVar`) or a JS literal
+    // (number / true / false). Mirrors the plugin-param heuristic above so
+    // `<<if $x != _name>>` rebuilds verbatim instead of `_name` becoming a
+    // literal string `"_name"`.
+    const looksLikeRef = /^[_$][A-Za-z_$][\w$.]*$/.test(val);
+    const looksLikeLiteral = /^-?\d+(\.\d+)?$/.test(val) || val === 'true' || val === 'false';
+    if ((v?.varType === 'string' || v?.varType === 'datetime') && !looksLikeRef && !looksLikeLiteral) {
+      val = `"${val}"`;
+    }
     expr = `${varName} ${branch.operator} ${val}`;
   }
 

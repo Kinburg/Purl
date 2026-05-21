@@ -14,6 +14,8 @@ import type {
   VariableSetBlock, LinkBlock, ImageBlock, VideoBlock,
   ConditionBlock, ConditionBranch, ConditionOperator,
   InputFieldBlock,
+  SetObjectBlock, SetObjectEntry,
+  ForBlock,
   ButtonStyle,
   Variable, VariableGroup, VariableTreeNode, VariableType, VarOperator,
 } from '../../types';
@@ -137,6 +139,26 @@ function inferType(value: unknown): VariableType | null {
 function literalDefault(value: unknown, type: VariableType): string {
   if (type === 'array')  return JSON.stringify(value);
   return String(value);
+}
+
+/** Convert a JS object into an array of SetObjectEntry, recursing into nested objects. */
+function objectToSetEntries(obj: Record<string, unknown>): SetObjectEntry[] {
+  return Object.entries(obj).map(([k, v]): SetObjectEntry => {
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      return {
+        id: uid(),
+        key: k,
+        valueType: 'object',
+        entries: objectToSetEntries(v as Record<string, unknown>),
+      };
+    }
+    if (Array.isArray(v)) {
+      return { id: uid(), key: k, valueType: 'array', value: JSON.stringify(v) };
+    }
+    if (typeof v === 'number')  return { id: uid(), key: k, valueType: 'number',  value: String(v) };
+    if (typeof v === 'boolean') return { id: uid(), key: k, valueType: 'boolean', value: v ? 'true' : 'false' };
+    return { id: uid(), key: k, valueType: 'string', value: v == null ? '' : String(v) };
+  });
 }
 
 // ─── Block-level macro classification ────────────────────────────────────────
@@ -295,9 +317,98 @@ function recognizeBlockAt(tokens: Token[], i: number, ctx: BuildContext): { bloc
       const blk = makeInputFieldBlock(tok, ctx);
       if (blk) return { block: blk, next: i + 1 };
     }
+    if (tok.name === 'for' && tok.body !== undefined) {
+      const blk = makeForBlock(tok, ctx);
+      if (blk) return { block: blk, next: i + 1 };
+    }
   }
 
   return null;
+}
+
+// ─── ForBlock from <<for>>...<</for>> ────────────────────────────────────────
+
+/**
+ * Detects the SC `<<for>>` form from its args and emits a structured ForBlock.
+ *  - `<<for [_k, ]_v range EXPR>>` → range mode
+ *  - `<<for INIT; COND; STEP>>`    → c-style
+ *  - `<<for EXPR>>` (single, no semicolons, no `range`) → while
+ */
+function makeForBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): ForBlock | null {
+  const args = tok.args.trim();
+  if (!args) return null;
+  const innerBlocks = buildBlocks(tok.body ?? [], ctx);
+
+  // Range form: split outside of brackets/strings to be safe with $arr[idx] or "a range b" strings.
+  const rangeMatch = /^([^]*?)\s+range\s+([^]*)$/.exec(args);
+  if (rangeMatch) {
+    const vars = rangeMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+    const source = rangeMatch[2].trim();
+    const block: ForBlock = {
+      id: uid(),
+      type: 'for',
+      mode: 'range',
+      source,
+      blocks: innerBlocks,
+    };
+    if (vars.length === 1) {
+      block.valueVar = vars[0];
+    } else if (vars.length === 2) {
+      block.keyVar = vars[0];
+      block.valueVar = vars[1];
+    } else {
+      // Malformed — keep raw fallback by returning null (dispatcher emits RawBlock).
+      return null;
+    }
+    return block;
+  }
+
+  // C-style: top-level semicolons. Split respecting strings.
+  const cstyleParts = splitTopLevelSemis(args);
+  if (cstyleParts.length === 3) {
+    return {
+      id: uid(),
+      type: 'for',
+      mode: 'cstyle',
+      initExpr:        cstyleParts[0].trim(),
+      cstyleCondition: cstyleParts[1].trim(),
+      stepExpr:        cstyleParts[2].trim(),
+      blocks: innerBlocks,
+    };
+  }
+
+  // Otherwise: while-loop. Whole args = condition expression.
+  return {
+    id: uid(),
+    type: 'for',
+    mode: 'while',
+    whileCondition: args,
+    blocks: innerBlocks,
+  };
+}
+
+function splitTopLevelSemis(s: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let quote: string | null = null;
+  let depth = 0;   // tracks (), [], {}
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quote) {
+      if (c === '\\') { i++; continue; }
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+    if (c === '(' || c === '[' || c === '{') { depth++; continue; }
+    if (c === ')' || c === ']' || c === '}') { depth--; continue; }
+    if (c === ';' && depth === 0) {
+      parts.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.slice(start));
+  return parts;
 }
 
 // ─── ImageBlock / VideoBlock from <img>/<video> ─────────────────────────────
@@ -335,7 +446,7 @@ function makeVideoBlock(tok: Token & { kind: 'html' }): VideoBlock {
  * Whitespace around the operator is optional (so `$x+=1` works too).
  * Anything else returns null (caller falls back to RawBlock).
  */
-function makeSetBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): VariableSetBlock | null {
+function makeSetBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): VariableSetBlock | SetObjectBlock | null {
   const m = /^\$([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*(\+=|-=|\*=|\/=|to|=)\s*([\s\S]+)$/.exec(tok.args);
   if (!m) return null;
 
@@ -380,6 +491,18 @@ function makeSetBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): Variab
   // Plain literal assignment: $x to LITERAL  /  $x = LITERAL
   const value = safeEval(rhs);
   if (value !== undefined) {
+    // Plain object → SetObjectBlock (structured editor)
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      const entries = objectToSetEntries(value as Record<string, unknown>);
+      const varId = ensureVariable(path, ctx, 'string', JSON.stringify(value));
+      return {
+        id: uid(),
+        type: 'set-object',
+        variableId: varId,
+        entries,
+      };
+    }
+
     const t = inferType(value);
     if (t === null) return null;
     const storedValue = t === 'string' ? (value as string) : literalDefault(value, t);
@@ -423,12 +546,16 @@ function makeSetBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): Variab
 function isSafeNumericExpression(rhs: string): boolean {
   if (!rhs.trim()) return false;
   if (/['"`]/.test(rhs)) return false;
-  // Each token must be: $identifier(.path)*  |  number  |  operator  |  paren  |  whitespace
-  const tokenRe = /(\$[A-Za-z_$][\w$.]*|[0-9]+(?:\.[0-9]+)?|[+\-*/%()]|\s+)/g;
+  // Tokens allowed:
+  //   - $identifier(.path)*           — SC variables
+  //   - bare/dotted identifier        — SC helpers (`random`, `either`, `Math.floor`)
+  //   - number literal
+  //   - math op (+ - * / %)
+  //   - paren, comma                  — for function calls
+  //   - whitespace
+  const tokenRe = /(\$[A-Za-z_$][\w$.]*|[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*|[0-9]+(?:\.[0-9]+)?|[+\-*/%(),]|\s+)/g;
   const tokens = rhs.match(tokenRe);
   if (!tokens) return false;
-  // Must consume the entire input — anything left over (e.g. a bare identifier
-  // like `Math` or `floor`) means it's not a clean numeric expression.
   return tokens.join('') === rhs;
 }
 
@@ -534,12 +661,23 @@ function makeConditionBlock(tok: Token & { kind: 'macro' }, ctx: BuildContext): 
 
   const branches: ConditionBranch[] = [];
   for (const b of tok.branches) {
-    const parsed = parseCondition(b.condition, ctx);
-    if (b.type !== 'else' && !parsed) {
-      // Bail out — fall back to RawBlock for the whole if/else chain.
-      return null;
-    }
+    const parsed = b.type === 'else' ? null : parseCondition(b.condition, ctx);
     const nestedBlocks = buildBlocks(b.body, ctx);
+    if (b.type !== 'else' && !parsed) {
+      // Unparseable condition (compound or, expression LHS, function call, …)
+      // — keep the normalized expression as a raw escape-hatch so the IF chain
+      // still ends up as a typed ConditionBlock and the body becomes typed too.
+      branches.push({
+        id: uid(),
+        branchType: b.type,
+        variableId: '',
+        operator: '==',
+        value: '',
+        rawExpression: normalizeKeywordOps(b.condition).trim(),
+        blocks: nestedBlocks,
+      });
+      continue;
+    }
     branches.push({
       id: uid(),
       branchType: b.type,
@@ -666,7 +804,7 @@ function parseCondition(expr: string, ctx: BuildContext): ParsedCondition | null
     };
   }
 
-  // Simple: $var OP literal
+  // Simple: $var OP literal-or-ref
   for (const op of COND_OPS) {
     const opEscaped = op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(`^\\$([A-Za-z_$][\\w$.]*)\\s*${opEscaped}\\s*(.+)$`);
@@ -675,12 +813,21 @@ function parseCondition(expr: string, ctx: BuildContext): ParsedCondition | null
       const path = m[1].split('.');
       const rhs = m[2].trim();
       const rhsVal = safeEval(rhs);
-      if (rhsVal === undefined) return null;
-      const t = inferType(rhsVal);
-      if (t === null) return null;
-      const varId = ensureVariable(path, ctx, t);
-      const valStr = t === 'string' ? String(rhsVal) : literalDefault(rhsVal, t);
-      return { variableId: varId, operator: op, value: valStr };
+      if (rhsVal !== undefined) {
+        const t = inferType(rhsVal);
+        if (t === null) return null;
+        const varId = ensureVariable(path, ctx, t);
+        const valStr = t === 'string' ? String(rhsVal) : literalDefault(rhsVal, t);
+        return { variableId: varId, operator: op, value: valStr };
+      }
+      // RHS didn't safeEval — accept it as a raw reference if it LOOKS like
+      // one (`_tempVar` or `$other.path`). Export skips quoting for such
+      // values so the SC expression rebuilds verbatim.
+      if (/^[_$][A-Za-z_$][\w$.]*$/.test(rhs)) {
+        const varId = ensureVariable(path, ctx, 'string');
+        return { variableId: varId, operator: op, value: rhs };
+      }
+      return null;
     }
   }
 

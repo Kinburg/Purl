@@ -8,8 +8,6 @@ interface Props {
   onConfirm: () => void;
 }
 
-const MAX_WARNINGS_SHOWN = 6;
-
 function humanBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -29,9 +27,7 @@ export function ImportSummaryModal({ summary, onCancel, onConfirm }: Props) {
   }, [onCancel, onConfirm]);
 
   const stats = summary;
-  const warnings        = stats.warnings;
-  const shownWarnings   = warnings.slice(0, MAX_WARNINGS_SHOWN);
-  const hiddenWarnings  = Math.max(0, warnings.length - MAX_WARNINGS_SHOWN);
+  const warnings = stats.warnings;
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
@@ -118,20 +114,14 @@ export function ImportSummaryModal({ summary, onCancel, onConfirm }: Props) {
             </div>
           )}
 
-          <div className="text-xs text-slate-400 italic border-l-2 border-slate-700 pl-3 py-1">
-            {t.importSummary.phase1Note}
-          </div>
 
           {warnings.length > 0 && (
             <details className="bg-slate-900/40 rounded border border-slate-700/60 px-3 py-2">
               <summary className="cursor-pointer text-xs font-medium text-amber-300 select-none">
                 {t.importSummary.warningsTitle} ({warnings.length})
               </summary>
-              <ul className="mt-2 space-y-1 text-xs text-slate-300 font-mono break-all">
-                {shownWarnings.map((w, i) => <li key={i}>• {w}</li>)}
-                {hiddenWarnings > 0 && (
-                  <li className="text-slate-500 italic">{t.importSummary.warningsHidden(hiddenWarnings)}</li>
-                )}
+              <ul className="mt-2 space-y-1 text-xs text-slate-300 font-mono break-all max-h-72 overflow-y-auto pr-2">
+                {warnings.map((w, i) => <li key={i}>• {w}</li>)}
               </ul>
             </details>
           )}

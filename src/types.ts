@@ -168,6 +168,17 @@ export interface ConditionBranch {
   rangeMax?: string;     // upper bound (inclusive)
   /** Array accessor — only relevant when variableId points to an array variable. */
   accessor?: ArrayAccessor;
+  /**
+   * Escape-hatch for conditions Purl can't express structurally:
+   *  - compound `or` chains
+   *  - LHS expressions like `$day + 1 > 23`
+   *  - function calls
+   *  - anything else that doesn't fit variableId/operator/value
+   *
+   * When set, this raw SugarCube expression is emitted verbatim and the
+   * structured fields above are ignored.
+   */
+  rawExpression?: string;
   blocks: Block[];
 }
 
@@ -211,6 +222,73 @@ export interface StringBoundEntry {
   rangeMin?: string;   // used when matchType === 'range'
   rangeMax?: string;   // used when matchType === 'range'
   result: string;      // the string value to assign to the target variable
+}
+
+/**
+ * One entry inside a SetObjectBlock — a single key/value pair.
+ * Nested objects are represented by valueType === 'object' + children entries.
+ */
+export interface SetObjectEntry {
+  id: string;
+  /** Dictionary key. May contain spaces / special chars; export quotes when needed. */
+  key: string;
+  /** Type of the value at this position. */
+  valueType: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  /** Raw value for primitive types. For 'array', a JSON literal string like `[1,2,3]`. */
+  value?: string;
+  /** Child entries when valueType === 'object'. */
+  entries?: SetObjectEntry[];
+}
+
+/**
+ * SugarCube `<<for>>` loop. Three structurally distinct modes:
+ *  - 'range'  — iterate over a collection: <<for [_k, ]_v range $coll>>
+ *  - 'while'  — repeat while condition holds: <<for $cond>>
+ *  - 'cstyle' — classic for: <<for INIT; COND; STEP>>
+ *
+ * Loop variables (`_name`, `_i`, …) live in SugarCube's temp-var scope and
+ * are NOT modelled as project variables — stored as raw strings here.
+ */
+export type ForLoopMode = 'range' | 'while' | 'cstyle';
+
+export interface ForBlock {
+  id: string;
+  type: 'for';
+  delay?: BlockDelay;
+  mode: ForLoopMode;
+  // ── range mode ───────────────────────────────────────────────────────────
+  /** Optional key temp-var name (e.g. "_name"). */
+  keyVar?: string;
+  /** Value temp-var name (e.g. "_data" or "_item"). */
+  valueVar?: string;
+  /** Source expression — usually `$collection`. */
+  source?: string;
+  // ── while mode ──────────────────────────────────────────────────────────
+  /** Raw SC condition expression. */
+  whileCondition?: string;
+  // ── c-style mode ─────────────────────────────────────────────────────────
+  /** Init expression — e.g. `_i to 0`. Emitted as part of the for header. */
+  initExpr?: string;
+  /** Condition expression. */
+  cstyleCondition?: string;
+  /** Step expression — e.g. `_i++` or `_i += 1`. */
+  stepExpr?: string;
+  /** Body — recursively built. */
+  blocks: Block[];
+}
+
+/**
+ * Assigns a structured JS object literal to a variable.
+ * Exports as `<<set $name = { key1: value1, key2: { ... } }>>`.
+ * Counterpart to VariableSetBlock for `<<set $obj = {...}>>` patterns that
+ * can't be flattened into the usual primitive-valued set.
+ */
+export interface SetObjectBlock {
+  id: string;
+  type: 'set-object';
+  delay?: BlockDelay;
+  variableId: string;
+  entries: SetObjectEntry[];
 }
 
 export interface VariableSetBlock {
@@ -651,6 +729,8 @@ export type Block =
   | ChoiceBlock
   | ConditionBlock
   | VariableSetBlock
+  | SetObjectBlock
+  | ForBlock
   | ImageBlock
   | ImageGenBlock
   | VideoBlock
@@ -1043,6 +1123,14 @@ export interface Variable {
   varType: VariableType;
   defaultValue: string;
   description: string;
+  /**
+   * When true, `defaultValue` holds a raw SC expression (e.g. `random(3,10)`,
+   * `either("a","b")`, `"hello " + $name`) and is emitted verbatim by the
+   * exporter instead of being wrapped in quotes. Used by the importer when
+   * StoryInit contains `<<set>>` calls whose RHS we can't safeEval but want
+   * to preserve as-is.
+   */
+  isExpression?: boolean;
 }
 
 export interface VariableGroup {

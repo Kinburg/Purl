@@ -190,6 +190,8 @@ const en: Translations = {
     choice:           'Choice',
     condition:        'Condition',
     variableSet:      'Variable',
+    setObject:        'Set object',
+    forLoop:          'For loop',
     button:           'Button',
     link:             'Navigation',
     inputField:       'Input field',
@@ -240,6 +242,8 @@ const en: Translations = {
     choice:      { label: 'Choice',     desc: 'Options / links' },
     condition:   { label: 'Condition',  desc: 'if/elseif/else' },
     variableSet: { label: 'Variable',   desc: 'Set a variable' },
+    setObject:   { label: 'Set object', desc: 'Assign a structured object to a variable' },
+    forLoop:     { label: 'For loop',   desc: 'Iterate over a collection, while, or C-style' },
     button:      { label: 'Button',     desc: 'Action without link' },
     link:        { label: 'Navigation', desc: 'Go to scene / go back' },
     inputField:  { label: 'Input',      desc: 'Player enters a value' },
@@ -329,6 +333,9 @@ const en: Translations = {
     rangeToggle:         'Range mode (a ≤ x ≤ b)',
     rangeMinPlaceholder: 'min',
     rangeMaxPlaceholder: 'max',
+    rawExpressionPlaceholder: '$day + 1 > 23  or  $a and $b',
+    toRaw:                'Switch to raw SugarCube expression',
+    toStructured:         'Back to structured (var / op / value)',
     opContains:          'contains',
     opNotContains:       '!contains',
     opEmpty:             'is empty',
@@ -430,10 +437,8 @@ const en: Translations = {
     customCss:            (bytes) => `Custom CSS preserved (${bytes})`,
     customScript:         (bytes) => `Custom JS preserved (${bytes})`,
     warningsTitle:        'Warnings',
-    warningsHidden:       (n) => `…and ${n} more`,
     cancel:               'Cancel',
     openProject:          'Open',
-    phase1Note:           'Phase 2 (in progress): scene content is being unpacked into typed blocks where possible. Anything not yet recognized stays as a Raw Code block — fully editable, still exports correctly.',
   },
 
   assets: {
@@ -1014,6 +1019,19 @@ const en: Translations = {
     recognizeTitle:    'Re-run the importer recognizer on this code and replace this block with the typed result',
     recognizeNothing:  'Nothing recognized — keeping the raw block.',
     recognizeSuccess:  (n) => `Recognized — produced ${n} block${n === 1 ? '' : 's'}.`,
+  },
+
+  setObject: {
+    varPlaceholder:   'Pick a variable…',
+    keyPlaceholder:   'key',
+    valuePlaceholder: 'value',
+    addEntry:         '+ Entry',
+    removeEntry:      'Remove entry',
+    pickVariableHint: 'Pick (or create) a variable to assign this object to.',
+  },
+
+  forBlock: {
+    bodyLabel: 'Loop body',
   },
 
   dividerBlock: {

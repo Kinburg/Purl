@@ -190,6 +190,8 @@ const ua: Translations = {
     choice:           'Вибір',
     condition:        'Умова',
     variableSet:      'Змінна',
+    setObject:        "Задати об'єкт",
+    forLoop:          'Цикл',
     button:           'Кнопка',
     link:             'Навігація',
     inputField:       'Поле вводу',
@@ -240,6 +242,8 @@ const ua: Translations = {
     choice:      { label: 'Вибір',       desc: 'Варіанти / посилання' },
     condition:   { label: 'Умова',       desc: 'if/elseif/else' },
     variableSet: { label: 'Змінна',      desc: 'Задати значення змінної' },
+    setObject:   { label: "Задати об'єкт", desc: "Структурне присвоєння об'єкта змінній" },
+    forLoop:     { label: 'Цикл',        desc: 'Перебір колекції, while або C-style' },
     button:      { label: 'Кнопка',      desc: 'Дія без посилання' },
     link:        { label: 'Навігація',   desc: 'Перейти до сцени / назад' },
     inputField:  { label: 'Поле вводу',  desc: 'Гравець вводить значення' },
@@ -329,6 +333,9 @@ const ua: Translations = {
     rangeToggle:         'Діапазон (a ≤ x ≤ b)',
     rangeMinPlaceholder: 'мін',
     rangeMaxPlaceholder: 'макс',
+    rawExpressionPlaceholder: '$day + 1 > 23  чи  $a and $b',
+    toRaw:                'Перейти до сирого SugarCube-виразу',
+    toStructured:         'Повернутися до структурованого режиму',
     opContains:          'містить',
     opNotContains:       'не містить',
     opEmpty:             'порожній',
@@ -430,10 +437,8 @@ const ua: Translations = {
     customCss:            (bytes) => `Користувацький CSS збережено (${bytes})`,
     customScript:         (bytes) => `Користувацький JS збережено (${bytes})`,
     warningsTitle:        'Попередження',
-    warningsHidden:       (n) => `…і ще ${n}`,
     cancel:               'Скасувати',
     openProject:          'Відкрити',
-    phase1Note:           'Фаза 2 (в процесі): вміст сцен розпаковується в типізовані блоки, де можливо. Все нерозпізнане залишається блоком "Сирий код" — його можна редагувати, експорт працює.',
   },
 
   assets: {
@@ -1014,6 +1019,19 @@ const ua: Translations = {
     recognizeTitle:    'Запустити імпортний парсер на цьому коді і замінити блок на типізований результат',
     recognizeNothing:  'Нічого не вдалося розпізнати — залишаємо як є.',
     recognizeSuccess:  (n) => `Розпізнано — отримано ${n} ${n === 1 ? 'блок' : (n < 5 ? 'блоки' : 'блоків')}.`,
+  },
+
+  setObject: {
+    varPlaceholder:   'Оберіть змінну…',
+    keyPlaceholder:   'ключ',
+    valuePlaceholder: 'значення',
+    addEntry:         '+ Поле',
+    removeEntry:      'Видалити поле',
+    pickVariableHint: "Оберіть (або створіть) змінну, якій присвоюється цей об'єкт.",
+  },
+
+  forBlock: {
+    bodyLabel: 'Тіло циклу',
   },
 
   dividerBlock: {

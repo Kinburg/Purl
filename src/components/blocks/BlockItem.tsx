@@ -12,6 +12,8 @@ import { DialogueBlockEditor } from './DialogueBlockEditor';
 import { ChoiceBlockEditor } from './ChoiceBlockEditor';
 import { ConditionBlockEditor } from './ConditionBlockEditor';
 import { VariableSetBlockEditor } from './VariableSetBlockEditor';
+import { SetObjectBlockEditor } from './SetObjectBlockEditor';
+import { ForBlockEditor } from './ForBlockEditor';
 import { ImageBlockEditor } from './ImageBlockEditor';
 import { ImageGenBlockEditor } from './ImageGenBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
@@ -41,6 +43,8 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'choice':            'bg-emerald-900/40',
   'condition':         'bg-amber-900/40',
   'variable-set':      'bg-purple-900/40',
+  'set-object':        'bg-purple-900/40',
+  'for':               'bg-amber-900/40',
   'button':            'bg-blue-900/40',
   'link':              'bg-emerald-900/40',
   'input-field':       'bg-teal-900/40',
@@ -181,6 +185,8 @@ export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdat
         {block.type === 'choice'            && <ChoiceBlockEditor           block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'condition'         && <ConditionBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'variable-set'      && <VariableSetBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
+        {block.type === 'set-object'        && <SetObjectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
+        {block.type === 'for'               && <ForBlockEditor              block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'image'             && <ImageBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'image-gen'         && <ImageGenBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'video'             && <VideoBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}

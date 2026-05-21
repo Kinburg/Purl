@@ -52,6 +52,27 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="23.5" y="15" width="4" height="1.5" rx=".75" fill="currentColor" opacity=".6"/>
   </>, p),
 
+  'set-object': (p) => svg(<>
+    {/* Curly-brace container with key/value rows inside */}
+    <path d="M9 4 Q5 4 5 8 V13 Q5 16 2 16 Q5 16 5 19 V24 Q5 28 9 28" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
+    <path d="M23 4 Q27 4 27 8 V13 Q27 16 30 16 Q27 16 27 19 V24 Q27 28 23 28" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
+    <rect x="9.5" y="9"  width="4" height="2" rx="1" fill="currentColor"/>
+    <rect x="15" y="9"  width="7" height="2" rx="1" fill="currentColor" opacity=".55"/>
+    <rect x="9.5" y="14" width="4" height="2" rx="1" fill="currentColor"/>
+    <rect x="15" y="14" width="6" height="2" rx="1" fill="currentColor" opacity=".55"/>
+    <rect x="9.5" y="19" width="4" height="2" rx="1" fill="currentColor"/>
+    <rect x="15" y="19" width="8" height="2" rx="1" fill="currentColor" opacity=".55"/>
+  </>, p),
+
+  'for': (p) => svg(<>
+    {/* Circular arrow (loop) + 3 dots representing the iteration */}
+    <path d="M25 9 A11 11 0 1 0 27 19" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    <path d="M22 5 L25 9 L21 11" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="11" cy="16" r="1.6" fill="currentColor"/>
+    <circle cx="16" cy="16" r="1.6" fill="currentColor" opacity=".7"/>
+    <circle cx="21" cy="16" r="1.6" fill="currentColor" opacity=".4"/>
+  </>, p),
+
   image: (p) => svg(<>
     <rect x="2" y="5" width="28" height="22" rx="3" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity=".08"/>
     <circle cx="10" cy="12" r="2.5" fill="currentColor" opacity=".55"/>
