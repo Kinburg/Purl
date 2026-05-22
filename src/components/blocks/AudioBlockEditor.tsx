@@ -2,6 +2,7 @@ import { useProjectStore, flattenAssets } from '../../store/projectStore';
 import type { AudioBlock } from '../../types';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { useT } from '../../i18n';
+import NumericInput from '../shared/NumericInput';
 
 export function AudioBlockEditor({
   block,
@@ -77,13 +78,13 @@ export function AudioBlockEditor({
           ))}
           {block.trigger === 'delay' && (
             <div className="flex items-center gap-1">
-              <input
-                type="number"
+              <NumericInput
                 className="w-16 bg-slate-800 text-sm text-white rounded px-2 py-0.5 outline-none border border-slate-600 focus:border-indigo-500"
                 min={0}
                 step={0.5}
+                float
                 value={block.triggerDelay ?? 0}
-                onChange={e => update({ triggerDelay: parseFloat(e.target.value) || 0 })}
+                onChange={v => update({ triggerDelay: v })}
               />
               <span className="text-xs text-slate-500">{t.audioBlock.seconds}</span>
             </div>

@@ -8,6 +8,7 @@ import type {
 } from '../../types';
 import { useT } from '../../i18n';
 import { ModalShell, INPUT_CLS } from '../shared/ModalShell';
+import NumericInput from '../shared/NumericInput';
 import { EmojiIcon, type EmojiIconName } from '../shared/EmojiIcons';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -560,21 +561,21 @@ function StockRow({
         >
           ∞
         </button>
-        <input
-          type="number" min={1} disabled={isInfinite}
+        <NumericInput
+          min={1} disabled={isInfinite}
           className="w-full bg-slate-700 text-xs text-white rounded px-1 py-1 outline-none border border-slate-600 focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
-          value={isInfinite ? '' : slot.quantity}
+          value={isInfinite ? 0 : slot.quantity}
           placeholder={isInfinite ? '∞' : ''}
-          onChange={e => onChange({ quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+          onChange={v => onChange({ quantity: v })}
         />
       </div>
 
       {showPrice && (
-        <input
-          type="number" min={0}
+        <NumericInput
+          min={0}
           className="w-full bg-slate-700 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500"
           value={slot.price ?? 0}
-          onChange={e => onChange({ price: Math.max(0, parseInt(e.target.value) || 0) })}
+          onChange={v => onChange({ price: v })}
         />
       )}
 

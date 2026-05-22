@@ -4,6 +4,7 @@ import type { DividerBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { useVariableNodes } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import NumericInput from '../shared/NumericInput';
 import {
   DIVIDER_FIELD_SCHEMA,
   DIVIDER_RAW_CSS_HELP,
@@ -60,26 +61,24 @@ export function DividerBlockEditor({
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-500">{t.dividerBlock.thicknessLabel}</span>
-          <input
-            type="number"
+          <NumericInput
             min={1}
             step={1}
             value={thickness}
             onFocus={saveSnapshot}
-            onChange={e => update({ thickness: Math.max(1, parseInt(e.target.value) || 1) })}
+            onChange={v => update({ thickness: v })}
             className="w-14 bg-slate-800 text-slate-200 text-xs rounded px-2 py-0.5 border border-slate-600 outline-none focus:border-indigo-500"
           />
           <span className="text-xs text-slate-500">{t.dividerBlock.thicknessSuffix}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-500">{t.dividerBlock.marginLabel}</span>
-          <input
-            type="number"
+          <NumericInput
             min={0}
             step={1}
             value={marginV}
             onFocus={saveSnapshot}
-            onChange={e => update({ marginV: Math.max(0, parseInt(e.target.value) || 0) })}
+            onChange={v => update({ marginV: v })}
             className="w-14 bg-slate-800 text-slate-200 text-xs rounded px-2 py-0.5 border border-slate-600 outline-none focus:border-indigo-500"
           />
           <span className="text-xs text-slate-500">{t.dividerBlock.marginSuffix}</span>

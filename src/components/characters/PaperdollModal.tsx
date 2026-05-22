@@ -8,6 +8,7 @@ import type {
   PaperdollConfig, PaperdollSlot, SlotPlaceholderConfig, AssetTreeNode,
 } from '../../types';
 import { useT } from '../../i18n';
+import NumericInput from '../shared/NumericInput';
 
 import { EmojiIcon } from '../shared/EmojiIcons';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -187,18 +188,18 @@ function SlotDetail({
           <label className="text-[10px] text-slate-500 w-12 shrink-0">Position</label>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-slate-500">{t.characters.paperdollRowLabel}</span>
-            <input
-              type="number" min={1}
+            <NumericInput
+              min={1}
               className="w-12 bg-slate-700 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500"
               value={slot.row}
-              onChange={e => onUpdate({ row: Math.max(1, parseInt(e.target.value) || 1) })}
+              onChange={v => onUpdate({ row: v })}
             />
             <span className="text-[10px] text-slate-500">{t.characters.paperdollColLabel}</span>
-            <input
-              type="number" min={1}
+            <NumericInput
+              min={1}
               className="w-12 bg-slate-700 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500"
               value={slot.col}
-              onChange={e => onUpdate({ col: Math.max(1, parseInt(e.target.value) || 1) })}
+              onChange={v => onUpdate({ col: v })}
             />
           </div>
         </div>
@@ -497,11 +498,11 @@ export function PaperdollModal({
               ] as const).map(({ key, label, def }) => (
                 <div key={key} className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-500 w-16">{label}</span>
-                  <input
-                    type="number" min={1}
+                  <NumericInput
+                    min={1}
                     className="w-14 bg-slate-700 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500"
                     value={config?.[key] ?? def}
-                    onChange={e => handleGridChange({ [key]: Math.max(1, parseInt(e.target.value) || 1) })}
+                    onChange={v => handleGridChange({ [key]: v })}
                   />
                 </div>
               ))}

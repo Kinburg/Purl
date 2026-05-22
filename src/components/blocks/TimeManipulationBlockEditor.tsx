@@ -3,6 +3,7 @@ import type { TimeManipulationBlock } from '../../types';
 import { useT } from '../../i18n';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
+import NumericInput from '../shared/NumericInput';
 
 export function TimeManipulationBlockEditor({
   block,
@@ -47,12 +48,11 @@ export function TimeManipulationBlockEditor({
         {fields.map(f => (
           <div key={f.id} className="flex flex-col gap-1">
             <label className="text-[10px] text-slate-500 uppercase text-center truncate" title={f.label}>{f.label}</label>
-            <input
-              type="number"
+            <NumericInput
               className="bg-slate-800 text-sm text-white rounded px-1 py-1 outline-none border border-slate-600 focus:border-indigo-500 text-center"
               value={block[f.id] || 0}
               onFocus={saveSnapshot}
-              onChange={e => patchField(f.id, e.target.value)}
+              onChange={v => update({ [f.id]: v })}
             />
           </div>
         ))}

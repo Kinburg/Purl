@@ -1,3 +1,4 @@
+import NumericInput from '../shared/NumericInput';
 import { useEditorPrefsStore, BUILTIN_PANEL_PRESETS } from '../../store/editorPrefsStore';
 import type { PanelLayoutPreset } from '../../store/editorPrefsStore';
 import { useT, useLocaleStore, getLocales } from '../../i18n';
@@ -745,18 +746,19 @@ function AiTab() {
 
           <div className="grid grid-cols-2 gap-3">
             <ModalField label={llm.maxTokensLabel}>
-              <input
-                type="number"
+              <NumericInput
+                min={1}
                 value={llmMaxTokens}
-                onChange={e => setPrefs({ llmMaxTokens: parseInt(e.target.value) || 100 })}
+                onChange={v => setPrefs({ llmMaxTokens: v })}
                 className={INPUT_CLS}
               />
             </ModalField>
             <ModalField label={llm.temperatureLabel}>
-              <input
-                type="number" step="0.1" min="0.1" max="2.0"
+              <NumericInput
+                step={0.1} min={0.1} max={2.0}
+                float
                 value={llmTemperature}
-                onChange={e => setPrefs({ llmTemperature: parseFloat(e.target.value) || 0.7 })}
+                onChange={v => setPrefs({ llmTemperature: v })}
                 className={INPUT_CLS}
               />
             </ModalField>

@@ -5,6 +5,7 @@ import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { usePluginParams, useVariableNodes } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import { CONTENT_BLOCK_FIELD_SCHEMA, CONTENT_BLOCK_RAW_CSS_HELP } from '../../utils/styleCascade';
+import NumericInput from '../shared/NumericInput';
 
 export function IncludeBlockEditor({
   block,
@@ -63,13 +64,12 @@ export function IncludeBlockEditor({
         {/* Max width */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-500">{t.includeBlock.maxWidthLabel}</span>
-          <input
-            type="number"
+          <NumericInput
             min={0}
             step={10}
             value={block.maxWidth ?? 0}
             onFocus={saveSnapshot}
-            onChange={e => update({ maxWidth: Math.max(0, parseInt(e.target.value) || 0) })}
+            onChange={v => update({ maxWidth: v })}
             className={`w-16 ${inputCls}`}
           />
           <span className="text-xs text-slate-500">{t.includeBlock.maxWidthSuffix}</span>
@@ -101,13 +101,12 @@ export function IncludeBlockEditor({
             </div>
             {/* Border width */}
             <div className="flex items-center gap-1">
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 step={1}
                 value={block.borderWidth ?? 1}
                 onFocus={saveSnapshot}
-                onChange={e => update({ borderWidth: Math.max(1, parseInt(e.target.value) || 1) })}
+                onChange={v => update({ borderWidth: v })}
                 className={`w-12 ${inputCls}`}
               />
               <span className="text-xs text-slate-500">{t.includeBlock.thicknessSuffix}</span>
@@ -115,13 +114,12 @@ export function IncludeBlockEditor({
             {/* Border radius */}
             <div className="flex items-center gap-1">
               <span className="text-xs text-slate-500">r:</span>
-              <input
-                type="number"
+              <NumericInput
                 min={0}
                 step={1}
                 value={block.borderRadius ?? 0}
                 onFocus={saveSnapshot}
-                onChange={e => update({ borderRadius: Math.max(0, parseInt(e.target.value) || 0) })}
+                onChange={v => update({ borderRadius: v })}
                 className={`w-12 ${inputCls}`}
               />
               <span className="text-xs text-slate-500">{t.includeBlock.radiusSuffix}</span>
@@ -132,13 +130,12 @@ export function IncludeBlockEditor({
         {/* Padding */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-500">{t.includeBlock.paddingLabel}</span>
-          <input
-            type="number"
+          <NumericInput
             min={0}
             step={2}
             value={block.padding ?? 0}
             onFocus={saveSnapshot}
-            onChange={e => update({ padding: Math.max(0, parseInt(e.target.value) || 0) })}
+            onChange={v => update({ padding: v })}
             className={`w-12 ${inputCls}`}
           />
           <span className="text-xs text-slate-500">{t.includeBlock.paddingSuffix}</span>

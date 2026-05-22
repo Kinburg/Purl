@@ -13,6 +13,7 @@ import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEdit
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { VariablePicker } from '../shared/VariablePicker';
 import { CellImageGenEditor } from '../shared/CellImageGenEditor';
+import NumericInput from '../shared/NumericInput';
 import { CellImageBoundGenModal } from '../shared/CellImageBoundGenModal';
 import { DateTimeCellEditor } from '../shared/DateTimeCellEditor';
 import { InventoryPopupShortcut } from './InventoryPopupShortcut';
@@ -354,11 +355,11 @@ function TCellWidthBar({
       <div className="flex items-center gap-1">
         {cells.map(cell => (
           <div key={cell.id} style={{ flex: cell.width, minWidth: 0 }} className="flex items-center gap-0.5 min-w-0">
-            <input
-              type="number" min={1} max={99}
+            <NumericInput
+              min={1} max={99}
               className="w-full text-xs bg-slate-800 text-white rounded px-1.5 py-0.5 outline-none border border-slate-700 focus:border-indigo-500 font-mono text-center"
               value={cell.width}
-              onChange={e => onWidthChange(cell.id, Math.max(1, Math.min(99, Number(e.target.value))))}
+              onChange={v => onWidthChange(cell.id, v)}
             />
             <span className="text-xs text-slate-600 shrink-0">%</span>
           </div>
@@ -635,9 +636,9 @@ function TCellEditModal({
           <>
             <TVarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} />
             <TMField label={t.cellModal.maximum}>
-              <input type="number" min={1}
+              <NumericInput min={1}
                 className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono"
-                value={c.maxValue} onChange={e => onUpdateContent({ ...c, maxValue: Number(e.target.value) })} />
+                value={c.maxValue} onChange={v => onUpdateContent({ ...c, maxValue: v })} />
             </TMField>
             {/* Colour range toggle */}
             <TMField label={t.cellModal.colorRange}>
@@ -888,11 +889,11 @@ function TNumInput({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <input
-        type="number" min={min} max={max}
+      <NumericInput
+        min={min} max={max}
         className={`${className} text-xs bg-slate-800 text-white rounded px-1.5 py-0.5 outline-none border border-slate-600 focus:border-indigo-500 font-mono`}
         value={value}
-        onChange={e => onChange(Math.min(max, Math.max(min, Number(e.target.value))))}
+        onChange={onChange}
       />
       {suffix && <span className="text-xs text-slate-500">{suffix}</span>}
     </div>
