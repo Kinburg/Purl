@@ -18,11 +18,6 @@ export function TimeManipulationBlockEditor({
   const { updateBlock, saveSnapshot } = useProjectStore();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<TimeManipulationBlock>) => updateBlock(sceneId, block.id, p as never));
-  
-/*  const patchField = (field: keyof TimeManipulationBlock, value: string) => {
-    const num = parseInt(value, 10);
-    update({ [field]: isNaN(num) ? 0 : num });
-  };*/
 
   const fields = [
     { id: 'years',   label: t.timeManipulationBlock.years },
