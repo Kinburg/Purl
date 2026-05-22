@@ -1,5 +1,42 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+
+/**
+ * Debounced localStorage adapter. `JSON.stringify(project)` + `setItem` runs
+ * once after `delay` ms of inactivity, instead of on every store mutation —
+ * typing into a TextBlock previously triggered a sync write of the entire
+ * project on each keystroke. Pending write is flushed on `beforeunload` to
+ * avoid losing the last edits if the user closes the window quickly.
+ */
+function makeDebouncedLocalStorage(delay = 500): StateStorage {
+  const pending: Map<string, string> = new Map();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    for (const [key, value] of pending) {
+      try { localStorage.setItem(key, value); } catch { /* quota / private mode */ }
+    }
+    pending.clear();
+    timer = null;
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flush);
+  }
+
+  return {
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => {
+      pending.set(key, value);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, delay);
+    },
+    removeItem: (key) => {
+      pending.delete(key);
+      localStorage.removeItem(key);
+    },
+  };
+}
 import type {
   Project, ProjectSettings, Scene, SceneGroup, Block, Character, CharacterVarIds,
   Variable, VariableGroup, VariableTreeNode,
@@ -2599,6 +2636,7 @@ export const useProjectStore = create<ProjectState>()(
     },
     {
       name: 'purl-project',
+      storage: createJSONStorage(() => makeDebouncedLocalStorage(500)),
       partialize: (state) => ({
         project: state.project,
         activeSceneId: state.activeSceneId,

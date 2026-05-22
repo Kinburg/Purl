@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
+import { useDraftValue } from '../../utils/useDraftValue';
 import { useT } from '../../i18n';
 import type { TextBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
@@ -23,18 +24,27 @@ export function TextBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<TextBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  // Selector-based subscriptions — don't re-render this editor when an
+  // UNRELATED part of the project changes (e.g. typing in another block).
+  const updateBlock   = useProjectStore(s => s.updateBlock);
+  const saveSnapshot  = useProjectStore(s => s.saveSnapshot);
+  const assetNodes    = useProjectStore(s => s.project.assetNodes);
+  const settings      = useProjectStore(s => s.project.settings);
+  const projectScenes = useProjectStore(s => s.project.scenes);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<TextBlock>) => updateBlock(sceneId, block.id, p as never));
+  // Debounced draft of the textarea content — store commit on blur or after
+  // 300 ms of idle; eliminates per-keystroke project re-renders.
+  const contentDraft = useDraftValue(block.content, v => update({ content: v }));
   const vars = flattenVariables(variableNodes);
-  const imgAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'image');
+  const imgAssets = flattenAssets(assetNodes).filter(a => a.assetType === 'image');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const cascadeClasses = ['tg-text', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const cascadeClasses = ['tg-text', ...simpleBlockCascadeClasses(block, settings)].join(' ');
   // Show preview only when a style override / default actually affects this block —
   // otherwise the textarea above already shows the literal content.
   const hasOverride =
-    !!project.settings.defaultBlockStyles?.text?.enabled ||
+    !!settings.defaultBlockStyles?.text?.enabled ||
     !!block.customStyle?.enabled;
 
   return (
@@ -55,16 +65,17 @@ export function TextBlockEditor({
             vars={vars}
             imageAssets={imgAssets}
             variableNodes={variableNodes}
-            scenes={project.scenes}
+            scenes={projectScenes}
           />
         </div>
         <textarea
           ref={textareaRef}
           className="w-full bg-slate-800 text-slate-200 text-sm rounded px-2 py-1.5 pr-20 outline-none border border-slate-600 focus:border-indigo-500 min-h-[80px]"
           placeholder={t.textBlock.placeholder}
-          value={block.content}
-          onFocus={saveSnapshot}
-          onChange={e => update({ content: e.target.value })}
+          value={contentDraft.value}
+          onFocus={() => { saveSnapshot(); contentDraft.onFocus(); }}
+          onBlur={contentDraft.onBlur}
+          onChange={e => contentDraft.set(e.target.value)}
         />
       </div>
       <label className="flex items-center gap-2 cursor-pointer select-none mt-0.5">

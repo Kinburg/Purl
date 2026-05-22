@@ -358,7 +358,7 @@ interface SceneGraphViewProps {
   onNodeNavigate: (nodeId: string) => void;
 }
 
-export function SceneGraphView({ graphData, onNodeDragStop, onNodeNavigate }: SceneGraphViewProps) {
+function SceneGraphViewImpl({ graphData, onNodeDragStop, onNodeNavigate }: SceneGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const isDragging = useRef(false);
@@ -456,3 +456,11 @@ export function SceneGraphView({ graphData, onNodeDragStop, onNodeNavigate }: Sc
     </ActiveCtx.Provider>
   );
 }
+
+/**
+ * Memoized so the heavy ReactFlow tree skips re-render when parent re-renders
+ * with the SAME graphData ref. The debounce in SceneGraphPanel keeps graphData
+ * stable between rebuilds, so typing in a TextBlock no longer re-runs the
+ * graph view on every keystroke.
+ */
+export const SceneGraphView = memo(SceneGraphViewImpl);

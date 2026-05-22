@@ -256,16 +256,22 @@ export function ChoiceBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<ChoiceBlock>) => void;
 }) {
-  const { project, addChoiceOption, updateChoiceOption, deleteChoiceOption, saveSnapshot, updateBlock } = useProjectStore();
+  const addChoiceOption    = useProjectStore(s => s.addChoiceOption);
+  const updateChoiceOption = useProjectStore(s => s.updateChoiceOption);
+  const deleteChoiceOption = useProjectStore(s => s.deleteChoiceOption);
+  const saveSnapshot       = useProjectStore(s => s.saveSnapshot);
+  const updateBlock        = useProjectStore(s => s.updateBlock);
+  const projectScenes      = useProjectStore(s => s.project.scenes);
+  const projectSettings    = useProjectStore(s => s.project.settings);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
-  const scenes = project.scenes.filter(s => !s.tags.some(tag => (SYSTEM_TAGS as readonly string[]).includes(tag)));
+  const scenes = projectScenes.filter(s => !s.tags.some(tag => (SYSTEM_TAGS as readonly string[]).includes(tag)));
   const t = useT();
   const vars = flattenVariables(variableNodes);
-  const cascadeClasses = ['tg-choice', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const cascadeClasses = ['tg-choice', ...simpleBlockCascadeClasses(block, projectSettings)].join(' ');
   const hasOverride =
-    !!project.settings.defaultBlockStyles?.choice?.enabled ||
+    !!projectSettings.defaultBlockStyles?.choice?.enabled ||
     !!block.customStyle?.enabled;
   const previewOptions = block.options.length > 0
     ? block.options.slice(0, 3)

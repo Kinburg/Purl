@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore } from '../../store/projectStore';
@@ -91,9 +92,13 @@ interface Props {
   onDuplicate?: () => void;
 }
 
-export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
-  const { deleteBlock, duplicateBlock } = useProjectStore();
-  const { copyToClipboard } = useEditorStore();
+function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
+  // Selector pattern — Zustand caches stable action refs, so this hook does
+  // NOT re-render BlockItem on every project change (the old `useProjectStore()`
+  // without selector was subscribing to the entire store).
+  const deleteBlock     = useProjectStore(s => s.deleteBlock);
+  const duplicateBlock  = useProjectStore(s => s.duplicateBlock);
+  const copyToClipboard = useEditorStore(s => s.copyToClipboard);
   const confirmDeleteBlock = useEditorPrefsStore(s => s.confirmDeleteBlock);
   const { ask, modal: confirmModal } = useConfirm();
   const t = useT();
@@ -214,3 +219,10 @@ export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdat
     </>
   );
 }
+
+/**
+ * React.memo prevents re-render when the block prop and callbacks are stable.
+ * Zustand's immutable updates preserve refs of unchanged blocks, so typing
+ * into block A doesn't re-create block B's props → BlockItem B doesn't re-render.
+ */
+export const BlockItem = memo(BlockItemImpl);

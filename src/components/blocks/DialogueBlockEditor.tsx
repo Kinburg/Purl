@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore } from '../../store/projectStore';
+import { useDraftValue } from '../../utils/useDraftValue';
 import { useT } from '../../i18n';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import type {
@@ -220,13 +221,19 @@ export function DialogueBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<DialogueBlock>) => void;
 }) {
-  const { project, projectDir, updateBlock, saveSnapshot } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const projectDir   = useProjectStore(s => s.projectDir);
+  const characters   = useProjectStore(s => s.project.characters);
+  const assetNodes   = useProjectStore(s => s.project.assetNodes);
+  const projectScenes = useProjectStore(s => s.project.scenes);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<DialogueBlock>) => updateBlock(sceneId, block.id, p as never));
-  const { characters } = project;
+  // Debounced draft for the dialogue text — same pattern as TextBlock.
+  const textDraft = useDraftValue(block.text, v => update({ text: v }));
   const vars = flattenVariables(variableNodes);
-  const imgAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'image');
+  const imgAssets = flattenAssets(assetNodes).filter(a => a.assetType === 'image');
   const dialogueRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedChar = characters.find(c => c.id === block.characterId);
@@ -387,16 +394,17 @@ export function DialogueBlockEditor({
               vars={vars}
               imageAssets={imgAssets}
               variableNodes={variableNodes}
-              scenes={project.scenes}
+              scenes={projectScenes}
             />
           </div>
           <textarea
             ref={dialogueRef}
             className={`char-text w-full bg-transparent rounded outline-none min-h-[60px] placeholder-slate-500 ${isRight ? 'pl-20' : 'pr-20'}`}
             placeholder={t.dialogueBlock.linePlaceholder}
-            value={block.text}
-            onFocus={saveSnapshot}
-            onChange={e => update({ text: e.target.value })}
+            value={textDraft.value}
+            onFocus={() => { saveSnapshot(); textDraft.onFocus(); }}
+            onBlur={textDraft.onBlur}
+            onChange={e => textDraft.set(e.target.value)}
           />
         </div>
       </div>

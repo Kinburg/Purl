@@ -237,19 +237,19 @@ export function ConditionBlockEditor({
    *  state container. */
   onUpdate?: (patch: Partial<ConditionBlock>) => void;
 }) {
-  const {
-    addConditionBranch,
-    updateConditionBranch,
-    deleteConditionBranch,
-    addNestedBlock,
-    updateNestedBlock,
-    deleteNestedBlock,
-    duplicateNestedBlock,
-    pasteToNested,
-    reorderNestedBlocks,
-    saveSnapshot,
-  } = useProjectStore();
-  const { clipboardBlock, copyToClipboard } = useEditorStore();
+  // Selector pattern — stable action refs, no full-store subscription.
+  const addConditionBranch    = useProjectStore(s => s.addConditionBranch);
+  const updateConditionBranch = useProjectStore(s => s.updateConditionBranch);
+  const deleteConditionBranch = useProjectStore(s => s.deleteConditionBranch);
+  const addNestedBlock        = useProjectStore(s => s.addNestedBlock);
+  const updateNestedBlock     = useProjectStore(s => s.updateNestedBlock);
+  const deleteNestedBlock     = useProjectStore(s => s.deleteNestedBlock);
+  const duplicateNestedBlock  = useProjectStore(s => s.duplicateNestedBlock);
+  const pasteToNested         = useProjectStore(s => s.pasteToNested);
+  const reorderNestedBlocks   = useProjectStore(s => s.reorderNestedBlocks);
+  const saveSnapshot          = useProjectStore(s => s.saveSnapshot);
+  const clipboardBlock        = useEditorStore(s => s.clipboardBlock);
+  const copyToClipboard       = useEditorStore(s => s.copyToClipboard);
   const t = useT();
   const variableNodes = useVariableNodes();
   const variables = flattenVariables(variableNodes);
