@@ -2,6 +2,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useT } from '../../i18n';
 import type { BlockDelay, BlockTypewriter } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
+import NumericInput from '../shared/NumericInput';
 
 interface Props {
   delay?: BlockDelay;
@@ -39,13 +40,13 @@ export function BlockEffectsPanel({ delay, typewriter, onDelayChange, onTypewrit
         <div className="flex flex-col gap-1 pl-4">
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-slate-500">{t.blockEffects.delaySeconds}</span>
-            <input
-              type="number"
+            <NumericInput
               min={0.1}
               step={0.1}
+              float
               value={delay!.delay}
               onFocus={saveSnapshot}
-              onChange={e => onDelayChange({ ...delay!, delay: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
+              onChange={v => onDelayChange({ ...delay!, delay: v })}
               className={INPUT_CLS}
             />
             <span className="text-xs text-slate-500">{t.blockEffects.delaySuffix}</span>
@@ -84,13 +85,13 @@ export function BlockEffectsPanel({ delay, typewriter, onDelayChange, onTypewrit
               {/* Duration */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-slate-500">{t.blockEffects.animDuration}</span>
-                <input
-                  type="number"
+                <NumericInput
                   min={0.1}
                   step={0.1}
+                  float
                   value={delay!.animDuration ?? 0.4}
                   onFocus={saveSnapshot}
-                  onChange={e => onDelayChange({ ...delay!, animDuration: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
+                  onChange={v => onDelayChange({ ...delay!, animDuration: v })}
                   className={INPUT_CLS}
                 />
                 <span className="text-xs text-slate-500">{t.blockEffects.animDurationSuffix}</span>
@@ -98,21 +99,19 @@ export function BlockEffectsPanel({ delay, typewriter, onDelayChange, onTypewrit
               {/* X / Y offsets */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500">{t.blockEffects.animOffsetX}</span>
-                <input
-                  type="number"
+                <NumericInput
                   step={1}
                   value={delay!.animOffsetX ?? 0}
                   onFocus={saveSnapshot}
-                  onChange={e => onDelayChange({ ...delay!, animOffsetX: parseInt(e.target.value) || 0 })}
+                  onChange={v => onDelayChange({ ...delay!, animOffsetX: v })}
                   className={INPUT_CLS}
                 />
                 <span className="text-xs text-slate-500">{t.blockEffects.animOffsetY}</span>
-                <input
-                  type="number"
+                <NumericInput
                   step={1}
                   value={delay!.animOffsetY ?? 0}
                   onFocus={saveSnapshot}
-                  onChange={e => onDelayChange({ ...delay!, animOffsetY: parseInt(e.target.value) || 0 })}
+                  onChange={v => onDelayChange({ ...delay!, animOffsetY: v })}
                   className={INPUT_CLS}
                 />
                 <span className="text-xs text-slate-500">{t.blockEffects.animOffsetSuffix}</span>
@@ -139,13 +138,12 @@ export function BlockEffectsPanel({ delay, typewriter, onDelayChange, onTypewrit
           {hasTw && (
             <div className="flex items-center gap-1.5 pl-4">
               <span className="text-xs text-slate-500">{t.blockEffects.typewriterSpeed}</span>
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 step={1}
                 value={typewriter!.speed}
                 onFocus={saveSnapshot}
-                onChange={e => onTypewriterChange({ speed: Math.max(1, parseInt(e.target.value) || 1) })}
+                onChange={v => onTypewriterChange({ speed: v })}
                 className={INPUT_CLS}
               />
               <span className="text-xs text-slate-500">{t.blockEffects.typewriterSpeedSuffix}</span>

@@ -27,6 +27,7 @@ import { generateImageWithProvider, type ComfyProgress } from '../../utils/image
 import { loadComfyWorkflow, loadExampleWorkflows, collectWorkflowFiles, EXAMPLES_PREFIX } from '../../utils/imageGen/workflowLoader';
 import { generateAvatarPromptWithLlm } from '../../utils/imageGen/llmPrompt';
 import { getVariablePath, flattenVariables } from '../../utils/treeUtils';
+import NumericInput from './NumericInput';
 import { StyleChipsEditor } from './StyleChipsEditor';
 import { ImageAssetPicker } from './ImageMappingEditor';
 
@@ -672,15 +673,15 @@ export function CellImageBoundGenPanel({
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-400 w-24 shrink-0">{ag.genSizeLabel}</label>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <input type="number" min={0}
+                <NumericInput min={0}
                   className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-                  placeholder={ag.genWidthPlaceholder} value={genWidth || ''}
-                  onChange={e => setGenWidth(parseInt(e.target.value, 10) || 0)} />
+                  placeholder={ag.genWidthPlaceholder} value={genWidth}
+                  onChange={setGenWidth} />
                 <span className="text-xs text-slate-500">×</span>
-                <input type="number" min={0}
+                <NumericInput min={0}
                   className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-                  placeholder={ag.genHeightPlaceholder} value={genHeight || ''}
-                  onChange={e => setGenHeight(parseInt(e.target.value, 10) || 0)} />
+                  placeholder={ag.genHeightPlaceholder} value={genHeight}
+                  onChange={setGenHeight} />
                 <div className="flex gap-0.5">
                   {ASPECT_RATIOS.map(({ label, w, h }) => (
                     <button key={label} type="button"
@@ -702,9 +703,9 @@ export function CellImageBoundGenPanel({
               </label>
               {seedLocked && (
                 <>
-                  <input type="number" min={0} max={4294967295}
+                  <NumericInput min={0} max={4294967295}
                     className="w-32 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-                    value={lockedSeed} onChange={e => setLockedSeed(parseInt(e.target.value, 10) || 0)} />
+                    value={lockedSeed} onChange={setLockedSeed} />
                   <button type="button"
                     className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer"
                     onClick={() => setLockedSeed(randomSeed())}

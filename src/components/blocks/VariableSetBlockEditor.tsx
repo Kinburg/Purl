@@ -7,6 +7,7 @@ import { ArrayAccessorInput } from './ArrayAccessorInput';
 import { VariablePicker } from '../shared/VariablePicker';
 import { VarInsertButton } from '../shared/VarInsertButton';
 import { useVariableNodes } from '../shared/VariableScope';
+import NumericInput from '../shared/NumericInput';
 
 /** Default RandomConfig strictly matching the variable type */
 function defaultRandomConfig(varType: string): RandomConfig {
@@ -475,36 +476,33 @@ export function VariableSetBlockEditor({
           {cfg.kind === 'number' && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-400 w-20 shrink-0">{t.variableSetBlock.randomRange}</label>
-              <input
-                type="number"
+              <NumericInput
                 className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 font-mono"
                 placeholder={t.variableSetBlock.fromLabel}
                 value={cfg.min}
                 onFocus={saveSnapshot}
-                onChange={e => updateCfg({ min: Number(e.target.value) })}
+                onChange={v => updateCfg({ min: v })}
               />
               <span className="text-xs text-slate-500">—</span>
-              <input
-                type="number"
+              <NumericInput
                 className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 font-mono"
                 placeholder={t.variableSetBlock.toLabel}
                 value={cfg.max}
                 onFocus={saveSnapshot}
-                onChange={e => updateCfg({ max: Number(e.target.value) })}
+                onChange={v => updateCfg({ max: v })}
               />
             </div>
           )}
           {cfg.kind === 'string' && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-400 w-20 shrink-0">{t.variableSetBlock.randomLength}</label>
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 max={256}
                 className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 font-mono"
                 value={cfg.length}
                 onFocus={saveSnapshot}
-                onChange={e => updateCfg({ length: Math.max(1, Number(e.target.value)) })}
+                onChange={v => updateCfg({ length: v })}
               />
               <span className="text-xs text-slate-500">{t.variableSetBlock.randomLengthSuffix}</span>
             </div>

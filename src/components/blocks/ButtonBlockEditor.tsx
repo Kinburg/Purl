@@ -8,6 +8,7 @@ import { VarInsertButton } from '../shared/VarInsertButton';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
 import { InventoryPopupShortcut } from './InventoryPopupShortcut';
+import NumericInput from '../shared/NumericInput';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import {
   BUTTON_FIELD_SCHEMA,
@@ -70,12 +71,11 @@ function NumberInput({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <input
-        type="number"
+      <NumericInput
         value={value}
         min={min}
         max={max}
-        onChange={e => onChange(Number(e.target.value))}
+        onChange={onChange}
         className="w-16 bg-slate-800 text-xs text-white rounded px-2 py-1 border border-slate-600 focus:border-indigo-500 outline-none text-right"
       />
       {suffix && <span className="text-xs text-slate-500">{suffix}</span>}

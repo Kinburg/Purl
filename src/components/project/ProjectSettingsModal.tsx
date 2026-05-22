@@ -26,6 +26,7 @@ import {
 } from '../../utils/styleCascade';
 import type { StyleFieldDescriptor, StyleRawCssHelp } from '../../utils/styleCascade';
 import type { BlockType } from '../../types';
+import NumericInput from '../shared/NumericInput';
 
 /** AI-button label: sparkle SVG followed by the action text. */
 function AiLabel({ children }: { children: React.ReactNode }) {
@@ -873,20 +874,20 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 
                 <ModalRow label={ig.genSizeLabel}>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number" min={0}
+                    <NumericInput
+                      min={0}
                       className={INPUT_CLS + ' w-24'}
                       placeholder={ig.genWidthPlaceholder}
-                      value={imgWidth || ''}
-                      onChange={e => setImgWidth(parseInt(e.target.value, 10) || 0)}
+                      value={imgWidth}
+                      onChange={setImgWidth}
                     />
                     <span className="text-xs text-slate-500">×</span>
-                    <input
-                      type="number" min={0}
+                    <NumericInput
+                      min={0}
                       className={INPUT_CLS + ' w-24'}
                       placeholder={ig.genHeightPlaceholder}
-                      value={imgHeight || ''}
-                      onChange={e => setImgHeight(parseInt(e.target.value, 10) || 0)}
+                      value={imgHeight}
+                      onChange={setImgHeight}
                     />
                   </div>
                 </ModalRow>
@@ -904,12 +905,12 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 
                 {imgSeedMode === 'manual' && (
                   <ModalRow label={ig.seedLabel}>
-                    <input
-                      type="number" min={0} max={4294967295}
+                    <NumericInput
+                      min={0} max={4294967295}
                       className={INPUT_CLS + ' w-40'}
                       placeholder={ig.seedPlaceholder}
                       value={imgSeed}
-                      onChange={e => setImgSeed(parseInt(e.target.value, 10) || 0)}
+                      onChange={setImgSeed}
                     />
                   </ModalRow>
                 )}

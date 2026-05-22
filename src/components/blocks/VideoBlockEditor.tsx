@@ -6,6 +6,7 @@ import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { useVariableNodes } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import NumericInput from '../shared/NumericInput';
 import {
   MEDIA_BLOCK_FIELD_SCHEMA,
   MEDIA_BLOCK_RAW_CSS_HELP,
@@ -88,13 +89,12 @@ export function VideoBlockEditor({
       {/* Width */}
       <div className="flex items-center gap-2">
         <label className="text-xs text-slate-400 w-20 shrink-0">{t.videoBlock.widthLabel}</label>
-        <input
-          type="number"
+        <NumericInput
           className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
           placeholder={t.videoBlock.widthPlaceholder}
           min={0}
-          value={block.width || ''}
-          onChange={e => update({ width: parseInt(e.target.value) || 0 })}
+          value={block.width || 0}
+          onChange={v => update({ width: v })}
         />
       </div>
 

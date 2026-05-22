@@ -1,5 +1,6 @@
 import type { ArrayAccessor, ArrayIndexSource, Variable } from '../../types';
 import { useT } from '../../i18n';
+import NumericInput from '../shared/NumericInput';
 
 /**
  * Secondary control shown when the selected variable is of type 'array'.
@@ -89,16 +90,12 @@ export function ArrayAccessorInput({
           </div>
 
           {indexSource.kind === 'literal' && (
-            <input
-              type="number"
+            <NumericInput
               min={0}
               className="w-16 bg-slate-800 text-xs text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-violet-500 font-mono"
               placeholder={t.arrayAccessor.indexPlaceholder}
               value={indexSource.index}
-              onChange={e => {
-                const n = parseInt(e.target.value, 10);
-                onChange({ kind: 'index', source: { kind: 'literal', index: isNaN(n) ? 0 : n } });
-              }}
+              onChange={v => onChange({ kind: 'index', source: { kind: 'literal', index: v } })}
             />
           )}
 

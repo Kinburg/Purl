@@ -13,6 +13,7 @@ import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEdit
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useConfirm } from '../shared/ConfirmModal';
+import NumericInput from '../shared/NumericInput';
 import { CellImageGenEditor } from '../shared/CellImageGenEditor';
 import { CellImageBoundGenModal } from '../shared/CellImageBoundGenModal';
 import { DateTimeCellEditor } from '../shared/DateTimeCellEditor';
@@ -380,12 +381,11 @@ function CellWidthBar({
       <div className="flex items-center gap-1">
         {row.cells.map(cell => (
           <div key={cell.id} style={{ flex: cell.width, minWidth: 0 }} className="flex items-center gap-0.5 min-w-0">
-            <input
-              type="number"
+            <NumericInput
               min={1} max={99}
               className="w-full text-[10px] bg-slate-800 text-slate-300 rounded px-1.5 py-0.5 outline-none border border-slate-700 focus:border-indigo-500 font-mono text-center"
               value={cell.width}
-              onChange={e => handleWidthChange(cell.id, Number(e.target.value))}
+              onChange={v => handleWidthChange(cell.id, v)}
             />
             <span className="text-xs text-slate-600 shrink-0">%</span>
           </div>
@@ -762,9 +762,9 @@ function CellEditModal({
           <>
             <VarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} filterType="number" />
             <MField label={t.cellModal.maximum}>
-              <input type="number" min={1}
+              <NumericInput min={1}
                 className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono"
-                value={c.maxValue} onChange={e => onUpdateContent({ ...c, maxValue: Number(e.target.value) })} />
+                value={c.maxValue} onChange={v => onUpdateContent({ ...c, maxValue: v })} />
             </MField>
             {/* Colour range toggle */}
             <MField label={t.cellModal.colorRange}>
@@ -1046,12 +1046,11 @@ function NumInput({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <input
-        type="number"
+      <NumericInput
         min={min} max={max}
         className={`${className} text-xs bg-slate-800 text-white rounded px-1.5 py-0.5 outline-none border border-slate-600 focus:border-indigo-500 font-mono`}
         value={value}
-        onChange={e => onChange(Math.min(max, Math.max(min, Number(e.target.value))))}
+        onChange={onChange}
       />
       {suffix && <span className="text-xs text-slate-500">{suffix}</span>}
     </div>
@@ -1192,8 +1191,8 @@ function CellButtonEditor({
           {/* radius */}
           <div className="flex items-center gap-1">
             <span className="text-xs text-slate-500">{t.buttonBlock.radiusLabel}</span>
-            <input type="number" min={0} max={50} value={c.style.borderRadius}
-              onChange={e => patchStyle({ borderRadius: Number(e.target.value) })}
+            <NumericInput min={0} max={50} value={c.style.borderRadius}
+              onChange={v => patchStyle({ borderRadius: v })}
               className="w-14 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none text-right" />
             <span className="text-xs text-slate-500">px</span>
           </div>

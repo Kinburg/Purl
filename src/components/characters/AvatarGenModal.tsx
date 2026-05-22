@@ -8,6 +8,7 @@ import { useT } from '../../i18n';
 import { generateImageWithProvider, type ComfyProgress } from '../../utils/imageGen/providers';
 import { loadComfyWorkflow, loadExampleWorkflows, collectWorkflowFiles, EXAMPLES_PREFIX } from '../../utils/imageGen/workflowLoader';
 import { generateAvatarPromptWithLlm } from '../../utils/imageGen/llmPrompt';
+import NumericInput from '../shared/NumericInput';
 import { StyleChipsEditor } from '../shared/StyleChipsEditor';
 import { ImageAssetPicker } from '../shared/ImageMappingEditor';
 
@@ -589,22 +590,20 @@ export function AvatarGenModal({ cfg, charVarName, charName, charLlmDescr, asset
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-400 w-24 shrink-0">{ag.genSizeLabel}</label>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <input
-                  type="number"
+                <NumericInput
                   min={0}
                   className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
                   placeholder={ag.genWidthPlaceholder}
-                  value={genWidth || ''}
-                  onChange={e => setGenWidth(parseInt(e.target.value, 10) || 0)}
+                  value={genWidth}
+                  onChange={setGenWidth}
                 />
                 <span className="text-xs text-slate-500">×</span>
-                <input
-                  type="number"
+                <NumericInput
                   min={0}
                   className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
                   placeholder={ag.genHeightPlaceholder}
-                  value={genHeight || ''}
-                  onChange={e => setGenHeight(parseInt(e.target.value, 10) || 0)}
+                  value={genHeight}
+                  onChange={setGenHeight}
                 />
                 <div className="flex gap-0.5">
                   {ASPECT_RATIOS.map(({ label, w, h }) => (
@@ -635,13 +634,12 @@ export function AvatarGenModal({ cfg, charVarName, charName, charLlmDescr, asset
               </label>
               {seedLocked && (
                 <>
-                  <input
-                    type="number"
+                  <NumericInput
                     min={0}
                     max={4294967295}
                     className="w-32 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
                     value={lockedSeed}
-                    onChange={e => setLockedSeed(parseInt(e.target.value, 10) || 0)}
+                    onChange={setLockedSeed}
                   />
                   <button
                     type="button"

@@ -13,6 +13,7 @@ import { StyleChipsEditor } from '../shared/StyleChipsEditor';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor } from '../shared/ImageMappingEditor';
+import NumericInput from '../shared/NumericInput';
 import { CellImageBoundGenPanel } from '../shared/CellImageBoundGenModal';
 import type { CellImageBound } from '../../types';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
@@ -447,22 +448,20 @@ export function ImageGenBlockEditor({
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-400 w-20 shrink-0">{ig.genSizeLabel}</label>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <input
-              type="number"
+            <NumericInput
               min={0}
               className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
               placeholder={ig.genWidthPlaceholder}
-              value={block.genWidth || ''}
-              onChange={e => update({ genWidth: parseInt(e.target.value, 10) || 0 })}
+              value={block.genWidth || 0}
+              onChange={v => update({ genWidth: v })}
             />
             <span className="text-xs text-slate-500">×</span>
-            <input
-              type="number"
+            <NumericInput
               min={0}
               className="w-20 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
               placeholder={ig.genHeightPlaceholder}
-              value={block.genHeight || ''}
-              onChange={e => update({ genHeight: parseInt(e.target.value, 10) || 0 })}
+              value={block.genHeight || 0}
+              onChange={v => update({ genHeight: v })}
             />
             <div className="flex gap-0.5">
               {ASPECT_RATIOS.map(({ label, w, h }) => (
@@ -493,13 +492,12 @@ export function ImageGenBlockEditor({
           </label>
           {seedMode === 'manual' && (
             <>
-              <input
-                type="number"
+              <NumericInput
                 min={0}
                 max={4294967295}
                 className="w-32 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-                value={block.seed ?? ''}
-                onChange={e => update({ seed: parseInt(e.target.value, 10) || 0 })}
+                value={block.seed ?? 0}
+                onChange={v => update({ seed: v })}
               />
               <button
                 type="button"
@@ -713,13 +711,12 @@ export function ImageGenBlockEditor({
 
       <div className="flex items-center gap-2">
         <label className="text-xs text-slate-400 w-20 shrink-0">{ig.widthLabel}</label>
-        <input
-          type="number"
+        <NumericInput
           min={0}
           className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
           placeholder={ig.widthPlaceholder}
-          value={block.width || ''}
-          onChange={e => update({ width: parseInt(e.target.value, 10) || 0 })}
+          value={block.width || 0}
+          onChange={v => update({ width: v })}
         />
       </div>
 

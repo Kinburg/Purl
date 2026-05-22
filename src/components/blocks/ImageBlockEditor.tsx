@@ -7,6 +7,7 @@ import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEditor';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import NumericInput from '../shared/NumericInput';
 import {
   MEDIA_BLOCK_FIELD_SCHEMA,
   MEDIA_BLOCK_RAW_CSS_HELP,
@@ -135,13 +136,12 @@ export function ImageBlockEditor({
 
       <div className="flex items-center gap-2">
         <label className="text-xs text-slate-400 w-20 shrink-0">{t.imageBlock.widthLabel}</label>
-        <input
-          type="number"
+        <NumericInput
           className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
           placeholder={t.imageBlock.widthPlaceholder}
           min={0}
-          value={block.width || ''}
-          onChange={e => update({ width: parseInt(e.target.value) || 0 })}
+          value={block.width || 0}
+          onChange={v => update({ width: v })}
         />
       </div>
       <details className="border border-slate-700/60 rounded bg-slate-900/30">
