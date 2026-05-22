@@ -34,7 +34,8 @@ export function constructGenerationPrompt(
     scene: Scene,
     blockId: string,
     currentValue: string,
-    mode: LLMMode
+    mode: LLMMode,
+    translationLanguage?: string
 ): StructuredPrompt {
     const context = buildSceneContext(scene, project.characters, blockId);
     const targetBlock = scene.blocks.find(b => b.id === blockId);
@@ -78,7 +79,10 @@ export function constructGenerationPrompt(
     // Continuation prefix (used by completion-style models like KoboldCPP)
     let continuationPrefix = "";
 
-    if (mode === 'rephrase') {
+    if (mode === 'translate') {
+        const lang = translationLanguage?.trim() || 'English';
+        userPrompt += `Translate the following text to ${lang}. Return ONLY the translated text, preserving the original formatting.\n\nText to translate:\n${currentValue.trim()}\n`;
+    } else if (mode === 'rephrase') {
         userPrompt += `Rephrase, improve, and enrich the following text — add vivid details where appropriate. `;
         if (targetBlock?.type === 'dialogue') {
             userPrompt += `Make sure the speech strictly matches the character's personality and style. `;

@@ -74,7 +74,7 @@ export const koboldcppProvider: LLMProviderImpl = {
         if (params.rawUserPrompt) {
             fullPrompt = `${systemPrompt.trim()}\n\n${params.rawUserPrompt}`;
         } else {
-            const structured = constructGenerationPrompt(systemPrompt, project, scene, blockId, currentValue, mode);
+            const structured = constructGenerationPrompt(systemPrompt, project, scene, blockId, currentValue, mode, params.translationLanguage);
             fullPrompt = `${structured.systemInstruction}\n\n${structured.userPrompt}`;
             if (mode === 'continue') {
                 fullPrompt += structured.continuationPrefix;

@@ -24,6 +24,8 @@ export function makeBlock(type: BlockType): Block {
     case 'choice':       return { id, type, options: [] };
     case 'condition':    return { id, type, branches: [] };
     case 'variable-set': return { id, type, variableId: '', operator: '=', value: '' };
+    case 'set-object':   return { id, type, variableId: '', entries: [] };
+    case 'for':          return { id, type, mode: 'range' as const, valueVar: '_item', source: '', blocks: [] };
     case 'image':        return { id, type, src: '', alt: '', width: 0 };
     case 'image-gen':    return {
       id, type,
@@ -89,7 +91,7 @@ const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
   { key: 'media',       types: ['image', 'image-gen', 'video', 'audio'] },
   { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table'] },
   { key: 'interaction', types: ['choice', 'button', 'link', 'input-field', 'checkbox', 'radio', 'popup'] },
-  { key: 'logic',       types: ['condition', 'variable-set', 'time-manipulation', 'function'] },
+  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function'] },
   { key: 'system',      types: ['raw', 'include', 'note'] },
 ];
 

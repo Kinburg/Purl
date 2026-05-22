@@ -1,17 +1,35 @@
 import type {
   Project, Block, Character, Variable, ConditionBranch, ChoiceOption,
   SidebarPanel, SidebarRow, SidebarCell, PanelStyle, TableBlock,
-  Scene, ButtonBlock, LinkBlock, FunctionBlock, ButtonStyle, CellProgress, CellButton, BlockDelay, BlockTypewriter, IncludeBlock,
+  Scene, ButtonStyle, CellProgress, CellButton, BlockDelay, BlockTypewriter, IncludeBlock,
   ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, CellList, CellDateTime, DateTimeDisplayMode,
   Watcher, WatcherCondition, AudioBlock, ContainerBlock, TimeManipulationBlock,
   VariableTreeNode, VariableGroup, ItemDefinition,
   PluginBlockDef, PluginBlock,
+  SceneBackground,
 } from '../types';
 import { START_TAG } from '../types';
 import { DEFAULT_PANEL_STYLE } from '../store/projectStore';
 import { flattenVariables, getVariablePath, hasLeafVariables } from './treeUtils';
 import { collectPluginIds, expandPluginDeps, pluginValueLiteral } from './pluginUtils';
 import { paramsToVirtualNodes, rewriteParamRefs } from './pluginParamScope';
+import {
+  buildAllDialogueCss,
+  buildStyleBindScript,
+  hasStyleBindings,
+  buildDialogueSpotStyleBlock,
+  dialogueElementClasses,
+  dialogueDataStyleBind,
+  buildButtonsCascadeCss,
+  buildButtonSpotStyleBlock,
+  buttonElementClasses,
+  buttonDataStyleBind,
+  buildSimpleBlocksCascadeCss,
+  buildSimpleBlockSpotStyleBlock,
+  simpleBlockCascadeClasses,
+  simpleBlockDataStyleBind,
+  buildPopupClassSyncScript,
+} from './styleCascade';
 
 // ─── Plugin registry (set by exportToTwee / buildPassages at start of export) ─
 // Keeps blockToSC* recursive calls simple — they look up defs through this module-scope map.
@@ -38,18 +56,51 @@ function buildJSRef(path: string): string {
 
 /** Convert a variable default value to a SugarCube literal string */
 export function defaultValueLiteral(v: Variable): string {
-  if (v.varType === 'string' || v.varType === 'datetime') return `"${v.defaultValue}"`;
+  // Expression mode: emit verbatim regardless of varType. The importer sets
+  // this for `<<set $x to random(3,10)>>`, `either(...)`, string concat, etc.
+  if (v.isExpression && v.defaultValue) return v.defaultValue;
+  if (v.varType === 'string' || v.varType === 'datetime') {
+    // JSON.stringify wraps in double quotes AND escapes embedded ", \, newlines, etc.
+    // Plain `"${...}"` would produce `"He said "hi""` for inputs that contain quotes
+    // and SugarCube would throw `<<set>>: bad evaluation: Unexpected identifier 'hi'`.
+    return JSON.stringify(v.defaultValue ?? '');
+  }
   if (v.varType === 'boolean') return v.defaultValue === 'true' ? 'true' : 'false';
   if (v.varType === 'array') return v.defaultValue || '[]';
   return v.defaultValue || '0';
+}
+
+/**
+ * Recursively build a JS object literal string from SetObjectBlock entries.
+ * Keys that aren't valid JS identifiers are quoted via JSON.stringify.
+ */
+export function buildSetObjectLiteral(entries: import('../types').SetObjectEntry[]): string {
+  if (entries.length === 0) return '{}';
+  const parts = entries.map(e => {
+    const keyStr = /^[A-Za-z_$][\w$]*$/.test(e.key) ? e.key : JSON.stringify(e.key);
+    let valueStr: string;
+    switch (e.valueType) {
+      case 'string':  valueStr = JSON.stringify(e.value ?? ''); break;
+      case 'number':  valueStr = (e.value && e.value.trim() !== '') ? e.value : '0'; break;
+      case 'boolean': valueStr = e.value === 'true' ? 'true' : 'false'; break;
+      case 'array':   valueStr = (e.value && e.value.trim() !== '') ? e.value : '[]'; break;
+      case 'object':  valueStr = buildSetObjectLiteral(e.entries ?? []); break;
+    }
+    return `${keyStr}: ${valueStr}`;
+  });
+  return `{ ${parts.join(', ')} }`;
 }
 
 /** Recursively build a JS object literal from a VariableGroup for StoryInit export */
 export function buildObjectLiteral(group: VariableGroup, allNodes: VariableTreeNode[]): string {
   const entries = group.children
     .map(n => {
-      if (n.kind === 'variable') return `${n.name}: ${defaultValueLiteral(n)}`;
-      if (n.kind === 'group' && hasLeafVariables(n)) return `${n.name}: ${buildObjectLiteral(n, allNodes)}`;
+      // Keys with spaces / special chars (e.g. "Tailored Suit") must be JSON-quoted —
+      // bare identifiers like `Tailored Suit:` parse as two separate identifiers and
+      // SugarCube throws `<<set>>: bad evaluation: Unexpected identifier 'Suit'`.
+      const key = /^[A-Za-z_$][\w$]*$/.test(n.name) ? n.name : JSON.stringify(n.name);
+      if (n.kind === 'variable') return `${key}: ${defaultValueLiteral(n)}`;
+      if (n.kind === 'group' && hasLeafVariables(n)) return `${key}: ${buildObjectLiteral(n, allNodes)}`;
       return null;
     })
     .filter(Boolean);
@@ -234,17 +285,24 @@ export function blockToSC(block: Block, chars: Character[], vars: Variable[], no
 
 function blockToSCInner(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
   switch (block.type) {
-    case 'text':
+    case 'text': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
       if (block.live) {
         const attr = htmlAttr(block.content);
-        return `${indent}<span class="tg-live" data-wiki="${attr}">${block.content}</span>`;
+        const classes = ['tg-text', 'tg-live', ...extra].join(' ');
+        return `${spotPrefix}${indent}<span class="${classes}" data-wiki="${attr}"${bindAttr}>${block.content}</span>`;
       }
-      return indent + block.content;
+      const classes = ['tg-text', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${block.content}</div>`;
+    }
 
     case 'dialogue': {
       const char = chars.find(c => c.id === block.characterId);
-      const charClass = char ? `char-${char.id}` : 'char-unknown';
-      const alignClass = block.align === 'right' ? 'dlg-right' : 'dlg-left';
 
       // Use runtime $name variable if available, otherwise fall back to static name
       const nameVarId = char?.varIds?.nameVarId;
@@ -261,7 +319,6 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
       let avatarHtml = '';
       if (cfg?.mode === 'bound' && cfg.variableId) {
-        // Bound mode: generate <<if>>...<<elseif>>...<<else>>...<</if>> chain
         const boundVar = vars.find(v => v.id === cfg.variableId);
         const vname = boundVar ? `$${varPath(boundVar, nodes)}` : '$???';
         const imgTag = (src: string) => `<img class="char-avatar" src="${src}">`;
@@ -283,10 +340,8 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         if (cases.length > 0) cases.push('<</if>>');
         avatarHtml = cases.join('');
       } else if (cfg?.mode === 'static' && cfg.src) {
-        // Static mode: fixed image path
         avatarHtml = `<img class="char-avatar" src="${cfg.src}">`;
       } else if (avatarVar) {
-        // Legacy: avatar stored in a $variable
         avatarHtml = `<<if $${varPath(avatarVar, nodes)}>><img class="char-avatar" @src="$${varPath(avatarVar, nodes)}"><</if>>`;
       }
 
@@ -296,36 +351,20 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         .filter(Boolean)
         .join('');
 
-      // ── Color variables: use runtime $vars so color changes reflect immediately ─
-      // Inline @style overrides static CSS and is re-evaluated on every render.
-      const bgColorVar     = char?.varIds?.bgColorVarId
-        ? vars.find(v => v.id === char!.varIds!.bgColorVarId)    : null;
-      const borderColorVar = char?.varIds?.borderColorVarId
-        ? vars.find(v => v.id === char!.varIds!.borderColorVarId) : null;
-      const nameColorVar   = char?.varIds?.nameColorVarId
-        ? vars.find(v => v.id === char!.varIds!.nameColorVarId)   : null;
-      const textColorVar   = char?.varIds?.textColorVarId
-        ? vars.find(v => v.id === char!.varIds!.textColorVarId)   : null;
-      // Fallback to static value (quoted string literal) when variable not found
-      const bgExpr       = bgColorVar     ? `$${varPath(bgColorVar, nodes)}`     : `'${char?.bgColor     ?? '#23262e'}'`;
-      const borderExpr   = borderColorVar ? `$${varPath(borderColorVar, nodes)}` : `'${char?.borderColor  ?? '#4a90d9'}'`;
-      const nameExpr     = nameColorVar   ? `$${varPath(nameColorVar, nodes)}`   : `'${char?.nameColor    ?? '#e0e0e0'}'`;
-      const textExpr     = textColorVar   ? `$${varPath(textColorVar, nodes)}`   : `'${char?.textColor    ?? '#e2e8f0'}'`;
-      // Border side switches with alignment; explicitly reset the opposite side
-      const borderDir     = block.align === 'right' ? 'right' : 'left';
-      const borderAntiDir = block.align === 'right' ? 'left'  : 'right';
-      const bodyStyleExpr = `'background:'+${bgExpr}+';border-${borderDir}:4px solid '+${borderExpr}+';border-${borderAntiDir}:none'`;
-      const nameStyleExpr = block.align === 'right'
-        ? `'text-align:right;color:'+${nameExpr}`
-        : `'color:'+${nameExpr}`;
-      const textStyleExpr = `'color:'+${textExpr}`;
-      const body = `<div class="char-body" @style="${bodyStyleExpr}"><span class="char-name" @style="${nameStyleExpr}">${charNameDisplay}</span><span class="char-text" @style="${textStyleExpr}">${block.text}</span>${innerBlocksHtml}</div>`;
-      // Avatar always comes first in DOM for BOTH alignments.
-      // CSS `.dlg-right { flex-direction: row-reverse }` flips the visual order for right-aligned dialogues,
-      // placing the avatar on the right side without changing the DOM order.
+      const body = `<div class="char-body"><span class="char-name">${charNameDisplay}</span><span class="char-text">${block.text}</span>${innerBlocksHtml}</div>`;
+
+      // Avatar always comes first in DOM for both alignments. The `.dlg-right`
+      // class flips visual order via flex-direction: row-reverse.
       const inner = avatarHtml + body;
 
-      const divContent = `<div class="dialogue ${charClass} ${alignClass}">${inner}</div>`;
+      // Style cascade classes + spot <style> block + data-style-bind
+      const classes = char ? dialogueElementClasses(char, block) : ['dialogue', 'dlg-unknown'];
+      classes.push(block.align === 'right' ? 'dlg-right' : 'dlg-left');
+      const dataBind = char ? dialogueDataStyleBind(char) : '';
+      const dataBindAttr = dataBind ? ` data-style-bind="${dataBind}"` : '';
+      const spotStyleBlock = char ? buildDialogueSpotStyleBlock(block) : '';
+
+      const divContent = `${spotStyleBlock}<div class="${classes.join(' ')}"${dataBindAttr}>${inner}</div>`;
       if (block.live) {
         const attr = htmlAttr(divContent);
         return `${indent}<span class="tg-live" data-wiki="${attr}">${divContent}</span>`;
@@ -341,10 +380,17 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         const raw = opt.targetSceneId || '';
         const target = raw ? sceneTarget(raw, idToName) : '"Start"';
         const link = `<<link "${opt.label}" ${target}>><</link>>`;
-        if (cond) return `${indent}<<if ${cond}>>${link}<</if>>`;
-        return `${indent}${link}`;
+        if (cond) return `${indent}  <<if ${cond}>>${link}<</if>>`;
+        return `${indent}  ${link}`;
       });
-      return lines.join('\n');
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-choice', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${lines.join('\n')}\n${indent}</div>`;
     }
 
     case 'condition': {
@@ -352,6 +398,38 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return block.branches
         .map((branch, i) => branchToSC(branch, chars, vars, nodes, indent, i === 0, idToName, project))
         .join('\n') + `\n${indent}<</if>>`;
+    }
+
+    case 'for': {
+      let header: string;
+      if (block.mode === 'range') {
+        const value = block.valueVar || '_value';
+        const loopVars = block.keyVar ? `${block.keyVar}, ${value}` : value;
+        const src  = block.source || '[]';
+        header = `<<for ${loopVars} range ${src}>>`;
+      } else if (block.mode === 'while') {
+        header = `<<for ${block.whileCondition ?? 'false'}>>`;
+      } else { // cstyle
+        const init = block.initExpr ?? '';
+        const cond = block.cstyleCondition ?? 'false';
+        const step = block.stepExpr ?? '';
+        header = `<<for ${init}; ${cond}; ${step}>>`;
+      }
+      const body = block.blocks
+        .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
+        .filter(Boolean)
+        .join('\n');
+      return body
+        ? `${indent}${header}\n${body}\n${indent}<</for>>`
+        : `${indent}${header}${indent}<</for>>`;
+    }
+
+    case 'set-object': {
+      const v = vars.find(x => x.id === block.variableId);
+      if (!v) return `${indent}/* variable not found */`;
+      const path = varPath(v, nodes);
+      const literal = buildSetObjectLiteral(block.entries);
+      return `${indent}<<set $${path} = ${literal}>>`;
     }
 
     case 'variable-set': {
@@ -437,6 +515,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     }
 
     case 'image': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-image', ...extra].join(' ');
+
       const w   = block.width > 0 ? ` width="${block.width}"` : '';
       const alt = block.alt ? ` alt="${block.alt}"` : '';
       const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
@@ -462,14 +548,22 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
         if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
         cases.push(`${indent}<</if>>`);
-        return cases.join('\n');
+        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
       }
 
       // ── Static mode ──────────────────────────────────────────────────────
-      return `${indent}${imgTag(block.src)}`;
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
     }
 
     case 'image-gen': {
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-image', ...extra].join(' ');
+
       const w   = block.width > 0 ? ` width="${block.width}"` : '';
       const alt = block.alt ? ` alt="${block.alt}"` : '';
       const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
@@ -494,10 +588,10 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
         if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
         cases.push(`${indent}<</if>>`);
-        return cases.join('\n');
+        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
       }
 
-      return `${indent}${imgTag(block.src)}`;
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
     }
 
     case 'video': {
@@ -507,7 +601,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         block.loop ? 'loop' : '',
         block.width > 0 ? `width="${block.width}"` : '',
       ].filter(Boolean).join(' ');
-      return `${indent}<video src="${block.src}"${attrs ? ' ' + attrs : ''}></video>`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-video', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
     }
 
     case 'input-field': {
@@ -522,10 +623,18 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       // $varname evaluates to its StoryInit default on first load, and to the
       // player's input on subsequent re-renders.
       const defVal = `$${path}`;
-      const lines: string[] = [];
-      if (block.label) lines.push(`${indent}${block.label}`);
-      lines.push(`${indent}<<${macro} "${vname}" ${defVal}>>`);
-      return lines.join('\n');
+      const inner: string[] = [];
+      if (block.label) inner.push(block.label);
+      inner.push(`<<${macro} "${vname}" ${defVal}>>`);
+
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-input-field', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${inner.join('\n')}</div>`;
     }
 
     case 'raw':
@@ -536,33 +645,46 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const raw = (block as IncludeBlock).passageName.trim();
       if (!raw) return '';
       const includeArg = sceneTarget(raw, idToName);
-
       const include = `<<include ${includeArg}>>`;
 
-      const styles: string[] = [];
+      const cssVars: string[] = [];
       if (block.maxWidth && block.maxWidth > 0)
-        styles.push(`max-width:${block.maxWidth}px`);
+        cssVars.push(`--tg-inc-max-width:${block.maxWidth}px`);
       if (block.bordered) {
         const bw = block.borderWidth ?? 1;
         const bc = block.borderColor ?? '#555555';
         const br = block.borderRadius ?? 0;
-        styles.push(`border:${bw}px solid ${bc}`);
-        if (br > 0) styles.push(`border-radius:${br}px`);
+        cssVars.push(`--tg-inc-border-width:${bw}px`, `--tg-inc-border-color:${bc}`);
+        if (br > 0) cssVars.push(`--tg-inc-radius:${br}px`);
       }
       if (block.padding && block.padding > 0)
-        styles.push(`padding:${block.padding}px`);
+        cssVars.push(`--tg-inc-padding:${block.padding}px`);
       if (block.bgColor)
-        styles.push(`background-color:${block.bgColor}`);
+        cssVars.push(`--tg-inc-bg:${block.bgColor}`);
 
-      if (styles.length === 0) return `${indent}${include}`;
-      return `${indent}<div style="${styles.join(';')}">${include}</div>`;
+      const styleAttr = cssVars.length > 0 ? ` style="${cssVars.join(';')}"` : '';
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-include', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}${styleAttr}>${include}</div>`;
     }
 
     case 'divider': {
       const color     = block.color     ?? '#555555';
       const thickness = block.thickness ?? 1;
       const marginV   = block.marginV   ?? 8;
-      return `${indent}<hr style="border:none;border-top:${thickness}px solid ${color};margin:${marginV}px 0;">`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-divider', ...extra].join(' ');
+      return `${spotPrefix}${indent}<hr class="${classes}"${bindAttr} style="--tg-div-color:${color};--tg-div-thickness:${thickness}px;--tg-div-margin:${marginV}px">`;
     }
 
     case 'note':
@@ -587,7 +709,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     }
 
     case 'button': {
-      const cls = `tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const settings = project?.settings;
+      const classAttr = settings
+        ? buttonElementClasses(block, settings).join(' ')
+        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildButtonSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
       const actionLines = block.actions
         .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
         .filter(Boolean);
@@ -597,9 +726,11 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         actionLines.push(`${indent}  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>`);
       }
       actionLines.push(`${indent}  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>`);
+      actionLines.push(`${indent}  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>`);
       actionLines.push(`${indent}  <<run UIBar.update()>>`);
       return (
-        `${indent}<span class="tg-btn ${cls}">` +
+        spotPrefix +
+        `${indent}<span class="${classAttr}"${bindAttr}>` +
         `<<link "${block.label}">>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
@@ -607,7 +738,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     }
 
     case 'link': {
-      const cls = `tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const settings = project?.settings;
+      const classAttr = settings
+        ? buttonElementClasses(block, settings).join(' ')
+        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildButtonSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
       const actionLines = block.actions
         .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
         .filter(Boolean);
@@ -622,14 +760,22 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       }
       actionLines.push(`${indent}  <<run UIBar.update()>>`);
       return (
-        `${indent}<span class="tg-btn ${cls}"><<link "${block.label}">>\n` +
+        spotPrefix +
+        `${indent}<span class="${classAttr}"${bindAttr}><<link "${block.label}">>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
     }
 
     case 'function': {
-      const cls = `tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const settings = project?.settings;
+      const classAttr = settings
+        ? buttonElementClasses(block, settings).join(' ')
+        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildButtonSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
       const actionLines = block.actions
         .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
         .filter(Boolean);
@@ -637,9 +783,11 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       actionLines.push(`${indent}  <<include ${funcTarget}>>`);
       actionLines.push(`${indent}  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>`);
       actionLines.push(`${indent}  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>`);
+      actionLines.push(`${indent}  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>`);
       actionLines.push(`${indent}  <<run UIBar.update()>>`);
       return (
-        `${indent}<span class="tg-btn ${cls}"><<link "${block.label}">>\n` +
+        spotPrefix +
+        `${indent}<span class="${classAttr}"${bindAttr}><<link "${block.label}">>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
@@ -682,7 +830,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         }).join('');
         lines.push(`${indent}<<script>>setTimeout(function(){${handlers}},0);<</script>>`);
       }
-      return lines.join('\n');
+      const cbSettings = project?.settings;
+      const cbExtra = cbSettings ? simpleBlockCascadeClasses(cb, cbSettings) : [];
+      const cbBindKey = cbSettings ? simpleBlockDataStyleBind(cb, cbSettings) : '';
+      const cbBindAttr = cbBindKey ? ` data-style-bind="${cbBindKey}"` : '';
+      const cbSpotStyle = buildSimpleBlockSpotStyleBlock(cb);
+      const cbSpotPrefix = cbSpotStyle ? `${indent}${cbSpotStyle}\n` : '';
+      const cbClasses = ['tg-checkbox', ...cbExtra].join(' ');
+      return `${cbSpotPrefix}${indent}<div class="${cbClasses}"${cbBindAttr}>${lines.join('\n')}</div>`;
     }
 
     case 'radio': {
@@ -695,13 +850,27 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       for (const opt of rb.options) {
         lines.push(`${indent}<<radiobutton "${vname}" "${opt.value}" autocheck>> ${opt.label}`);
       }
-      return lines.join('\n');
+      const rbSettings = project?.settings;
+      const rbExtra = rbSettings ? simpleBlockCascadeClasses(rb, rbSettings) : [];
+      const rbBindKey = rbSettings ? simpleBlockDataStyleBind(rb, rbSettings) : '';
+      const rbBindAttr = rbBindKey ? ` data-style-bind="${rbBindKey}"` : '';
+      const rbSpotStyle = buildSimpleBlockSpotStyleBlock(rb);
+      const rbSpotPrefix = rbSpotStyle ? `${indent}${rbSpotStyle}\n` : '';
+      const rbClasses = ['tg-radio', ...rbExtra].join(' ');
+      return `${rbSpotPrefix}${indent}<div class="${rbClasses}"${rbBindAttr}>${lines.join('\n')}</div>`;
     }
 
     case 'popup': {
       const name = (idToName?.get(block.targetSceneId) ?? block.targetSceneId) || '???';
       const title = block.title ?? '';
-      return `${indent}<<run Dialog.setup("${title}"); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      // Drop the structural `tg-popup` base — it's only the cascade namespace.
+      const dlgClasses = extra.join(' ').trim();
+      const classArg = dlgClasses ? `, "${dlgClasses}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      return `${spotPrefix}${indent}<<run Dialog.setup("${title}"${classArg}); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
     }
 
     case 'audio': {
@@ -803,6 +972,17 @@ function branchToSC(
     return `${indent}<<else>>\n${innerLines}`;
   }
 
+  // Raw expression escape-hatch — used when import couldn't structurally
+  // parse the condition (compound or-chains, LHS expressions, function calls).
+  // Emits the SC expression verbatim.
+  if (branch.rawExpression !== undefined && branch.rawExpression !== '') {
+    const expr = branch.rawExpression;
+    if (branch.branchType === 'if' || isFirst) {
+      return `${indent}<<if ${expr}>>\n${innerLines}`;
+    }
+    return `${indent}<<elseif ${expr}>>\n${innerLines}`;
+  }
+
   // Plugin param virtual variables: branch.variableId starts with 'param:'.
   // Emit directly as a temp-var reference (_key) without going through the
   // project variable tree — scene kind params are excluded from paramVars.
@@ -852,7 +1032,16 @@ function branchToSC(
     expr = `${varName}.length ${branch.operator} ${branch.value}`;
   } else {
     let val = branch.value;
-    if (v?.varType === 'string' || v?.varType === 'datetime') val = `"${val}"`;
+    // Quote only when the value is genuinely a string literal — not when it
+    // looks like a SC reference (`$other` / `_tempVar`) or a JS literal
+    // (number / true / false). Mirrors the plugin-param heuristic above so
+    // `<<if $x != _name>>` rebuilds verbatim instead of `_name` becoming a
+    // literal string `"_name"`.
+    const looksLikeRef = /^[_$][A-Za-z_$][\w$.]*$/.test(val);
+    const looksLikeLiteral = /^-?\d+(\.\d+)?$/.test(val) || val === 'true' || val === 'false';
+    if ((v?.varType === 'string' || v?.varType === 'datetime') && !looksLikeRef && !looksLikeLiteral) {
+      val = `"${val}"`;
+    }
     expr = `${varName} ${branch.operator} ${val}`;
   }
 
@@ -906,12 +1095,14 @@ function buildProgressBarSC(c: CellProgress, vars: Variable[], nodes: VariableTr
         `+'<span style="width:'+_tgP+'%;background:'+${colorRef}+';height:100%;display:flex;align-items:center;justify-content:center;font-size:0.75em;${textColorCSS}">'+${textRef}+'</span></span>'`;
     return `${setPct}${setColor}<<print ${printExpr}>>`;
   } else {
-    // StoryCaption: use CSS classes (.tg-progress / .tg-bar), override bg via inline style
+    // StoryCaption: CSS classes handle layout; colors via CSS custom properties
+    const textColorVar = c.textColor ? `;--tg-bar-text:${c.textColor}` : '';
+    const vertClass = vert ? ' tg-progress-vert' : '';
     const printExpr = vert
-      ? `'<span class="tg-progress" style="background:${emptyColor};flex-direction:column-reverse;align-items:stretch;">'` +
-        `+'<span class="tg-bar" style="height:'+_tgP+'%;width:100%;background:'+${colorRef}+';${textColorCSS}">'+${textRef}+'</span></span>'`
-      : `'<span class="tg-progress" style="background:${emptyColor};">'` +
-        `+'<span class="tg-bar" style="width:'+_tgP+'%;background:'+${colorRef}+';${textColorCSS}">'+${textRef}+'</span></span>'`;
+      ? `'<span class="tg-progress${vertClass}" style="--tg-bar-empty:${emptyColor};--tg-bar-fill:'+${colorRef}+'${textColorVar}">'` +
+        `+'<span class="tg-bar" style="height:'+_tgP+'%;width:100%">'+${textRef}+'</span></span>'`
+      : `'<span class="tg-progress${vertClass}" style="--tg-bar-empty:${emptyColor};--tg-bar-fill:'+${colorRef}+'${textColorVar}">'` +
+        `+'<span class="tg-bar" style="width:'+_tgP+'%">'+${textRef}+'</span></span>'`;
     return `${setPct}${setColor}<<print ${printExpr}>>`;
   }
 }
@@ -951,6 +1142,7 @@ function buildCellButtonSC(c: CellButton, cellId: string, vars: Variable[], node
     .filter(Boolean);
 
   macros.push('<<run window._tgCheckWatchers && window._tgCheckWatchers()>>');
+  macros.push('<<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>');
   macros.push('<<run UIBar.update()>>');
 
   if (c.navigate?.type === 'back') {
@@ -1168,6 +1360,9 @@ function tableCellInnerToSC(cell: SidebarCell, vars: Variable[], nodes: Variable
 
     case 'raw': return c.code;
 
+    case 'include':
+      return c.passageName ? `<<include "${c.passageName}">>` : '';
+
     case 'button':
       return buildCellButtonSC(c, cell.id, vars, nodes, idToName);
 
@@ -1194,11 +1389,17 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
   if (block.rows.length === 0) return '';
   const s = block.style;
 
-  const outerParts = [
-    'display:flex', 'flex-direction:column', `gap:${s.rowGap}px`, 'margin:0', 'padding:0',
+  // CSS custom properties for user-overridable values; structural layout handled by .tg-table class
+  const outerStyles: string[] = [
+    `--tg-tbl-gap:${s.rowGap}px`,
+    `--tg-tbl-border-color:${s.borderColor}`,
+    `--tg-tbl-border-width:${s.borderWidth}px`,
   ];
   if (s.showOuterBorder) {
-    outerParts.push(`border:${s.borderWidth}px solid ${s.borderColor}`, 'padding:2px');
+    outerStyles.push(
+      `border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)`,
+      `padding:2px`,
+    );
   }
 
   const rowsHTML = block.rows.map(row => {
@@ -1208,7 +1409,7 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
       `height:${row.height}px`,
     ];
     if (s.showRowBorders) {
-      rowParts.push(`border:${s.borderWidth}px solid ${s.borderColor}`);
+      rowParts.push(`border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)`);
     }
     const cellsHTML = row.cells.map((cell, ci) => {
       const cellParts = [
@@ -1216,7 +1417,7 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
         'font-size:0.85em', 'min-width:0', 'box-sizing:border-box', 'padding:2px 4px',
       ];
       if (s.showCellBorders && ci > 0) {
-        cellParts.push(`border-left:${s.borderWidth}px solid ${s.borderColor}`);
+        cellParts.push(`border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)`);
       }
       return `<span style="${cellParts.join(';')}">${tableCellInnerToSC(cell, vars, nodes, idToName, characters, items)}</span>`;
     }).join('');
@@ -1224,7 +1425,7 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
   }).filter(Boolean).join('');
 
   if (!rowsHTML) return '';
-  return `${indent}<div style="${outerParts.join(';')}">${rowsHTML}</div>`;
+  return `${indent}<div class="tg-table" style="${outerStyles.join(';')}">${rowsHTML}</div>`;
 }
 
 // ─── Panel → StoryCaption markup ──────────────────────────────────────────────
@@ -1269,6 +1470,10 @@ function cellToSC(cell: SidebarCell, vars: Variable[], nodes: VariableTreeNode[]
 
     case 'raw':
       inner = c.code;
+      break;
+
+    case 'include':
+      inner = c.passageName ? `<<include "${c.passageName}">>` : '';
       break;
 
     case 'image-bound': {
@@ -1423,8 +1628,9 @@ export function buildPanelCSS(panel: SidebarPanel): string {
     `.tg-panel { display: flex; flex-direction: column; gap: ${s.rowGap}px; margin: 0; padding: 0; }`,
     `.tg-row { display: flex; overflow: hidden; align-items: stretch; margin: 0; }`,
     '.tg-cell { display: flex; align-items: center; overflow: hidden; font-size: 0.85em; min-width: 0; box-sizing: border-box; }',
-    '.tg-progress { width: 100%; height: 100%; background: #333; border-radius: 2px; overflow: hidden; display: flex; align-items: center; }',
-    '.tg-bar { height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; }',
+    '.tg-progress { width: 100%; height: 100%; background: var(--tg-bar-empty, #333); border-radius: 2px; overflow: hidden; display: flex; align-items: center; }',
+    '.tg-progress-vert { flex-direction: column-reverse; align-items: stretch; }',
+    '.tg-bar { height: 100%; background: var(--tg-bar-fill, #4a90d9); transition: width 0.3s, height 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--tg-bar-text, inherit); }',
     '.tg-cell-img { width: 100%; height: 100%; display: block; }',
     cellBorder,
     rowBorder,
@@ -1741,48 +1947,9 @@ export function buildTooltipCSS(): string {
 }
 
 // ─── Button CSS ───────────────────────────────────────────────────────────────
-
-function collectButtons(blocks: Block[]): (ButtonBlock | LinkBlock | FunctionBlock)[] {
-  const result: (ButtonBlock | LinkBlock | FunctionBlock)[] = [];
-  for (const b of blocks) {
-    if (b.type === 'button' || b.type === 'link' || b.type === 'function') result.push(b);
-    if (b.type === 'condition') {
-      for (const br of b.branches) result.push(...collectButtons(br.blocks));
-    }
-  }
-  return result;
-}
-
-/** Generate per-block CSS for styled tg-btn-XXXX classes (ButtonBlock + LinkBlock). */
-export function buildButtonsCSS(scenes: Scene[]): string {
-  const buttons = scenes.flatMap(s => collectButtons(s.blocks));
-  if (buttons.length === 0) return '';
-
-  const base = [
-    '.tg-btn { display: inline-block; }',
-    '.tg-btn a { display: inline-block; text-decoration: none; cursor: pointer; transition: filter 0.15s; }',
-    '.tg-btn a:hover { filter: brightness(1.2); }',
-    '.tg-btn.full a { display: block; width: 100%; text-align: center; box-sizing: border-box; }',
-  ].join('\n');
-
-  const perBtn = buttons.map(b => {
-    const s = b.style;
-    const cls = `.tg-btn-${b.id.replace(/-/g, '').substring(0, 12)} a`;
-    return [
-      `${cls} {`,
-      `  background: ${s.bgColor};`,
-      `  color: ${s.textColor};`,
-      `  border: 1px solid ${s.borderColor};`,
-      `  border-radius: ${s.borderRadius}px;`,
-      `  padding: ${s.paddingV}px ${s.paddingH}px;`,
-      `  font-size: ${(s.fontSize / 10).toFixed(1)}em;`,
-      s.bold ? `  font-weight: bold;` : null,
-      `}`,
-    ].filter(Boolean).join('\n');
-  }).join('\n\n');
-
-  return `${base}\n\n${perBtn}`;
-}
+// Button-family CSS emission now lives in styleCascade.ts:
+//   - buildButtonsCascadeCss(scenes, settings)  — per-block Std + per-type Common
+//   - buildButtonSpotStyleBlock(block)          — per-block Spot (inline <style>)
 
 // ─── Audio helpers ──────────────────────────────────────────────────────────────
 
@@ -1917,39 +2084,7 @@ export function buildAudioScript(scenes: Scene[], unlockText?: string): string {
 }
 
 // ─── Character CSS ─────────────────────────────────────────────────────────────
-
-function buildCharacterCSS(characters: Character[]): string {
-  if (characters.length === 0) return '';
-  const base = [
-    '.dialogue { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; font-style: italic; }',
-    '.dialogue.dlg-right { flex-direction: row-reverse; }',
-    '.char-avatar { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }',
-    '.char-body { flex: 1; padding: 8px 12px; border-radius: 4px; }',
-    '.char-name { font-weight: bold; display: block; margin-bottom: 4px; }',
-    '.dialogue.dlg-right .char-name { text-align: right; }',
-    '.char-text { display: block; margin: 0 !important; padding: 0; }',
-  ].join('\n');
-  const perChar = characters.map(c => {
-    const cls = `char-${c.id}`;
-    return (
-      `.dialogue.${cls} .char-body {\n` +
-      `  background: ${c.bgColor};\n` +
-      `  border-left: 4px solid ${c.borderColor};\n` +
-      `}\n` +
-      `.dialogue.dlg-right.${cls} .char-body {\n` +
-      `  border-left: none;\n` +
-      `  border-right: 4px solid ${c.borderColor};\n` +
-      `}\n` +
-      `.dialogue.${cls} .char-name {\n` +
-      `  color: ${c.nameColor};\n` +
-      `}\n` +
-      `.dialogue.${cls} .char-text {\n` +
-      `  color: ${c.textColor ?? '#e2e8f0'};\n` +
-      `}`
-    );
-  }).join('\n\n');
-  return `${base}\n\n${perChar}`;
-}
+// Implementation moved to styleCascade.ts (buildAllDialogueCss).
 
 // ─── Twine graph hint helpers ─────────────────────────────────────────────────
 
@@ -2058,15 +2193,20 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   }
 
   // StoryStylesheet
-  const charCSS      = buildCharacterCSS(characters);
+  const charCSS      = buildAllDialogueCss(characters);
   const panelCSS     = buildPanelCSS(sidebarPanel);
-  const buttonCSS    = buildButtonsCSS(scenes);
+  const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
+  const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
   const animCSS      = buildAnimationCSS(scenes);
   const tipCSS       = buildTooltipCSS();
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const allCSS    = [charCSS, panelCSS, buttonCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, panelCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const userCSS      = (project.customCss ?? '').trim();
+  const allCSS       = userCSS
+    ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
+    : generatedCSS;
   if (allCSS) parts.push(`::StoryStylesheet [stylesheet]\n${allCSS}\n`);
 
   // StoryScript (lightbox + input debounce) — single passage
@@ -2079,6 +2219,9 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     buildInventoryScript(project),
     buildContainerScript(project),
     buildPaperdollScript(project),
+    hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
+    hasStyleBindings(project) ? buildStyleBindScript(project) : '',
+    buildPopupClassSyncScript(scenes),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load',
       '$(document).on(":passagedisplay", function() {',
@@ -2088,7 +2231,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     ].join('\n') : '',
     buildPurlSignatureScript(),
   ].filter(Boolean).join('\n\n');
-  if (storyScript) parts.push(`::StoryScript [script]\n${storyScript}\n`);
+  const userScript = (project.customScript ?? '').trim();
+  const fullScript = userScript
+    ? (storyScript ? `${storyScript}\n\n/* User script */\n${userScript}` : userScript)
+    : storyScript;
+  if (fullScript) parts.push(`::StoryScript [script]\n${fullScript}\n`);
 
   // StoryCaption
   const captionSC = buildStoryCaptionSC(sidebarPanel, variables, variableNodes, idToName, characters, project.items);
@@ -2098,10 +2245,18 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   for (const scene of scenes) {
     const exportTags = scene.tags.filter(t => t !== START_TAG);
     const tags = exportTags.length > 0 ? ` [${exportTags.join(' ')}]` : '';
-    const body = scene.blocks
+
+    // Scene background — prepended to passage body
+    const bgMarkup = scene.background
+      ? exportSceneBg(scene.background, variables, variableNodes)
+      : '';
+
+    const blocksBody = scene.blocks
       .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
       .filter(Boolean)
       .join('\n');
+
+    const body = [bgMarkup, blocksBody].filter(Boolean).join('\n');
 
     // Graph hint: <<if false>>[[Target1]][[Target2]]<</if>>
     // Twine's editor finds [[...]] by regex to draw connections.
@@ -2182,6 +2337,225 @@ export function buildContainerCSS(): string {
     '.tg-detail-action:hover:not(:disabled) { background: #4f46e5; }',
     '.tg-detail-action:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; }',
     '.tg-cont-empty { color: rgba(255,255,255,0.3); font-size: 13px; padding: 16px 0; }',
+  ].join('\n');
+}
+
+// ── Scene background ──────────────────────────────────────────────────────────
+
+/**
+ * Generates the SugarCube markup to set the scene background at the top of a passage.
+ *
+ * Static/AI-static:  <<tgSceneBg "path" blur opacity "size" posX posY "overlayColor" overlayOpacity>>
+ * Bound/AI-bound:    <<set _tgBg to "">>, conditional chain, <<tgSceneBg _tgBg ...>>
+ */
+export function exportSceneBg(
+  bg: SceneBackground,
+  vars: Variable[],
+  nodes: VariableTreeNode[],
+): string {
+  const { imageType } = bg;
+
+  // None mode — solid background color and/or overlay only
+  if (imageType === 'none') {
+    const bgColor    = bg.bgColor ?? '';
+    const ovColor    = bg.overlayColor ?? '';
+    const ovOp       = bg.overlayOpacity ?? 0;
+    if (!bgColor && (!ovColor || ovOp <= 0)) return '';
+    return `<<tgSceneBgColor "${bgColor}" "${ovColor}" ${ovOp}>>`;
+  }
+
+  const blur          = bg.blur          ?? 0;
+  const opacity       = bg.opacity       ?? 100;
+  const size          = bg.size          ?? 'cover';
+  const posX          = bg.posX          ?? 50;
+  const posY          = bg.posY          ?? 50;
+  const overlayColor  = bg.overlayColor  ?? '';
+  const overlayOpacity = bg.overlayOpacity ?? 0;
+
+  // Static args after src: blur opacity "size" posX posY "overlayColor" overlayOpacity
+  const displayArgs = `${blur} ${opacity} "${size}" ${posX} ${posY} "${overlayColor}" ${overlayOpacity}`;
+
+  if (imageType === 'static' || imageType === 'ai-static') {
+    if (!bg.src) return '';
+    return `<<tgSceneBg "${bg.src}" ${displayArgs}>>`;
+  }
+
+  if (imageType === 'bound' || imageType === 'ai-bound') {
+    const mapping   = bg.mapping ?? [];
+    const defaultSrc = bg.defaultSrc ?? '';
+    if (mapping.length === 0 && !defaultSrc) return '';
+
+    const bv    = vars.find(x => x.id === bg.variableId);
+    const vname = bv ? `$${varPath(bv, nodes)}` : '$???';
+
+    const lines: string[] = ['<<set _tgBg to "">>'];
+
+    if (mapping.length > 0) {
+      const cases = mapping.map((m, i) => {
+        const kw = i === 0 ? '<<if' : '<<elseif';
+        const mt = m.matchType ?? 'exact';
+        let cond: string;
+        if (mt === 'range') {
+          cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
+        } else {
+          const val = bv?.varType === 'string' ? `"${m.value}"` : m.value;
+          cond = `${vname} eq ${val}`;
+        }
+        return `${kw} ${cond}>><<set _tgBg to "${m.src}">>`;
+      });
+      if (defaultSrc) cases.push(`<<else>><<set _tgBg to "${defaultSrc}">>`);
+      cases.push('<</if>>');
+      lines.push(cases.join('\n'));
+    } else if (defaultSrc) {
+      lines.push(`<<set _tgBg to "${defaultSrc}">>`);
+    }
+
+    lines.push(`<<if _tgBg>><<tgSceneBg _tgBg ${displayArgs}>><</if>>`);
+    return lines.join('\n');
+  }
+
+  return '';
+}
+
+/**
+ * Returns true if at least one scene in the project has a background configured.
+ * Used to conditionally include the <<tgSceneBg>> macro in StoryScript.
+ */
+export function hasScenesWithBg(scenes: Scene[]): boolean {
+  return scenes.some(s => {
+    const bg = s.background;
+    if (!bg) return false;
+    if (bg.imageType !== 'none') return true;
+    return !!(bg.bgColor || (bg.overlayColor && (bg.overlayOpacity ?? 0) > 0));
+  });
+}
+
+/**
+ * Build the <<tgSceneBg>> macro JS definition.
+ * The macro:
+ *  - Inserts a fixed-position background div (id="tg-scene-bg")
+ *  - Optionally inserts an overlay div (id="tg-scene-bg-ov") when overlayColor is set
+ *  - Clears both divs on :passagestart if no tgSceneBg call was made in the new passage
+ *
+ * Args: src blur opacity size posX posY overlayColor overlayOpacity
+ */
+/**
+ * Implementation note:
+ * Using CSS injection via body::before / body::after instead of extra DOM divs.
+ * This guarantees z-ordering: pseudo-elements with negative z-index inside a
+ * positioned body are always painted behind SugarCube's #story content.
+ *
+ * Stacking order inside body's stacking context (body { position: relative }):
+ *   body::before (z-index: -2)  ← background image
+ *   body::after  (z-index: -1)  ← color overlay
+ *   #story / .passage (z-index: auto → above all negatives)  ← story content
+ */
+export function buildSceneBgScript(): string {
+  return [
+    '// ── Scene background macro ──',
+    // Track whether the current passage set a background
+    '$(document).on(":passagestart", function() { window._tgBgSet = false; });',
+    // On passageend: if no <<tgSceneBg>> was called, clear the injected CSS
+    // so scenes without a background don't keep the previous scene's image.
+    '$(document).on(":passageend", function() {',
+    '  if (!window._tgBgSet) {',
+    '    var s = document.getElementById("tg-bg-style");',
+    '    if (s) s.textContent = "";',
+    '  }',
+    '});',
+    '',
+    'Macro.add("tgSceneBg", {',
+    '  handler: function() {',
+    '    var src     = this.args[0] || "";',
+    '    if (!src) return;',
+    '    window._tgBgSet = true;',
+    '    var blur    = this.args[1] != null ? this.args[1] : 0;',
+    '    var opacity = this.args[2] != null ? this.args[2] : 100;',
+    '    var size    = this.args[3] || "cover";',
+    '    var posX    = this.args[4] != null ? this.args[4] : 50;',
+    '    var posY    = this.args[5] != null ? this.args[5] : 50;',
+    '    var ovColor = this.args[6] || "";',
+    '    var ovOp    = this.args[7] != null ? this.args[7] : 0;',
+    '',
+    '    var bgSz = size === "fill" ? "100% 100%" : size;',
+    // Extend inset to hide blur-edge artifacts
+    '    var ext = blur > 0 ? (blur * 2) + "px" : "0";',
+    '',
+    // Build the full CSS rule block for body + ::before (bg) + ::after (overlay)
+    '    var css = [',
+    // body: position:relative creates a stacking context so negative z-index pseudo-elements work;
+    // transparent background lets them show through
+    '      "body { position: relative; background-color: transparent !important; background-image: none !important; }",',
+    '      "body::before {",',
+    '      "  content: \'\';",',
+    '      "  position: fixed;",',
+    '      "  inset: -" + ext + ";",',
+    '      "  z-index: -2;",',
+    '      "  pointer-events: none;",',
+    '      "  background-image: url(\'" + src + "\');",',
+    '      "  background-size: " + bgSz + ";",',
+    '      "  background-position: " + posX + "% " + posY + "%;",',
+    '      "  background-repeat: no-repeat;",',
+    '    ].join("\\n");',
+    '    if (blur > 0)    css += "  filter: blur(" + blur + "px);\\n";',
+    '    if (opacity < 100) css += "  opacity: " + (opacity / 100) + ";\\n";',
+    '    css += "}";',
+    '',
+    // Overlay via body::after
+    '    if (ovColor && ovOp > 0) {',
+    '      var hex = ovColor.replace("#","");',
+    '      var r = parseInt(hex.substring(0,2),16)||0;',
+    '      var g = parseInt(hex.substring(2,4),16)||0;',
+    '      var b = parseInt(hex.substring(4,6),16)||0;',
+    '      css += [',
+    '        "\\nbody::after {",',
+    '        "  content: \'\'",',
+    '        "  position: fixed",',
+    '        "  inset: 0",',
+    '        "  z-index: -1",',
+    '        "  pointer-events: none",',
+    '        "  background: rgba(" + r + "," + g + "," + b + "," + (ovOp/100) + ")",',
+    '        "}"',
+    '      ].join(";\\n");',
+    '    }',
+    '',
+    // Inject or update the single style tag
+    '    var st = document.getElementById("tg-bg-style");',
+    '    if (!st) {',
+    '      st = document.createElement("style");',
+    '      st.id = "tg-bg-style";',
+    '      document.head.appendChild(st);',
+    '    }',
+    '    st.textContent = css;',
+    '  }',
+    '});',
+    '',
+    // Solid background color macro (no image): tgSceneBgColor bgColor ovColor ovOpacity
+    'Macro.add("tgSceneBgColor", {',
+    '  handler: function() {',
+    '    var bgColor = this.args[0] || "";',
+    '    var ovColor = this.args[1] || "";',
+    '    var ovOp    = this.args[2] != null ? this.args[2] : 0;',
+    '    if (!bgColor && (!ovColor || ovOp <= 0)) return;',
+    '    window._tgBgSet = true;',
+    '    var css = "body { position: relative; background-color: transparent !important; background-image: none !important; }\\n";',
+    '    if (bgColor) {',
+    '      css += "body::before { content: \'\'; position: fixed; inset: 0; z-index: -2; pointer-events: none; background-color: " + bgColor + "; }\\n";',
+    '    } else {',
+    '      css += "body::before { content: none; }\\n";',
+    '    }',
+    '    if (ovColor && ovOp > 0) {',
+    '      var hex = ovColor.replace("#","");',
+    '      var r = parseInt(hex.substring(0,2),16)||0;',
+    '      var g = parseInt(hex.substring(2,4),16)||0;',
+    '      var b = parseInt(hex.substring(4,6),16)||0;',
+    '      css += "body::after { content: \'\'; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: rgba(" + r + "," + g + "," + b + "," + (ovOp/100) + "); }\\n";',
+    '    }',
+    '    var st = document.getElementById("tg-bg-style");',
+    '    if (!st) { st = document.createElement("style"); st.id = "tg-bg-style"; document.head.appendChild(st); }',
+    '    st.textContent = css;',
+    '  }',
+    '});',
   ].join('\n');
 }
 

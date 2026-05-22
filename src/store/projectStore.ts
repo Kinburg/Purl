@@ -1,5 +1,42 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+
+/**
+ * Debounced localStorage adapter. `JSON.stringify(project)` + `setItem` runs
+ * once after `delay` ms of inactivity, instead of on every store mutation —
+ * typing into a TextBlock previously triggered a sync write of the entire
+ * project on each keystroke. Pending write is flushed on `beforeunload` to
+ * avoid losing the last edits if the user closes the window quickly.
+ */
+function makeDebouncedLocalStorage(delay = 500): StateStorage {
+  const pending: Map<string, string> = new Map();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    for (const [key, value] of pending) {
+      try { localStorage.setItem(key, value); } catch { /* quota / private mode */ }
+    }
+    pending.clear();
+    timer = null;
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flush);
+  }
+
+  return {
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => {
+      pending.set(key, value);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, delay);
+    },
+    removeItem: (key) => {
+      pending.delete(key);
+      localStorage.removeItem(key);
+    },
+  };
+}
 import type {
   Project, ProjectSettings, Scene, SceneGroup, Block, Character, CharacterVarIds,
   Variable, VariableGroup, VariableTreeNode,
@@ -1008,6 +1045,10 @@ function migrateProject(raw: any): Project {
   if (p.settings.historyControls === undefined) p.settings.historyControls = DEFAULT_PROJECT_SETTINGS.historyControls;
   if (p.settings.saveLoadMenu === undefined) p.settings.saveLoadMenu = DEFAULT_PROJECT_SETTINGS.saveLoadMenu;
 
+  // Custom CSS / JS preserved from imports (or hand-edited). Empty string when absent.
+  if (typeof p.customCss !== 'string') p.customCss = '';
+  if (typeof p.customScript !== 'string') p.customScript = '';
+
   // Migrate targetSceneId / navigate.sceneId from scene NAMES → scene IDs
   p = migrateSceneLinks(p as Project);
 
@@ -1062,7 +1103,7 @@ interface ProjectState {
   updateSceneNote: (id: string, notes: string | undefined) => void;
   updateSceneGraphPosition: (id: string, x: number, y: number) => void;
   updateSceneTags: (id: string, tags: string[]) => void;
-  updateSceneSettings: (id: string, data: { name: string; tags: string[]; notes?: string }) => void;
+  updateSceneSettings: (id: string, data: { name: string; tags: string[]; notes?: string; background?: import('../types').SceneBackground }) => void;
   reorderScenes: (scenes: Scene[]) => void;
   duplicateScene: (sceneId: string) => void;
   makeStartScene: (sceneId: string) => void;
@@ -1078,6 +1119,9 @@ interface ProjectState {
   // Blocks
   addBlock: (sceneId: string, block: Block, insertIndex?: number) => void;
   updateBlock: (sceneId: string, blockId: string, patch: Partial<Block>) => void;
+  /** Replace a top-level block with zero or more new blocks (and optionally set
+   *  a fresh variableNodes tree — used by the "Re-recognize raw block" action). */
+  replaceBlock: (sceneId: string, blockId: string, newBlocks: Block[], newVariableNodes?: VariableTreeNode[]) => void;
   deleteBlock: (sceneId: string, blockId: string) => void;
   reorderBlocks: (sceneId: string, blocks: Block[]) => void;
   duplicateBlock: (sceneId: string, blockId: string) => void;
@@ -1396,7 +1440,7 @@ export const useProjectStore = create<ProjectState>()(
           });
         },
 
-        updateSceneSettings: (id, { name, tags, notes }) => {
+        updateSceneSettings: (id, { name, tags, notes, background }) => {
           get().saveSnapshot();
           // Protect start tag: preserve it if scene had it, strip it if scene didn't
           set(s => {
@@ -1406,7 +1450,7 @@ export const useProjectStore = create<ProjectState>()(
             const safeTags = hadStart
               ? (tags.includes(START_TAG) ? tags : [START_TAG, ...tags])
               : tags.filter(t => t !== START_TAG);
-            return { project: updateScene(s.project, id, sc => ({ ...sc, name, tags: safeTags, notes: notes || undefined })) };
+            return { project: updateScene(s.project, id, sc => ({ ...sc, name, tags: safeTags, notes: notes || undefined, background: background || undefined })) };
           });
         },
 
@@ -1578,6 +1622,23 @@ export const useProjectStore = create<ProjectState>()(
               updateBlockInScene(sc, blockId, b => ({ ...b, ...patch } as Block))
             ),
           })),
+
+        replaceBlock: (sceneId, blockId, newBlocks, newVariableNodes) => {
+          get().saveSnapshot();
+          set(s => {
+            const proj = updateScene(s.project, sceneId, sc => {
+              const idx = sc.blocks.findIndex(b => b.id === blockId);
+              if (idx < 0) return sc;
+              const blocks = [...sc.blocks.slice(0, idx), ...newBlocks, ...sc.blocks.slice(idx + 1)];
+              return { ...sc, blocks };
+            });
+            return {
+              project: newVariableNodes !== undefined
+                ? { ...proj, variableNodes: newVariableNodes }
+                : proj,
+            };
+          });
+        },
 
         deleteBlock: (sceneId, blockId) => {
           get().saveSnapshot();
@@ -2575,6 +2636,7 @@ export const useProjectStore = create<ProjectState>()(
     },
     {
       name: 'purl-project',
+      storage: createJSONStorage(() => makeDebouncedLocalStorage(500)),
       partialize: (state) => ({
         project: state.project,
         activeSceneId: state.activeSceneId,

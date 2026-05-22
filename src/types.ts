@@ -1,3 +1,59 @@
+// ─── Style overrides (cascade: standard → common custom → spot custom) ──────
+
+/** Static = one style applied always. Bound = numeric-variable-driven mapping. */
+export type StyleMode = 'static' | 'bound';
+
+/**
+ * One variant in a variable-bound style override. Numeric variables only.
+ * - matchType 'exact': fires when $var === value
+ * - matchType 'range': fires when rangeMin ≤ $var ≤ rangeMax (inclusive)
+ */
+export interface StyleMappingEntry {
+  id: string;
+  matchType: 'exact' | 'range';
+  /** Numeric literal as string (parsed on use). Used when matchType === 'exact'. */
+  value?: string;
+  /** Numeric literal as string. Used when matchType === 'range' (inclusive). */
+  rangeMin?: string;
+  rangeMax?: string;
+  /** Structured field overrides for this variant (keys depend on block type). */
+  fields?: Record<string, string | number | boolean>;
+  /** Raw CSS body for this variant — auto-scoped to the variant's class. */
+  rawCss?: string;
+}
+
+/**
+ * Generic style override. Applied at one of three cascade layers:
+ *   1. Standard         — built-in fields on Character/Block (no override)
+ *   2. Common custom    — Character.customDialogueStyle / ProjectSettings.defaultBlockStyles[type]
+ *   3. Spot custom      — block.customStyle (always static)
+ *
+ * Bound mode is allowed only at the common-custom layer. Spot-custom is always static.
+ */
+export interface BlockStyleOverride {
+  /** Master switch. When false, the whole override is ignored. */
+  enabled: boolean;
+  /**
+   * 'static' = single style applied always. Default.
+   * 'bound'  = variable-driven mapping (common-custom layer only; treat as 'static' at spot layer).
+   */
+  mode?: StyleMode;
+
+  // ─── Static mode ─────────────────────────────────────────────────────────
+  fields?: Record<string, string | number | boolean>;
+  /** Auto-scoped to the layer's class; appears after `fields` in the rule body. */
+  rawCss?: string;
+
+  // ─── Bound mode (common-custom layer only) ───────────────────────────────
+  /** Numeric variable's ID. */
+  variableId?: string;
+  /** Variants — first matching entry wins (top-to-bottom = priority). */
+  mapping?: StyleMappingEntry[];
+  /** Fallback fields when no entry matches (or variable is undefined/non-numeric). */
+  defaultFields?: Record<string, string | number | boolean>;
+  defaultRawCss?: string;
+}
+
 // ─── Block appearance effects ────────────────────────────────────────────────
 
 /** Delayed appearance: wraps block in <<timed Xs>>...<</timed>> on export */
@@ -19,7 +75,7 @@ export interface BlockTypewriter {
 
 export interface GenerationHistoryEntry {
   text: string;
-  mode: 'continue' | 'rephrase' | 'hint';
+  mode: 'continue' | 'rephrase' | 'hint' | 'translate';
   timestamp: number;
 }
 
@@ -33,6 +89,8 @@ export interface TextBlock {
   delay?: BlockDelay;
   typewriter?: BlockTypewriter;
   generationHistory?: GenerationHistoryEntry[];
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.text). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface DialogueBlock {
@@ -47,6 +105,8 @@ export interface DialogueBlock {
   delay?: BlockDelay;
   typewriter?: BlockTypewriter;
   generationHistory?: GenerationHistoryEntry[];
+  /** Spot-level style override (always static; supersedes character's common custom). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface ChoiceOption {
@@ -69,6 +129,8 @@ export interface ChoiceBlock {
   type: 'choice';
   options: ChoiceOption[];
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.choice). */
+  customStyle?: BlockStyleOverride;
 }
 
 export type ConditionOperator =
@@ -106,6 +168,17 @@ export interface ConditionBranch {
   rangeMax?: string;     // upper bound (inclusive)
   /** Array accessor — only relevant when variableId points to an array variable. */
   accessor?: ArrayAccessor;
+  /**
+   * Escape-hatch for conditions Purl can't express structurally:
+   *  - compound `or` chains
+   *  - LHS expressions like `$day + 1 > 23`
+   *  - function calls
+   *  - anything else that doesn't fit variableId/operator/value
+   *
+   * When set, this raw SugarCube expression is emitted verbatim and the
+   * structured fields above are ignored.
+   */
+  rawExpression?: string;
   blocks: Block[];
 }
 
@@ -151,6 +224,73 @@ export interface StringBoundEntry {
   result: string;      // the string value to assign to the target variable
 }
 
+/**
+ * One entry inside a SetObjectBlock — a single key/value pair.
+ * Nested objects are represented by valueType === 'object' + children entries.
+ */
+export interface SetObjectEntry {
+  id: string;
+  /** Dictionary key. May contain spaces / special chars; export quotes when needed. */
+  key: string;
+  /** Type of the value at this position. */
+  valueType: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  /** Raw value for primitive types. For 'array', a JSON literal string like `[1,2,3]`. */
+  value?: string;
+  /** Child entries when valueType === 'object'. */
+  entries?: SetObjectEntry[];
+}
+
+/**
+ * SugarCube `<<for>>` loop. Three structurally distinct modes:
+ *  - 'range'  — iterate over a collection: <<for [_k, ]_v range $coll>>
+ *  - 'while'  — repeat while condition holds: <<for $cond>>
+ *  - 'cstyle' — classic for: <<for INIT; COND; STEP>>
+ *
+ * Loop variables (`_name`, `_i`, …) live in SugarCube's temp-var scope and
+ * are NOT modelled as project variables — stored as raw strings here.
+ */
+export type ForLoopMode = 'range' | 'while' | 'cstyle';
+
+export interface ForBlock {
+  id: string;
+  type: 'for';
+  delay?: BlockDelay;
+  mode: ForLoopMode;
+  // ── range mode ───────────────────────────────────────────────────────────
+  /** Optional key temp-var name (e.g. "_name"). */
+  keyVar?: string;
+  /** Value temp-var name (e.g. "_data" or "_item"). */
+  valueVar?: string;
+  /** Source expression — usually `$collection`. */
+  source?: string;
+  // ── while mode ──────────────────────────────────────────────────────────
+  /** Raw SC condition expression. */
+  whileCondition?: string;
+  // ── c-style mode ─────────────────────────────────────────────────────────
+  /** Init expression — e.g. `_i to 0`. Emitted as part of the for header. */
+  initExpr?: string;
+  /** Condition expression. */
+  cstyleCondition?: string;
+  /** Step expression — e.g. `_i++` or `_i += 1`. */
+  stepExpr?: string;
+  /** Body — recursively built. */
+  blocks: Block[];
+}
+
+/**
+ * Assigns a structured JS object literal to a variable.
+ * Exports as `<<set $name = { key1: value1, key2: { ... } }>>`.
+ * Counterpart to VariableSetBlock for `<<set $obj = {...}>>` patterns that
+ * can't be flattened into the usual primitive-valued set.
+ */
+export interface SetObjectBlock {
+  id: string;
+  type: 'set-object';
+  delay?: BlockDelay;
+  variableId: string;
+  entries: SetObjectEntry[];
+}
+
 export interface VariableSetBlock {
   id: string;
   type: 'variable-set';
@@ -190,6 +330,8 @@ export interface ImageBlock {
   variableId?: string;
   mapping?: ImageBoundMapping[];
   defaultSrc?: string;   // fallback when no mapping matches
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.image). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface ImageGenHistoryEntry {
@@ -238,6 +380,8 @@ export interface ImageGenBlock {
   genSettings?: AvatarGenSettings;
   /** When true (bound + ComfyUI), pass the default-slot image as ${base64Image} into variant generations. */
   useRefImage?: boolean;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles['image-gen']). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface VideoBlock {
@@ -249,6 +393,8 @@ export interface VideoBlock {
   controls: boolean;
   width: number;
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.video). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ── Audio block ──────────────────────────────────────────────────────────────
@@ -330,6 +476,8 @@ export interface ButtonBlock {
   style: ButtonStyle;
   actions: ButtonAction[];
   refreshScene?: boolean;  // add <<run Engine.show()>> on export to re-render passage
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.button). */
+  customStyle?: BlockStyleOverride;
 }
 
 /** Navigation target for LinkBlock */
@@ -348,6 +496,8 @@ export interface LinkBlock {
   targetSceneId?: string;  // used when target === 'scene'
   actions: ButtonAction[];
   style: ButtonStyle;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.link). */
+  customStyle?: BlockStyleOverride;
 }
 
 /**
@@ -364,6 +514,8 @@ export interface InputFieldBlock {
   placeholder: string;  // default value pre-filled in the field
   /** Array accessor — only kind: 'index' is valid here. */
   accessor?: ArrayAccessor;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.input-field). */
+  customStyle?: BlockStyleOverride;
 }
 
 /**
@@ -431,6 +583,8 @@ export interface IncludeBlock {
   padding?: number;       // inner padding px
   bgColor?: string;       // background color; undefined = transparent
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.include). */
+  customStyle?: BlockStyleOverride;
 }
 
 export interface DividerBlock {
@@ -440,6 +594,8 @@ export interface DividerBlock {
   thickness?: number;  // px, default 1
   marginV?: number;    // vertical margin (top + bottom) in px, default 8
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.divider). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── Checkbox block ──────────────────────────────────────────────────────────
@@ -466,6 +622,8 @@ export interface CheckboxBlock {
   options: CheckboxOption[];
   variableId?: string;       // array mode only: the target array variable
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.checkbox). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── Radio block ─────────────────────────────────────────────────────────────
@@ -487,6 +645,8 @@ export interface RadioBlock {
   options: RadioOption[];
   variableId: string;      // the string variable to set
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.radio). */
+  customStyle?: BlockStyleOverride;
 }
 
 // ─── System tags ──────────────────────────────────────────────────────────────
@@ -517,6 +677,8 @@ export interface PopupBlock {
   /** Optional dialog title bar text. Empty string = no title bar. */
   title?: string;
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.popup). */
+  customStyle?: BlockStyleOverride;
 }
 
 /**
@@ -532,6 +694,8 @@ export interface FunctionBlock {
   actions: ButtonAction[];
   style: ButtonStyle;
   delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.function). */
+  customStyle?: BlockStyleOverride;
 }
 
 /** Renders a container (shop/chest/loot) in a passage */
@@ -565,6 +729,8 @@ export type Block =
   | ChoiceBlock
   | ConditionBlock
   | VariableSetBlock
+  | SetObjectBlock
+  | ForBlock
   | ImageBlock
   | ImageGenBlock
   | VideoBlock
@@ -634,6 +800,39 @@ export interface SceneGroup {
   collapsed?: boolean;
 }
 
+export type SceneBgImageType = 'none' | 'static' | 'bound' | 'ai-static' | 'ai-bound';
+export type SceneBgSize = 'cover' | 'contain' | 'fill';
+
+export interface SceneBackground {
+  imageType: SceneBgImageType;
+  /** Solid background color — used in 'none' mode without an image */
+  bgColor?: string;
+  /** Image path — static and ai-static modes */
+  src?: string;
+  /** Variable ID — bound and ai-bound modes */
+  variableId?: string;
+  /** Mapping entries — bound and ai-bound modes */
+  mapping?: ImageBoundMapping[];
+  /** Fallback image when no mapping matches */
+  defaultSrc?: string;
+  /** AI generation settings — ai-static and ai-bound */
+  genSettings?: AvatarGenSettings;
+  /** CSS blur in px (0 = no blur) */
+  blur?: number;
+  /** Opacity 0–100 (default 100) */
+  opacity?: number;
+  /** CSS background-size (default 'cover') */
+  size?: SceneBgSize;
+  /** background-position-x 0–100 (default 50) */
+  posX?: number;
+  /** background-position-y 0–100 (default 50) */
+  posY?: number;
+  /** Optional color overlay (#rrggbb) */
+  overlayColor?: string;
+  /** Overlay opacity 0–100 (default 0) */
+  overlayOpacity?: number;
+}
+
 export interface Scene {
   id: string;
   name: string;
@@ -645,6 +844,8 @@ export interface Scene {
   groupId?: string;
   /** Position of this scene's node in the scene graph window. */
   graphPosition?: { x: number; y: number };
+  /** Optional background image configuration */
+  background?: SceneBackground;
 }
 
 // ─── Character ──────────────────────────────────────────────────────────────
@@ -794,6 +995,11 @@ export interface Character {
   varIds?: CharacterVarIds;
   /** Marks this character as the main hero (used automatically in container interactions). */
   isHero?: boolean;
+  /**
+   * Common custom dialogue style for this character (cascade layer 2).
+   * Supports both static and bound (number-variable-driven) modes.
+   */
+  customDialogueStyle?: BlockStyleOverride;
 }
 
 // ─── Item ────────────────────────────────────────────────────────────────────
@@ -917,6 +1123,14 @@ export interface Variable {
   varType: VariableType;
   defaultValue: string;
   description: string;
+  /**
+   * When true, `defaultValue` holds a raw SC expression (e.g. `random(3,10)`,
+   * `either("a","b")`, `"hello " + $name`) and is emitted verbatim by the
+   * exporter instead of being wrapped in quotes. Used by the importer when
+   * StoryInit contains `<<set>>` calls whose RHS we can't safeEval but want
+   * to preserve as-is.
+   */
+  isExpression?: boolean;
 }
 
 export interface VariableGroup {
@@ -1056,6 +1270,17 @@ export interface CellRaw {
   code: string;
 }
 
+/**
+ * Embeds another passage (scene) inside a sidebar cell via `<<include "name">>`.
+ * Lets users keep complex panel content in a regular Scene (with typed blocks)
+ * and reference it from the sidebar, instead of duplicating logic across cells.
+ */
+export interface CellInclude {
+  type: 'include';
+  /** Target scene NAME (consistent with IncludeBlock.passageName). */
+  passageName: string;
+}
+
 /** Displays the contents of an array variable as a joined string */
 export interface CellList {
   type: 'list';
@@ -1117,6 +1342,7 @@ export type CellContent =
   | CellImageGen
   | CellImageFromVar
   | CellRaw
+  | CellInclude
   | CellButton
   | CellList
   | CellAudioVolume
@@ -1174,6 +1400,12 @@ export interface ProjectSettings {
   headerRowId?:    string;
   /** Text shown on the click-to-begin overlay when audio autoplay is blocked */
   audioUnlockText?: string;
+  /**
+   * Common custom styles per block type (cascade layer 2 for non-dialogue blocks).
+   * Dialogue uses Character.customDialogueStyle instead.
+   * Supports both static and bound modes.
+   */
+  defaultBlockStyles?: Partial<Record<BlockType, BlockStyleOverride>>;
 }
 
 export interface Project {
@@ -1196,4 +1428,8 @@ export interface Project {
   assetNodes: AssetTreeNode[];
   sidebarPanel: SidebarPanel;
   watchers: Watcher[];
+  /** Raw user CSS appended to the generated StoryStylesheet (preserved from imports / hand-edited). */
+  customCss?: string;
+  /** Raw user JS appended to the generated StoryScript (preserved from imports / hand-edited). */
+  customScript?: string;
 }

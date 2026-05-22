@@ -2,13 +2,17 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useProjectStore, charToVarPrefix, pregenCharVarIds } from '../../store/projectStore';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { VariablePicker } from '../shared/VariablePicker';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import { DIALOGUE_FIELD_SCHEMA, DIALOGUE_RAW_CSS_HELP } from '../../utils/styleCascade';
 import { TreeLevel } from '../variables/VariableManager';
 import type { TreeActions } from '../variables/variableTreeShared';
 import type {
   Character, AvatarConfig, Variable, AssetTreeNode, VariableTreeNode,
   VariableGroup, CharacterVarIds, CharacterInventorySlot, ItemDefinition,
   PaperdollConfig, PaperdollSlot, SlotPlaceholderConfig,
+  BlockStyleOverride,
 } from '../../types';
+import { buildDialogueLivePreviewCss } from '../../utils/styleCascade';
 import { useT } from '../../i18n';
 import { AvatarGenModal } from './AvatarGenModal';
 import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEditor';
@@ -166,6 +170,9 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
   const [initialInventory, setInitialInventory] = useState<CharacterInventorySlot[]>(initial.initialInventory ?? []);
   const [localPaperdoll, setLocalPaperdoll] = useState<PaperdollConfig | undefined>(initial.paperdoll);
   const [isHero, setIsHero] = useState(initial.isHero ?? false);
+  const [customDialogueStyle, setCustomDialogueStyle] = useState<BlockStyleOverride | undefined>(
+    initial.customDialogueStyle,
+  );
 
   const handleNameChange = (v: string) => {
     setName(v);
@@ -191,6 +198,7 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
     name, varName, nameColor, textColor, bgColor, borderColor,
     avatarConfig: avatarCfg, llm_descr: llmDescr, llm_temperature: parsedTemp,
     initialInventory, isHero,
+    customDialogueStyle,
     ...(mode === 'create' ? { paperdoll: localPaperdoll } : {}),
   };
 
@@ -308,6 +316,9 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
               onNameColorChange={setNameColor} onTextColorChange={setTextColor}
               onBgColorChange={setBgColor} onBorderColorChange={setBorderColor}
               onEnterSave={handleSave}
+              customDialogueStyle={customDialogueStyle}
+              onCustomDialogueStyleChange={setCustomDialogueStyle}
+              variableNodes={mode === 'create' ? selfVarNodes : project.variableNodes}
             />
           )}
           {tab === 'avatar' && (
@@ -344,11 +355,12 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
             <h3 className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-3">
               {(t.characters as any).previewLabel ?? 'Preview'}
             </h3>
-            <CharacterPreview char={draft} avatarCfg={avatarCfg} />
+            <CharacterPreview char={draft} avatarCfg={avatarCfg} charId={charId} />
           </div>
           <PreviewMeta
             varName={trimmedVarName} isHero={isHero}
             nameColor={nameColor} textColor={textColor} bgColor={bgColor} borderColor={borderColor}
+            charId={charId}
           />
         </aside>
       </div>
@@ -382,10 +394,14 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
 //  Preview (sticky right panel)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function CharacterPreview({ char, avatarCfg }: { char: Omit<Character, 'id'>; avatarCfg: AvatarConfig }) {
+/** Stable scope class used only inside the modal preview — never appears in the export. */
+const MODAL_PREVIEW_SCOPE = 'purl-modal-dlg-preview';
+
+function CharacterPreview({ char, avatarCfg, charId: _charId }: { char: Omit<Character, 'id'>; avatarCfg: AvatarConfig; charId?: string }) {
   const t = useT();
   const { projectDir } = useProjectStore();
 
+  // Avatar cycling (unchanged)
   const boundSrcs = avatarCfg.mode === 'bound'
     ? [...avatarCfg.mapping.map(m => m.src), avatarCfg.defaultSrc].filter(Boolean)
     : [];
@@ -406,47 +422,147 @@ function CharacterPreview({ char, avatarCfg }: { char: Omit<Character, 'id'>; av
   useEffect(() => { setImgFailed(false); }, [avatarSrc]);
   const showAvatar = Boolean(avatarSrc) && !imgFailed;
 
+  // ── Style cascade preview (std + common custom incl. raw CSS) ──────────
+  // Generate scoped CSS using the same emitter as the export → preview matches
+  // story.css exactly, including any rawCss the user typed.
+  const cs = char.customDialogueStyle;
+  const isBoundStyle = !!cs?.enabled && (cs?.mode ?? 'static') === 'bound';
+
+  // For bound mode, build the list of variant labels + their `variantIdx`
+  // (0..N-1 for mapping entries, -1 for default fallback).
+  const variantList = isBoundStyle ? [
+    ...(cs!.mapping ?? []).map((m, idx) => ({
+      label: m.matchType === 'range'
+        ? `${m.rangeMin ?? '?'}…${m.rangeMax ?? '?'}`
+        : `= ${m.value ?? '?'}`,
+      idx,
+    })),
+    { label: t.styleOverride.variantDefault, idx: -1 },
+  ] : [];
+
+  const [styleCycleIdx, setStyleCycleIdx] = useState(0);
+  useEffect(() => { setStyleCycleIdx(0); }, [isBoundStyle, cs?.variableId, cs?.mapping?.length]);
+  useEffect(() => {
+    if (!isBoundStyle || variantList.length <= 1) return;
+    const id = setInterval(() => setStyleCycleIdx(i => (i + 1) % variantList.length), 2000);
+    return () => clearInterval(id);
+  });
+
+  // Compute the synthetic Character for CSS generation — we don't have an `id`
+  // in create mode, but `buildDialogueLivePreviewCss` uses only the cascade
+  // fields, not the id.
+  const previewChar = { ...char, id: 'preview' } as Character;
+  const variantIdxForCss = isBoundStyle && variantList.length > 0
+    ? variantList[styleCycleIdx % variantList.length].idx
+    : undefined;
+  const previewCss = buildDialogueLivePreviewCss(MODAL_PREVIEW_SCOPE, previewChar, variantIdxForCss);
+
+  // Fallback fields for the big avatar square (which is rendered outside the
+  // dialogue scope — avatar bg/border don't pick up scoped CSS rules).
+  const stdAvatarBg     = char.bgColor;
+  const stdAvatarBorder = char.borderColor;
+  const stdAvatarName   = char.nameColor;
+  const avatarFields = { bg: stdAvatarBg, border: stdAvatarBorder, name: stdAvatarName };
+  if (cs?.enabled) {
+    let src: Record<string, string | number | boolean> | undefined;
+    if ((cs.mode ?? 'static') === 'static') {
+      src = cs.fields;
+    } else if (variantIdxForCss === -1) {
+      src = cs.defaultFields;
+    } else if (variantIdxForCss !== undefined) {
+      src = cs.mapping?.[variantIdxForCss]?.fields;
+    }
+    if (src) {
+      if (typeof src.bgColor     === 'string' && src.bgColor)     avatarFields.bg     = src.bgColor;
+      if (typeof src.borderColor === 'string' && src.borderColor) avatarFields.border = src.borderColor;
+      if (typeof src.nameColor   === 'string' && src.nameColor)   avatarFields.name   = src.nameColor;
+    }
+  }
+
+  const variantLabel = isBoundStyle && variantList.length > 0
+    ? variantList[styleCycleIdx % variantList.length].label
+    : '';
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Scoped CSS for this preview — same emitter as story.css. */}
+      <style dangerouslySetInnerHTML={{ __html: previewCss }} />
+
       {/* Big avatar square */}
       <div
         className="w-full aspect-square rounded-lg border-2 overflow-hidden flex items-center justify-center"
-        style={{ borderColor: char.borderColor, background: char.bgColor }}
+        style={{ borderColor: avatarFields.border, background: avatarFields.bg }}
       >
         {showAvatar ? (
           <img src={avatarSrc} className="w-full h-full object-cover" alt="" onError={() => setImgFailed(true)} />
         ) : (
-          <span className="text-4xl font-bold" style={{ color: char.nameColor }}>
+          <span className="text-4xl font-bold" style={{ color: avatarFields.name }}>
             {(char.name || '?').slice(0, 1).toUpperCase()}
           </span>
         )}
       </div>
 
-      {/* Dialog example */}
-      <div
-        className="rounded p-2.5 flex gap-2 items-start"
-        style={{ background: char.bgColor, borderLeft: `4px solid ${char.borderColor}` }}
-      >
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-bold block" style={{ color: char.nameColor }}>
+      {/* Dialog example — scoped CSS class applies all merged fields + rawCss.
+          Includes a small .char-avatar so rules targeting it become testable. */}
+      <div className={`dialogue ${MODAL_PREVIEW_SCOPE}`}>
+        {showAvatar ? (
+          <img
+            src={avatarSrc}
+            className="char-avatar object-cover"
+            style={{ width: 48, height: 48 }}
+            alt=""
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div
+            className="char-avatar flex items-center justify-center font-bold"
+            style={{
+              width: 48, height: 48,
+              background: avatarFields.bg,
+              color: avatarFields.name,
+              borderRadius: 4,
+            }}
+          >
+            {(char.name || '?').slice(0, 1).toUpperCase()}
+          </div>
+        )}
+        <div className="char-body flex-1 min-w-0">
+          <span className="char-name text-xs">
             {char.name || t.characters.fieldName}
           </span>
-          <p className="text-xs italic m-0 mt-0.5" style={{ color: char.textColor ?? '#e2e8f0' }}>
+          <p className="char-text text-xs italic m-0 mt-0.5">
             {t.characters.exampleLine}
           </p>
         </div>
       </div>
+
+      {isBoundStyle && variantLabel && (
+        <div className="text-[10px] text-slate-500 text-center font-mono">{variantLabel}</div>
+      )}
     </div>
   );
 }
 
 function PreviewMeta({
-  varName, isHero, nameColor, textColor, bgColor, borderColor,
+  varName, isHero, nameColor, textColor, bgColor, borderColor, charId,
 }: {
   varName: string; isHero: boolean;
   nameColor: string; textColor: string; bgColor: string; borderColor: string;
+  charId?: string;
 }) {
   const t = useT();
+  const [copied, setCopied] = useState(false);
+
+  const cssClass = charId ? `char-${charId}` : null;
+
+  const handleCopy = () => {
+    if (!cssClass) return;
+    navigator.clipboard.writeText(cssClass).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
   const rows: [string, ReactNode][] = [
     [t.characters.fieldVarName, varName ? <code className="text-slate-300 font-mono text-[11px]">{varName}</code> : <span className="text-slate-600">—</span>],
     [t.characters.isHero, isHero
@@ -468,6 +584,30 @@ function PreviewMeta({
               <dd className="text-slate-200 truncate">{v}</dd>
             </div>
           ))}
+          {cssClass && (
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-slate-500 shrink-0">CSS class</dt>
+              <dd className="flex items-center gap-1 min-w-0">
+                <code className="text-indigo-300 font-mono text-[10px] truncate">{cssClass}</code>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  title={copied ? 'Copied!' : 'Copy class name'}
+                  className="shrink-0 text-slate-500 hover:text-indigo-300 transition-colors cursor-pointer"
+                >
+                  {copied ? (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  )}
+                </button>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
       <div>
@@ -502,6 +642,7 @@ function BasicsTab({
   onNameChange, onVarNameChange, onIsHeroChange, onLlmDescrChange, onLlmTemperatureChange,
   onNameColorChange, onTextColorChange, onBgColorChange, onBorderColorChange,
   onEnterSave,
+  customDialogueStyle, onCustomDialogueStyleChange, variableNodes,
 }: {
   name: string; varName: string;
   nameError: string | null; varNameError: string | null;
@@ -517,6 +658,9 @@ function BasicsTab({
   onBgColorChange: (v: string) => void;
   onBorderColorChange: (v: string) => void;
   onEnterSave: () => void;
+  customDialogueStyle: BlockStyleOverride | undefined;
+  onCustomDialogueStyleChange: (v: BlockStyleOverride | undefined) => void;
+  variableNodes: VariableTreeNode[];
 }) {
   const t = useT();
 
@@ -565,6 +709,17 @@ function BasicsTab({
           <ColorSwatch label={t.characters.fieldDialogBg}   value={bgColor}     onChange={onBgColorChange} />
           <ColorSwatch label={t.characters.fieldAccent}     value={borderColor} onChange={onBorderColorChange} />
         </div>
+      </Section>
+
+      <Section title={t.styleOverride.sectionTitle}>
+        <StyleOverrideEditor
+          value={customDialogueStyle}
+          onChange={onCustomDialogueStyleChange}
+          variableNodes={variableNodes}
+          allowBound={true}
+          fieldsSchema={DIALOGUE_FIELD_SCHEMA}
+          rawCssHelp={DIALOGUE_RAW_CSS_HELP}
+        />
       </Section>
 
       <Section title={(t.characters as any).sectionLlm ?? 'LLM'}>

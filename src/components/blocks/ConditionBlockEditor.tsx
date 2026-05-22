@@ -23,13 +23,16 @@ import { useVariableNodes } from '../shared/VariableScope';
 import { useT, blockTypeLabel } from '../../i18n';
 import type {
   ConditionBlock, ConditionBranch, ConditionBranchType, ConditionOperator, Block, ArrayAccessor,
-  TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock,
+  TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, SetObjectBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock,
+  ForBlock,
 } from '../../types';
 import { AddBlockMenu } from './AddBlockMenu';
 import { TextBlockEditor } from './TextBlockEditor';
 import { DialogueBlockEditor } from './DialogueBlockEditor';
 import { ChoiceBlockEditor } from './ChoiceBlockEditor';
 import { VariableSetBlockEditor } from './VariableSetBlockEditor';
+import { SetObjectBlockEditor } from './SetObjectBlockEditor';
+import { ForBlockEditor } from './ForBlockEditor';
 import { ImageBlockEditor } from './ImageBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
 import { RawBlockEditor } from './RawBlockEditor';
@@ -134,12 +137,18 @@ function NestedBlockEditor({
     case 'dialogue':     return <DialogueBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DialogueBlock>) => void} />;
     case 'choice':       return <ChoiceBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ChoiceBlock>) => void} />;
     case 'variable-set': return <VariableSetBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VariableSetBlock>) => void} />;
+    case 'set-object':   return <SetObjectBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SetObjectBlock>) => void} />;
+    case 'for':          return <ForBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ForBlock>) => void} />;
     case 'image':        return <ImageBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ImageBlock>) => void} />;
     case 'video':        return <VideoBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VideoBlock>) => void} />;
     case 'raw':          return <RawBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RawBlock>) => void} />;
     case 'table':        return <TableBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
     case 'include':      return <IncludeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<IncludeBlock>) => void} />;
     case 'divider':      return <DividerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DividerBlock>) => void} />;
+    // Recursive: a ConditionBlock nested inside a branch renders the full
+    // ConditionBlockEditor in local-mode — all mutations route up through the
+    // parent's `onUpdate` chain, so the store sees a single patch at the top.
+    case 'condition':    return <ConditionBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ConditionBlock>) => void} />;
     default:             return <span className="text-xs text-slate-500">{t.block.unsupportedNested}</span>;
   }
 }
@@ -228,19 +237,19 @@ export function ConditionBlockEditor({
    *  state container. */
   onUpdate?: (patch: Partial<ConditionBlock>) => void;
 }) {
-  const {
-    addConditionBranch,
-    updateConditionBranch,
-    deleteConditionBranch,
-    addNestedBlock,
-    updateNestedBlock,
-    deleteNestedBlock,
-    duplicateNestedBlock,
-    pasteToNested,
-    reorderNestedBlocks,
-    saveSnapshot,
-  } = useProjectStore();
-  const { clipboardBlock, copyToClipboard } = useEditorStore();
+  // Selector pattern — stable action refs, no full-store subscription.
+  const addConditionBranch    = useProjectStore(s => s.addConditionBranch);
+  const updateConditionBranch = useProjectStore(s => s.updateConditionBranch);
+  const deleteConditionBranch = useProjectStore(s => s.deleteConditionBranch);
+  const addNestedBlock        = useProjectStore(s => s.addNestedBlock);
+  const updateNestedBlock     = useProjectStore(s => s.updateNestedBlock);
+  const deleteNestedBlock     = useProjectStore(s => s.deleteNestedBlock);
+  const duplicateNestedBlock  = useProjectStore(s => s.duplicateNestedBlock);
+  const pasteToNested         = useProjectStore(s => s.pasteToNested);
+  const reorderNestedBlocks   = useProjectStore(s => s.reorderNestedBlocks);
+  const saveSnapshot          = useProjectStore(s => s.saveSnapshot);
+  const clipboardBlock        = useEditorStore(s => s.clipboardBlock);
+  const copyToClipboard       = useEditorStore(s => s.copyToClipboard);
   const t = useT();
   const variableNodes = useVariableNodes();
   const variables = flattenVariables(variableNodes);
@@ -380,7 +389,26 @@ export function ConditionBlockEditor({
               )}
             </select>
 
-            {branch.branchType !== 'else' && (() => {
+            {branch.branchType !== 'else' && branch.rawExpression !== undefined && (
+              <>
+                <input
+                  className="flex-1 min-w-0 bg-slate-800 text-xs text-white font-mono rounded px-2 py-1 outline-none border border-amber-700/60 focus:border-amber-500"
+                  placeholder={t.condition.rawExpressionPlaceholder}
+                  value={branch.rawExpression}
+                  onFocus={saveSnapshot}
+                  onChange={e => doUpdateBranch(branch.id, { rawExpression: e.target.value })}
+                />
+                <button
+                  title={t.condition.toStructured}
+                  className="text-xs rounded px-1.5 py-0.5 border cursor-pointer font-mono shrink-0 transition-colors bg-amber-800/50 text-amber-300 border-amber-600 hover:bg-amber-700/50"
+                  onClick={() => doUpdateBranch(branch.id, { rawExpression: undefined })}
+                >
+                  raw
+                </button>
+              </>
+            )}
+
+            {branch.branchType !== 'else' && branch.rawExpression === undefined && (() => {
               const branchVar = variables.find(v => v.id === branch.variableId);
               const isArray   = branchVar?.varType === 'array';
               const accessorKind = branch.accessor?.kind ?? 'whole';
@@ -390,6 +418,19 @@ export function ConditionBlockEditor({
                 || (isArray && accessorKind === 'length');
               const rangeMode = branch.rangeMode && isNumericContext;
               const showValue = !rangeMode && operatorNeedsValue(branch.operator);
+              const seedRaw = (): string => {
+                if (!branchVar) return '';
+                const varName = `$${branchVar.name}`;
+                if (rangeMode) return `${varName} >= ${branch.rangeMin ?? '0'} && ${varName} <= ${branch.rangeMax ?? '0'}`;
+                if (!showValue) return `${varName} ${branch.operator}`;
+                const isStringy = branchVar.varType === 'string' || branchVar.varType === 'datetime';
+                const looksLikeRef = /^[_$][A-Za-z_$][\w$.]*$/.test(branch.value);
+                const looksLikeLit = /^-?\d+(\.\d+)?$/.test(branch.value) || branch.value === 'true' || branch.value === 'false';
+                const val = isStringy && !looksLikeRef && !looksLikeLit
+                  ? `"${branch.value}"`
+                  : branch.value;
+                return `${varName} ${branch.operator} ${val}`;
+              };
               return (
               <>
                 {/* Variable selector */}
@@ -447,6 +488,15 @@ export function ConditionBlockEditor({
                     a≤x≤b
                   </button>
                 )}
+
+                {/* Raw mode toggle — escape hatch for compound or, expression LHS, etc. */}
+                <button
+                  title={t.condition.toRaw}
+                  className="text-xs rounded px-1.5 py-0.5 border cursor-pointer font-mono shrink-0 transition-colors bg-slate-800 text-slate-500 border-slate-600 hover:text-slate-300"
+                  onClick={() => doUpdateBranch(branch.id, { rawExpression: seedRaw() })}
+                >
+                  raw
+                </button>
 
                 {rangeMode ? (
                   <>
@@ -540,7 +590,7 @@ export function ConditionBlockEditor({
 
             <AddBlockMenu
               sceneId={sceneId}
-              excludeTypes={['condition', 'note']}
+              excludeTypes={['note']}
               onAdd={(nb) => doAddNested(branch.id, nb)}
             />
 

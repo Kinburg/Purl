@@ -8,6 +8,9 @@ import { useConfirm } from '../shared/ConfirmModal';
 import { useDropdown } from '../shared/useDropdown';
 import { generateStandaloneHtml } from '../../utils/exportToHtml';
 import { exportToTwee } from '../../utils/exportToTwee';
+import { importFromTweeSource, ImportError, type ImportResult } from '../../utils/importFromTwee';
+import { importFromHtmlSource } from '../../utils/importFromHtml';
+import { ImportSummaryModal } from '../import/ImportSummaryModal';
 import { extractProjectStrings, applyTranslations, type TranslationMap } from '../../utils/i18nUtils';
 import {
   hasSCTemplate, getSCTemplate, getSCVersion,
@@ -49,6 +52,7 @@ export function Header() {
   const [aboutOpen, setAboutOpen]       = useState(false);
   const [busy, setBusy]                 = useState(false);
   const [isMaximized, setIsMaximized]   = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportResult | null>(null);
   const { ask, modal: confirmModal }    = useConfirm();
 
   const exportDD = useDropdown<HTMLDivElement>();
@@ -184,6 +188,39 @@ export function Header() {
     );
   };
 
+  const handleImportFromTwee = async () => {
+    fileDD.close();
+    const filePath = await fsApi.openFileDialog({
+      title: t.header.dialogImportTwee,
+      filters: [
+        { name: 'Twee / Twine HTML', extensions: ['twee', 'tw', 'html', 'htm'] },
+      ],
+    });
+    if (!filePath) return;
+    setBusy(true);
+    try {
+      const text = await fsApi.readFile(filePath);
+      const lower = filePath.toLowerCase();
+      const result = (lower.endsWith('.html') || lower.endsWith('.htm'))
+        ? importFromHtmlSource(text)
+        : importFromTweeSource(text);
+      setImportPreview(result);
+    } catch (e) {
+      const msg = e instanceof ImportError ? e.message : String(e);
+      alert(t.header.errorImport(msg));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfirmImport = () => {
+    if (!importPreview) return;
+    loadProject(importPreview.project);
+    setProjectDir(null);
+    setImportPreview(null);
+    toast.success(t.header.successImport);
+  };
+
   const handleOpenProjectFolder = async () => {
     if (projectDir) await fsApi.openPath(projectDir);
   };
@@ -239,8 +276,13 @@ export function Header() {
         const dir = await ensureProjectDir();
         if (!dir) return;
         const releaseDir = joinPath(dir, 'release');
-        const html = generateStandaloneHtml(project, template, usePluginStore.getState().plugins);
+
+        const { html, css } = generateStandaloneHtml(
+          project, template, usePluginStore.getState().plugins,
+        );
+
         await fsApi.writeFile(joinPath(releaseDir, 'index.html'), html);
+        await fsApi.writeFile(joinPath(releaseDir, 'story.css'), css);
         toast.success(t.header.successExportHtml);
         if (confirmOpenFolderAfterExport) {
           ask({ message: t.header.confirmHtmlSaved }, async () => { await fsApi.openPath(releaseDir); });
@@ -278,8 +320,11 @@ export function Header() {
     if (!filePath) return;
     setBusy(true);
     try {
-      const html = generateStandaloneHtml(project, template, usePluginStore.getState().plugins);
+      const { html, css } = generateStandaloneHtml(project, template, usePluginStore.getState().plugins);
+      const lastSep = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+      const saveDir = lastSep >= 0 ? filePath.substring(0, lastSep) : '.';
       await fsApi.writeFile(filePath, html);
+      await fsApi.writeFile(joinPath(saveDir, 'story.css'), css);
       toast.success(t.header.successExportHtml);
     } catch (e) {
       alert(t.header.errorExportHtml(String(e)));
@@ -368,8 +413,11 @@ export function Header() {
       if (!savePath) return;
       setBusy(true);
 
-      const html = generateStandaloneHtml(translatedProject, template, usePluginStore.getState().plugins);
+      const { html, css } = generateStandaloneHtml(translatedProject, template, usePluginStore.getState().plugins);
+      const lastSep = Math.max(savePath.lastIndexOf('/'), savePath.lastIndexOf('\\'));
+      const saveDir = lastSep >= 0 ? savePath.substring(0, lastSep) : '.';
       await fsApi.writeFile(savePath, html);
+      await fsApi.writeFile(joinPath(saveDir, 'story.css'), css);
       toast.success(`Exported ${langCode} version successfully!`);
     } catch (e) {
       alert('Error during translated export: ' + String(e));
@@ -654,6 +702,13 @@ export function Header() {
                 onClick={handleNewProject}
                 disabled={busy}
               />
+              <MenuItem
+                icon={<Icon.code className="w-4 h-4" />}
+                label={t.header.importFromTwee}
+                desc={t.header.importFromTweeDesc}
+                onClick={handleImportFromTwee}
+                disabled={busy}
+              />
               <div className="h-px bg-slate-700/80 mx-2 my-1" />
               <MenuSection label="Localization" />
               <MenuItem
@@ -769,6 +824,14 @@ export function Header() {
       )}
 
       {confirmModal}
+
+      {importPreview && (
+        <ImportSummaryModal
+          summary={importPreview.summary}
+          onCancel={() => setImportPreview(null)}
+          onConfirm={handleConfirmImport}
+        />
+      )}
 
       {/* About Modal */}
       {aboutOpen && (

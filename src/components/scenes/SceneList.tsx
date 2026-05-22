@@ -550,7 +550,7 @@ export function SceneList() {
           mode={sceneModal.mode}
           initial={sceneModal.mode === 'create'
             ? { name: defaultSceneName(), tags: [], notes: undefined }
-            : { name: sceneModal.scene.name, tags: sceneModal.scene.tags, notes: sceneModal.scene.notes }
+            : { name: sceneModal.scene.name, tags: sceneModal.scene.tags, notes: sceneModal.scene.notes, background: sceneModal.scene.background }
           }
           takenNames={sceneModal.mode === 'create'
             ? takenSceneNames()

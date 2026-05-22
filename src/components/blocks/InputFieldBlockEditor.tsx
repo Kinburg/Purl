@@ -5,6 +5,12 @@ import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  CONTENT_BLOCK_FIELD_SCHEMA,
+  CONTENT_BLOCK_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 // Badge showing the variable type and which SugarCube macro will be used
 function MacroBadge({ varType }: { varType: string | undefined }) {
@@ -30,11 +36,15 @@ export function InputFieldBlockEditor({
   onUpdate?: (patch: Partial<InputFieldBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const { updateBlock, saveSnapshot, project } = useProjectStore();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<InputFieldBlock>) => updateBlock(sceneId, block.id, p));
   const variables = flattenVariables(variableNodes);
   const selectedVar = variables.find(v => v.id === block.variableId);
+  const cascadeClasses = ['tg-input-field', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
+  const hasOverride =
+    !!project.settings.defaultBlockStyles?.['input-field']?.enabled ||
+    !!block.customStyle?.enabled;
 
   const isNumber  = selectedVar?.varType === 'number';
   const isBoolean = selectedVar?.varType === 'boolean';
@@ -125,6 +135,38 @@ export function InputFieldBlockEditor({
           </span>
         </div>
       )}
+      {/* Live preview — only when an override changes the look. */}
+      {hasOverride && (
+        <div className="mt-1 pt-1 border-t border-slate-700/40">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Preview</div>
+          <div className={cascadeClasses}>
+            {block.label && <div>{block.label}</div>}
+            <input
+              type={selectedVar?.varType === 'number' ? 'number' : 'text'}
+              placeholder={block.placeholder || '...'}
+              readOnly
+              tabIndex={-1}
+            />
+          </div>
+        </div>
+      )}
+
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={CONTENT_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={CONTENT_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
+
       <BlockEffectsPanel
         delay={block.delay}
         onDelayChange={v => update({ delay: v })}

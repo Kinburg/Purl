@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { usePluginStore } from '../../store/pluginStore';
 import { blockToSC, setPluginRegistry } from '../../utils/exportToTwee';
 import { flattenVariables } from '../../utils/treeUtils';
+import { useDebouncedValue } from '../../utils/useDebouncedValue';
 
 // ── Syntax highlighting (ported from preview.html) ──────────────────────────
 
@@ -91,16 +92,23 @@ export function PreviewPanel() {
   const plugins       = usePluginStore(s => s.plugins);
   const [copied, setCopied] = useState(false);
 
+  // Debounce project/activeScene so we don't re-serialize the whole active
+  // scene on every keystroke — typing into a TextBlock previously triggered
+  // blockToSC for every block in the scene + syntax highlight per char.
+  // 200ms is short enough to feel "live" but cuts work by ~10–20× on rapid input.
+  const debouncedProject       = useDebouncedValue(project, 200);
+  const debouncedActiveSceneId = useDebouncedValue(activeSceneId, 200);
+
   const { code, sceneName } = useMemo(() => {
-    const scene = project.scenes.find(s => s.id === activeSceneId);
+    const scene = debouncedProject.scenes.find(s => s.id === debouncedActiveSceneId);
     if (!scene) return { code: '', sceneName: '' };
 
     setPluginRegistry(plugins);
-    const vars = flattenVariables(project.variableNodes);
-    const idToName = new Map(project.scenes.map(s => [s.id, s.name]));
+    const vars = flattenVariables(debouncedProject.variableNodes);
+    const idToName = new Map(debouncedProject.scenes.map(s => [s.id, s.name]));
     const tags = scene.tags.length > 0 ? ` [${scene.tags.join(' ')}]` : '';
     const body = scene.blocks
-      .map(b => blockToSC(b, project.characters, vars, project.variableNodes, '', idToName, project))
+      .map(b => blockToSC(b, debouncedProject.characters, vars, debouncedProject.variableNodes, '', idToName, debouncedProject))
       .filter(Boolean)
       .join('\n');
 
@@ -108,7 +116,7 @@ export function PreviewPanel() {
       code: `::${scene.name}${tags}\n${body || '(empty scene)'}`,
       sceneName: scene.name,
     };
-  }, [project, activeSceneId, plugins]);
+  }, [debouncedProject, debouncedActiveSceneId, plugins]);
 
   const highlighted = useMemo(() => highlight(code), [code]);
 

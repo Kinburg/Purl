@@ -2,7 +2,7 @@ import type {Scene, Project} from '../../types';
 
 // --- Shared Types ---
 
-export type LLMMode = 'continue' | 'rephrase' | 'hint';
+export type LLMMode = 'continue' | 'rephrase' | 'hint' | 'translate';
 export type LLMProvider = 'koboldcpp' | 'gemini' | 'openai';
 
 export interface GeminiModel {
@@ -19,6 +19,7 @@ export interface GenerationParams {
     filterThought?: boolean;
     /** When set, providers skip constructGenerationPrompt and use this as the user message directly. */
     rawUserPrompt?: string;
+    translationLanguage?: string;
 }
 
 // --- Structured Prompt ---

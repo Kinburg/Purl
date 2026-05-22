@@ -532,9 +532,11 @@ function BehaviorTab() {
 
       {/* Export */}
       <Section title={ep.sectionExport}>
-        <Row label={ep.confirmOpenFolderAfterExport}>
-          <Toggle value={prefs.confirmOpenFolderAfterExport} onChange={() => toggle('confirmOpenFolderAfterExport')} />
-        </Row>
+        <div className="flex flex-col gap-2">
+          <Row label={ep.confirmOpenFolderAfterExport}>
+            <Toggle value={prefs.confirmOpenFolderAfterExport} onChange={() => toggle('confirmOpenFolderAfterExport')} />
+          </Row>
+        </div>
       </Section>
     </>
   );
@@ -577,7 +579,7 @@ function AiTab() {
     llmGeminiApiKey, llmGeminiModel, llmGeminiModelsList,
     llmOpenaiUrl, llmOpenaiApiKey, llmOpenaiModel,
     llmMaxTokens, llmTemperature, llmSystemPrompt,
-    llmFilterThought, llmGenerationHistory,
+    llmFilterThought, llmGenerationHistory, llmTranslationLanguage,
     imageGenProvider, comfyUiUrl, comfyUiWorkflowsDir,
     pollinationsModel, pollinationsToken,
   } = prefs;
@@ -815,6 +817,16 @@ function AiTab() {
               <option value="project">{llm.generationHistoryProject}</option>
               <option value="disabled">{llm.generationHistoryDisabled}</option>
             </select>
+          </ModalField>
+
+          <ModalField label={llm.translationLanguageLabel} note={llm.translationLanguageHint}>
+            <input
+              type="text"
+              value={llmTranslationLanguage}
+              onChange={e => setPrefs({ llmTranslationLanguage: e.target.value })}
+              placeholder={llm.translationLanguagePlaceholder}
+              className={INPUT_CLS}
+            />
           </ModalField>
 
           <ModalField label={llm.imageGenProviderLabel}>

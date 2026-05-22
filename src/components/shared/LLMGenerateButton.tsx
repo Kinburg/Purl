@@ -5,6 +5,7 @@ import { useGenerationHistoryStore } from '../../store/generationHistoryStore';
 import { generateText, abortGeneration, type LLMMode } from '../../utils/llm';
 import type { GenerationHistoryEntry } from '../../types';
 import { toast } from 'sonner';
+import { useT } from '../../i18n';
 
 const MAX_PROJECT_HISTORY = 10;
 
@@ -17,6 +18,8 @@ interface Props {
 }
 
 export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated, onStreaming }: Props) {
+  const t = useT();
+  const llmT = t.llmGenerateButton;
   const {
     llmEnabled,
     llmProvider,
@@ -30,7 +33,8 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
     llmTemperature,
     llmSystemPrompt,
     llmFilterThought,
-    llmGenerationHistory
+    llmGenerationHistory,
+    llmTranslationLanguage,
   } = useEditorPrefsStore();
   const { project, saveSnapshot, updateBlock } = useProjectStore();
   const memHistory = useGenerationHistoryStore();
@@ -69,7 +73,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
       }
       abortGeneration(llmProvider, llmUrl);
       setLoading(null);
-      toast.info("Generation stopped");
+      toast.info(llmT.generationStopped);
       return;
     }
 
@@ -200,7 +204,8 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
         {
           maxTokens: llmMaxTokens,
           temperature,
-          filterThought: llmFilterThought
+          filterThought: llmFilterThought,
+          translationLanguage: llmTranslationLanguage,
         },
         mode,
         controller.signal,
@@ -217,7 +222,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
       if (error instanceof Error && error.name === 'AbortError') {
         // Stopped by user
       } else {
-        toast.error(`Failed to generate text. Check your ${llmProvider} settings and connection.`);
+        toast.error(llmT.generateFailed(llmProvider));
       }
     } finally {
       if (abortControllerRef.current === controller) {
@@ -240,7 +245,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
             disabled={!canGoBack}
             onClick={() => navigateHistory(-1)}
             className="px-0.5 py-0.5 text-xs border rounded cursor-pointer transition-colors leading-none flex items-center justify-center text-slate-500 hover:text-indigo-400 bg-slate-800 border-slate-600 hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Previous generation"
+            title={llmT.prevGeneration}
           >
             <ChevronLeftIcon />
           </button>
@@ -252,7 +257,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
             disabled={!canGoForward}
             onClick={() => navigateHistory(1)}
             className="px-0.5 py-0.5 text-xs border rounded cursor-pointer transition-colors leading-none flex items-center justify-center text-slate-500 hover:text-indigo-400 bg-slate-800 border-slate-600 hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Next generation"
+            title={llmT.nextGeneration}
           >
             <ChevronRightIcon />
           </button>
@@ -269,7 +274,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
             ? 'text-indigo-400 bg-slate-700 border-indigo-500'
             : 'text-slate-500 hover:text-indigo-400 bg-slate-800 border-slate-600 hover:border-indigo-500'
         }`}
-        title={loading ? "Stop generation" : "AI Generation Tools"}
+        title={loading ? llmT.stopGeneration : llmT.aiTools}
       >
         {loading ? <StopLoadingIcon /> : <SparklesIcon />}
       </button>
@@ -282,23 +287,30 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
         >
           <MenuOption
             icon={<GenerateIcon />}
-            label="Continue generation"
+            label={llmT.continueGeneration}
             onClick={() => handleGenerate('continue')}
             colorClass="text-indigo-400"
           />
           <MenuOption
             icon={<RephraseIcon />}
-            label="Rephrase and improve"
+            label={llmT.rephraseImprove}
             disabled={!currentValue.trim()}
             onClick={() => handleGenerate('rephrase')}
             colorClass="text-emerald-400"
           />
           <MenuOption
             icon={<HintIcon />}
-            label="Generate from hint"
+            label={llmT.generateFromHint}
             disabled={!currentValue.trim()}
             onClick={() => handleGenerate('hint')}
             colorClass="text-amber-400"
+          />
+          <MenuOption
+            icon={<TranslateIcon />}
+            label={llmT.translateTo(llmTranslationLanguage || 'English')}
+            disabled={!currentValue.trim()}
+            onClick={() => handleGenerate('translate')}
+            colorClass="text-sky-400"
           />
         </div>
       )}
@@ -398,6 +410,14 @@ function ChevronRightIcon() {
   return (
     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function TranslateIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
     </svg>
   );
 }

@@ -5,13 +5,27 @@ import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT } from '../../i18n';
 import { fsApi, joinPath, safeName, toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { toast } from 'sonner';
-import type { Project, ProjectSettings, SidebarPanel, SidebarTab, SidebarRow } from '../../types';
+import type {
+  Project, ProjectSettings, SidebarPanel, SidebarTab, SidebarRow,
+  BlockStyleOverride, VariableTreeNode,
+} from '../../types';
 import {
   ModalShell, ModalBody,
   ModalField, ModalRow, ModalSection, Toggle, Segmented,
   PrimaryButton, SecondaryButton, ColorSwatchInput, INPUT_CLS,
 } from '../shared/ModalShell';
 import { EmojiIcon } from '../shared/EmojiIcons';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  BUTTON_FIELD_SCHEMA, BUTTON_RAW_CSS_HELP,
+  CONTENT_BLOCK_FIELD_SCHEMA, CONTENT_BLOCK_RAW_CSS_HELP,
+  MEDIA_BLOCK_FIELD_SCHEMA, MEDIA_BLOCK_RAW_CSS_HELP,
+  DIVIDER_FIELD_SCHEMA, DIVIDER_RAW_CSS_HELP,
+  CHOICE_FIELD_SCHEMA, CHOICE_RAW_CSS_HELP,
+  POPUP_FIELD_SCHEMA, POPUP_RAW_CSS_HELP,
+} from '../../utils/styleCascade';
+import type { StyleFieldDescriptor, StyleRawCssHelp } from '../../utils/styleCascade';
+import type { BlockType } from '../../types';
 
 /** AI-button label: sparkle SVG followed by the action text. */
 function AiLabel({ children }: { children: React.ReactNode }) {
@@ -104,7 +118,7 @@ function applyHeaderImageToPanel(
 //  Component
 // ═══════════════════════════════════════════════════════════════════════════
 
-type TabId = 'general' | 'appearance' | 'aiImage' | 'advanced';
+type TabId = 'general' | 'appearance' | 'blockDefaults' | 'aiImage' | 'advanced';
 
 interface Props {
   mode: 'create' | 'edit';
@@ -176,7 +190,12 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   // Advanced
   const [historyControls, setHistoryControls] = useState(existing.historyControls);
   const [saveLoadMenu,    setSaveLoadMenu]    = useState(existing.saveLoadMenu);
-  const [audioUnlockText, setAudioUnlockText] = useState(existing.audioUnlockText ?? '');
+  const [audioUnlockText,  setAudioUnlockText]  = useState(existing.audioUnlockText  ?? '');
+
+  // Block defaults (per-block-type cascade common-custom). Empty record = no overrides.
+  const [defaultBlockStyles, setDefaultBlockStyles] = useState<ProjectSettings['defaultBlockStyles']>(
+    existing.defaultBlockStyles ?? {},
+  );
 
   const [titleError, setTitleError] = useState<string | null>(null);
   const [busy, setBusy]             = useState(false);
@@ -431,7 +450,11 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
     if (titleFont.trim())    s.titleFont    = titleFont.trim();
     if (headerSrc)           s.headerImageSrc = headerSrc;
     if (rowId)               s.headerRowId = rowId;
-    if (audioUnlockText.trim()) s.audioUnlockText = audioUnlockText.trim();
+    if (audioUnlockText.trim())  s.audioUnlockText  = audioUnlockText.trim();
+    // Block defaults (cascade common-custom per block type) — set when at least one entry exists.
+    if (defaultBlockStyles && Object.keys(defaultBlockStyles).length > 0) {
+      s.defaultBlockStyles = defaultBlockStyles;
+    }
     return s;
   }
 
@@ -550,10 +573,11 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   const hasHeaderImage = headerPreviewUrl && !headerRemoved;
 
   const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
-    { id: 'general',    label: ps.tabGeneral,    icon: <IconDocument /> },
-    { id: 'appearance', label: ps.tabAppearance, icon: <IconPalette /> },
-    { id: 'aiImage',    label: ps.tabAiImage,    icon: <IconImage /> },
-    { id: 'advanced',   label: ps.tabAdvanced,   icon: <IconCog /> },
+    { id: 'general',       label: ps.tabGeneral,        icon: <IconDocument /> },
+    { id: 'appearance',    label: ps.tabAppearance,     icon: <IconPalette /> },
+    { id: 'blockDefaults', label: ps.tabBlockDefaults,  icon: <IconPalette /> },
+    { id: 'aiImage',       label: ps.tabAiImage,        icon: <IconImage /> },
+    { id: 'advanced',      label: ps.tabAdvanced,       icon: <IconCog /> },
   ];
 
   return (
@@ -738,6 +762,15 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
                 <p className="text-[10px] text-slate-500 mt-1">{ps.headerImageAiHint}</p>
               </ModalSection>
             </>
+          )}
+
+          {/* ── Block defaults ─────────────────────────────────────────── */}
+          {tab === 'blockDefaults' && (
+            <BlockDefaultsTab
+              defaultBlockStyles={defaultBlockStyles}
+              onChange={setDefaultBlockStyles}
+              variableNodes={project.variableNodes}
+            />
           )}
 
           {/* ── AI Image ───────────────────────────────────────────────── */}
@@ -984,6 +1017,74 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 }
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
+// ─── Block defaults tab ─────────────────────────────────────────────────────
+
+/** One row in the Block defaults tab — wraps a single block-type section. */
+interface BlockDefaultRow {
+  type: BlockType;
+  titleKey: string;          // key under projectSettings (with sectionBlockDefaults* fallback)
+  descKey: string;           // key under projectSettings (with blockDefaults*Desc fallback)
+  schema: ReadonlyArray<StyleFieldDescriptor>;
+  help: StyleRawCssHelp;
+}
+
+const BLOCK_DEFAULT_ROWS: ReadonlyArray<BlockDefaultRow> = [
+  { type: 'button',      titleKey: 'sectionBlockDefaultsButton',      descKey: 'blockDefaultsButtonDesc',      schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'link',        titleKey: 'sectionBlockDefaultsLink',        descKey: 'blockDefaultsLinkDesc',        schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'function',    titleKey: 'sectionBlockDefaultsFunction',    descKey: 'blockDefaultsFunctionDesc',    schema: BUTTON_FIELD_SCHEMA,        help: BUTTON_RAW_CSS_HELP },
+  { type: 'choice',      titleKey: 'sectionBlockDefaultsChoice',      descKey: 'blockDefaultsChoiceDesc',      schema: CHOICE_FIELD_SCHEMA,        help: CHOICE_RAW_CSS_HELP },
+  { type: 'popup',       titleKey: 'sectionBlockDefaultsPopup',       descKey: 'blockDefaultsPopupDesc',       schema: POPUP_FIELD_SCHEMA,         help: POPUP_RAW_CSS_HELP },
+  { type: 'text',        titleKey: 'sectionBlockDefaultsText',        descKey: 'blockDefaultsTextDesc',        schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'image',       titleKey: 'sectionBlockDefaultsImage',       descKey: 'blockDefaultsImageDesc',       schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'image-gen',   titleKey: 'sectionBlockDefaultsImageGen',    descKey: 'blockDefaultsImageGenDesc',    schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'video',       titleKey: 'sectionBlockDefaultsVideo',       descKey: 'blockDefaultsVideoDesc',       schema: MEDIA_BLOCK_FIELD_SCHEMA,   help: MEDIA_BLOCK_RAW_CSS_HELP },
+  { type: 'include',     titleKey: 'sectionBlockDefaultsInclude',     descKey: 'blockDefaultsIncludeDesc',     schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'divider',     titleKey: 'sectionBlockDefaultsDivider',     descKey: 'blockDefaultsDividerDesc',     schema: DIVIDER_FIELD_SCHEMA,       help: DIVIDER_RAW_CSS_HELP },
+  { type: 'checkbox',    titleKey: 'sectionBlockDefaultsCheckbox',    descKey: 'blockDefaultsCheckboxDesc',    schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'radio',       titleKey: 'sectionBlockDefaultsRadio',       descKey: 'blockDefaultsRadioDesc',       schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+  { type: 'input-field', titleKey: 'sectionBlockDefaultsInputField',  descKey: 'blockDefaultsInputFieldDesc',  schema: CONTENT_BLOCK_FIELD_SCHEMA, help: CONTENT_BLOCK_RAW_CSS_HELP },
+];
+
+function BlockDefaultsTab({
+  defaultBlockStyles,
+  onChange,
+  variableNodes,
+}: {
+  defaultBlockStyles: ProjectSettings['defaultBlockStyles'];
+  onChange: (next: ProjectSettings['defaultBlockStyles']) => void;
+  variableNodes: VariableTreeNode[];
+}) {
+  const t = useT();
+  const ps = t.projectSettings as any;
+
+  const patchEntry = (type: BlockType, value: BlockStyleOverride | undefined) => {
+    const next = { ...(defaultBlockStyles ?? {}) };
+    if (value === undefined) delete next[type];
+    else next[type] = value;
+    onChange(next);
+  };
+
+  return (
+    <>
+      {BLOCK_DEFAULT_ROWS.map(row => (
+        <ModalSection key={row.type} title={ps[row.titleKey] ?? row.type}>
+          {ps[row.descKey] && (
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">{ps[row.descKey]}</p>
+          )}
+          <StyleOverrideEditor
+            value={defaultBlockStyles?.[row.type]}
+            onChange={v => patchEntry(row.type, v)}
+            variableNodes={variableNodes}
+            allowBound={true}
+            fieldsSchema={row.schema}
+            rawCssHelp={row.help}
+          />
+        </ModalSection>
+      ))}
+    </>
+  );
+}
+
 // 16×16 line icons, currentColor. Matches the visual weight of other modal icons.
 
 const IconBook = () => (

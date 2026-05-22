@@ -35,6 +35,8 @@ export function blockTypeLabel(t: Translations, type: Block['type']): string {
     'choice':            t.block.choice,
     'condition':         t.block.condition,
     'variable-set':      t.block.variableSet,
+    'set-object':        t.block.setObject,
+    'for':               t.block.forLoop,
     'button':            t.block.button,
     'link':              t.block.link,
     'input-field':       t.block.inputField,

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore } from '../../store/projectStore';
@@ -12,6 +13,8 @@ import { DialogueBlockEditor } from './DialogueBlockEditor';
 import { ChoiceBlockEditor } from './ChoiceBlockEditor';
 import { ConditionBlockEditor } from './ConditionBlockEditor';
 import { VariableSetBlockEditor } from './VariableSetBlockEditor';
+import { SetObjectBlockEditor } from './SetObjectBlockEditor';
+import { ForBlockEditor } from './ForBlockEditor';
 import { ImageBlockEditor } from './ImageBlockEditor';
 import { ImageGenBlockEditor } from './ImageGenBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
@@ -41,6 +44,8 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'choice':            'bg-emerald-900/40',
   'condition':         'bg-amber-900/40',
   'variable-set':      'bg-purple-900/40',
+  'set-object':        'bg-purple-900/40',
+  'for':               'bg-amber-900/40',
   'button':            'bg-blue-900/40',
   'link':              'bg-emerald-900/40',
   'input-field':       'bg-teal-900/40',
@@ -87,9 +92,13 @@ interface Props {
   onDuplicate?: () => void;
 }
 
-export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
-  const { deleteBlock, duplicateBlock } = useProjectStore();
-  const { copyToClipboard } = useEditorStore();
+function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
+  // Selector pattern — Zustand caches stable action refs, so this hook does
+  // NOT re-render BlockItem on every project change (the old `useProjectStore()`
+  // without selector was subscribing to the entire store).
+  const deleteBlock     = useProjectStore(s => s.deleteBlock);
+  const duplicateBlock  = useProjectStore(s => s.duplicateBlock);
+  const copyToClipboard = useEditorStore(s => s.copyToClipboard);
   const confirmDeleteBlock = useEditorPrefsStore(s => s.confirmDeleteBlock);
   const { ask, modal: confirmModal } = useConfirm();
   const t = useT();
@@ -181,6 +190,8 @@ export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdat
         {block.type === 'choice'            && <ChoiceBlockEditor           block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'condition'         && <ConditionBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'variable-set'      && <VariableSetBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
+        {block.type === 'set-object'        && <SetObjectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
+        {block.type === 'for'               && <ForBlockEditor              block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'image'             && <ImageBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'image-gen'         && <ImageGenBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
         {block.type === 'video'             && <VideoBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
@@ -208,3 +219,10 @@ export function BlockItem({ block, sceneId, collapsed, onToggleCollapse, onUpdat
     </>
   );
 }
+
+/**
+ * React.memo prevents re-render when the block prop and callbacks are stable.
+ * Zustand's immutable updates preserve refs of unchanged blocks, so typing
+ * into block A doesn't re-create block B's props → BlockItem B doesn't re-render.
+ */
+export const BlockItem = memo(BlockItemImpl);

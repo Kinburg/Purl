@@ -43,7 +43,8 @@ export function VariableSetBlockEditor({
   onUpdate?: (patch: Partial<VariableSetBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<VariableSetBlock>) => updateBlock(sceneId, block.id, p as never));
   const variables   = flattenVariables(variableNodes);

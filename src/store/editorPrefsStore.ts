@@ -73,6 +73,7 @@ export interface EditorPrefs {
   llmSystemPrompt:     string;
   llmFilterThought:    boolean; // Filter <thought> blocks
   llmGenerationHistory: 'memory' | 'project' | 'disabled';
+  llmTranslationLanguage: string;
 
   // ── Image Generation ──────────────────────────────────────────────────────
   /** Global default image generation provider. */
@@ -125,6 +126,7 @@ const DEFAULTS: EditorPrefs = {
   llmSystemPrompt:     'You are a professional storyteller. Write a continuation of the story based on the context provided. Maintain the tone and style of the existing text.',
   llmFilterThought:    true,
   llmGenerationHistory: 'memory',
+  llmTranslationLanguage: 'English',
 
   imageGenProvider:    'comfyui',
   comfyUiUrl:          'http://127.0.0.1:8188',

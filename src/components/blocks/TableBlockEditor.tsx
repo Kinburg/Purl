@@ -30,6 +30,7 @@ function makeDefaultContent(type: CellContent['type']): CellContent {
     case 'image-gen':      return { type: 'image-gen', promptMode: 'manual', prompt: '', seedMode: 'random', workflowFile: '', alt: '', src: '', width: 0 } as CellImageGen;
     case 'image-from-var': return { type: 'image-from-var', variableId: '', objectFit: 'cover' } as CellImageFromVar;
     case 'raw':            return { type: 'raw', code: '' } as CellRaw;
+    case 'include':        return { type: 'include', passageName: '' };
     case 'button':         return { type: 'button', label: '', style: { bgColor: '#3b82f6', textColor: '#ffffff', borderColor: '#2563eb', borderRadius: 4, paddingV: 4, paddingH: 10, fontSize: 9, bold: false, fullWidth: false }, actions: [] };
     case 'list':           return { type: 'list', variableId: '', separator: ', ', emptyText: '', prefix: '', suffix: '' };
     case 'audio-volume':   return { type: 'audio-volume', showMuteButton: true } as CellAudioVolume;
@@ -431,6 +432,7 @@ function cellTypeLabelFromT(t: ReturnType<typeof useT>, type: CellContent['type'
     'image-gen':      t.cellModal.typeImageGenShort,
     'image-from-var': t.cellModal.typeImageFromVarShort,
     raw:              t.cellModal.typeRaw,
+    include:          t.cellModal.typeInclude,
     button:           t.cellModal.typeButton,
     list:             t.cellModal.typeList,
     'audio-volume':   t.cellModal.typeAudioVolume,
@@ -578,6 +580,7 @@ function TCellEditModal({
     { value: 'image-gen',      label: t.cellModal.typeImageGen },
     { value: 'image-from-var', label: t.cellModal.typeImageFromVar },
     { value: 'raw',            label: t.cellModal.typeRaw },
+    { value: 'include',        label: t.cellModal.typeInclude },
     { value: 'button',         label: t.cellModal.typeButton },
     { value: 'list',           label: t.cellModal.typeList },
     { value: 'date-time',      label: t.cellModal.typeDateTime },

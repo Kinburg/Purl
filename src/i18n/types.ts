@@ -59,6 +59,146 @@ export interface Translations {
     groupUngrouped: string;
     makeStart: string;
     startTagHint: string;
+    tabSettings: string;
+    tabBackground: string;
+    bgNone: string;
+    bgStatic: string;
+    bgBound: string;
+    bgAiStatic: string;
+    bgAiBound: string;
+    bgSection: string;
+    bgHint: string;
+    bgBlur: string;
+    bgOpacity: string;
+    bgSize: string;
+    bgSizeCover: string;
+    bgSizeContain: string;
+    bgSizeFill: string;
+    bgPosX: string;
+    bgPosY: string;
+    bgOverlayColor: string;
+    bgOverlayOpacity: string;
+    bgNoImage: string;
+    bgGenerate: string;
+    bgRemove: string;
+    bgVariable: string;
+    bgDisplaySection: string;
+    bgOverlaySection: string;
+    bgColorSection: string;
+  };
+
+  // ─── Style override editor (shared, used in CharacterModal / DialogueBlockEditor / ProjectSettings) ──
+  styleOverride: {
+    sectionTitle: string;          // "Custom style"
+    enable: string;                // "Override style"
+    enableNote: string;            // small explainer near the toggle
+    modeStatic: string;            // "Static"
+    modeBound: string;             // "Bound to variable"
+    modeBoundNote: string;         // explainer for bound mode
+    fieldsHeader: string;          // "Style fields"
+    rawCssLabel: string;           // "Additional CSS"
+    rawCssPlaceholder: string;     // generic fallback textarea placeholder
+    placeholderDialogue: string;   // textarea placeholder for dialogue overrides
+    placeholderButton: string;     // textarea placeholder for button/link/function overrides
+    placeholderContent: string;    // placeholder for text/image/include/checkbox/radio/input
+    placeholderDivider: string;    // placeholder for divider
+    rawCssScopedNote: string;      // hint that rules are auto-scoped
+    rawCssHelpToggle: string;      // "Show supported selectors & example"
+    rawCssHelpIntro: string;       // intro line for help block
+    rawCssDisclaimer: string;      // "Any valid CSS works ..." — emphasises no whitelist
+    rawCssCheatsheetTitle: string; // "Common properties"
+    rawCssCheatsheet: {
+      motion:      string;         // "Motion & animation"
+      effects:     string;         // "Visual effects"
+      layout:      string;         // "Layout & spacing"
+      interaction: string;         // "Interaction"
+    };
+    rawCssExampleLabel: string;    // "Example:"
+    bindVariableLabel: string;     // "Variable (number)"
+    bindVariableEmpty: string;     // "Pick a numeric variable"
+    variants: string;              // "Variants"
+    variantAdd: string;            // "+ Variant"
+    variantEmpty: string;          // shown when list is empty
+    variantMatchExact: string;     // "Exact"
+    variantMatchRange: string;     // "Range"
+    variantMatchValue: string;     // "Value"
+    variantMatchMin: string;       // "From"
+    variantMatchMax: string;       // "To"
+    variantConditionHint: string;  // "first match wins"
+    variantDefault: string;        // "Default (no match)"
+    variantDefaultNote: string;    // explainer
+    reset: string;                 // "Reset"
+    // Tristate UI labels (boolean fields: bold / fullWidth)
+    tristateUnset: string;         // "—" (let lower cascade layer through)
+    tristateOff: string;
+    tristateOn: string;
+    // Field labels — keyed by StyleFieldDescriptor.labelKey
+    fields: {
+      bgColor:      string;
+      borderColor:  string;
+      nameColor:    string;
+      textColor:    string;
+      borderRadius: string;
+      paddingV:     string;
+      paddingH:     string;
+      fontSize:     string;
+      bold:         string;
+      fullWidth:    string;
+      // Content-block specific
+      borderWidth:  string;
+      maxWidth:     string;
+      opacity:      string;
+      // Divider specific
+      lineColor:    string;
+      thickness:    string;
+      marginV:      string;
+      // Media-block specific
+      align:        string;
+      borderTarget: string;
+      // Choice-specific
+      direction:    string;
+      gap:          string;
+      // Popup-specific
+      titlebarBg:   string;
+      titleColor:   string;
+    };
+    // Enum option labels — keyed by StyleFieldDescriptor.options[i].labelKey
+    options: {
+      alignLeft:            string;
+      alignCenter:          string;
+      alignRight:           string;
+      borderTargetContent:  string;
+      borderTargetWrapper:  string;
+      directionRow:         string;
+      directionColumn:      string;
+    };
+    // Raw-CSS help selector descriptions — keyed by StyleRawCssHelp.selectors[i].descKey
+    selectors: {
+      selectorBody:           string;
+      selectorName:           string;
+      selectorText:           string;
+      selectorAvatar:         string;
+      selectorButtonA:        string;
+      selectorButtonAHover:   string;
+      selectorButtonAActive:  string;
+      // Simple-block selectors
+      selectorBlockSelf:      string;
+      selectorBlockImg:       string;
+      selectorBlockVideo:     string;
+      selectorBlockInput:     string;
+      selectorBlockLabel:     string;
+      // Choice
+      selectorChoiceA:        string;
+      // Popup (#ui-dialog)
+      selectorPopupDialog:    string;
+      selectorPopupTitlebar:  string;
+      selectorPopupTitle:     string;
+      selectorPopupBody:      string;
+      selectorPopupClose:     string;
+    };
+    // Block-specific raw-CSS placeholders (used by StyleRawCssHelp.placeholderKey)
+    placeholderChoice?:       string;
+    placeholderPopup?:        string;
   };
 
   block: {
@@ -68,6 +208,8 @@ export interface Translations {
     choice: string;
     condition: string;
     variableSet: string;
+    setObject: string;
+    forLoop: string;
     button: string;
     link: string;
     inputField: string;
@@ -119,6 +261,8 @@ export interface Translations {
     choice:      { label: string; desc: string };
     condition:   { label: string; desc: string };
     variableSet: { label: string; desc: string };
+    setObject:   { label: string; desc: string };
+    forLoop:     { label: string; desc: string };
     button:      { label: string; desc: string };
     link:        { label: string; desc: string };
     inputField:  { label: string; desc: string };
@@ -222,6 +366,9 @@ export interface Translations {
     rangeToggle:         string;  // tooltip for range-mode button
     rangeMinPlaceholder: string;
     rangeMaxPlaceholder: string;
+    rawExpressionPlaceholder: string;
+    toRaw:                   string;
+    toStructured:            string;
     opContains:    string;  // 'contains'
     opNotContains: string;  // '!contains'
     opEmpty:       string;  // 'empty'
@@ -302,6 +449,29 @@ export interface Translations {
     successExportTwee: string;
     unapprovedImagesTitle: string;
     unapprovedImagesMessage: (scenes: string[]) => string;
+    importFromTwee: string;
+    importFromTweeDesc: string;
+    dialogImportTwee: string;
+    errorImport: (e: unknown) => string;
+    successImport: string;
+  };
+
+  importSummary: {
+    title: string;
+    intro: string;
+    format: (name: string) => string;
+    scenes: (n: number) => string;
+    blocksTotal: (n: number) => string;
+    rawBlocks: (n: number) => string;
+    blocksBreakdown: string;
+    variables: (n: number) => string;
+    variablesTodo: (n: number) => string;
+    variablesAutoCreated: (n: number) => string;
+    customCss: (bytes: string) => string;
+    customScript: (bytes: string) => string;
+    warningsTitle: string;
+    cancel: string;
+    openProject: string;
   };
 
   // ─── Asset manager ──────────────────────────────────────────────────────────
@@ -472,6 +642,9 @@ export interface Translations {
     typeImageBound: string;
     typeImageBoundShort: string;
     typeRaw: string;
+    typeInclude: string;
+    includeSceneLabel: string;
+    includeScenePicker: string;
     typeButton: string;
     // ── Button cell fields ──
     buttonLabelField: string;
@@ -893,6 +1066,23 @@ export interface Translations {
 
   rawBlock: {
     hint: string;
+    recognizeButton: string;
+    recognizeTitle: string;
+    recognizeNothing: string;
+    recognizeSuccess: (n: number) => string;
+  };
+
+  setObject: {
+    varPlaceholder: string;
+    keyPlaceholder: string;
+    valuePlaceholder: string;
+    addEntry: string;
+    removeEntry: string;
+    pickVariableHint: string;
+  };
+
+  forBlock: {
+    bodyLabel: string;
   };
 
   dividerBlock: {
@@ -1257,6 +1447,23 @@ export interface Translations {
 
     comfyUi: string;
     pollinationsAi: string;
+    translationLanguageLabel: string;
+    translationLanguagePlaceholder: string;
+    translationLanguageHint: string;
+  };
+
+  // ─── LLM Generate Button ─────────────────────────────────────────────────────
+  llmGenerateButton: {
+    continueGeneration: string;
+    rephraseImprove: string;
+    generateFromHint: string;
+    translateTo: (lang: string) => string;
+    prevGeneration: string;
+    nextGeneration: string;
+    stopGeneration: string;
+    aiTools: string;
+    generationStopped: string;
+    generateFailed: (provider: string) => string;
   };
 
   // ─── Project settings modal ──────────────────────────────────────────────────
@@ -1311,8 +1518,40 @@ export interface Translations {
     // Tabbed layout (merged AI Settings)
     tabGeneral:             string;
     tabAppearance:          string;
+    tabBlockDefaults:       string;
     tabAiImage:             string;
     tabAdvanced:            string;
+    sectionBlockDefaults:        string;  // legacy single section title
+    blockDefaultsDescription:    string;
+    // Per-type section titles + descriptions for Phase 2 Block defaults tab
+    sectionBlockDefaultsButton:     string;
+    sectionBlockDefaultsLink:       string;
+    sectionBlockDefaultsFunction:   string;
+    sectionBlockDefaultsChoice:     string;
+    sectionBlockDefaultsPopup:      string;
+    sectionBlockDefaultsText:       string;
+    sectionBlockDefaultsImage:      string;
+    sectionBlockDefaultsImageGen:   string;
+    sectionBlockDefaultsVideo:      string;
+    sectionBlockDefaultsInclude:    string;
+    sectionBlockDefaultsDivider:    string;
+    sectionBlockDefaultsCheckbox:   string;
+    sectionBlockDefaultsRadio:      string;
+    sectionBlockDefaultsInputField: string;
+    blockDefaultsButtonDesc:        string;
+    blockDefaultsLinkDesc:          string;
+    blockDefaultsFunctionDesc:      string;
+    blockDefaultsChoiceDesc:        string;
+    blockDefaultsPopupDesc:         string;
+    blockDefaultsTextDesc:          string;
+    blockDefaultsImageDesc:         string;
+    blockDefaultsImageGenDesc:      string;
+    blockDefaultsVideoDesc:         string;
+    blockDefaultsIncludeDesc:       string;
+    blockDefaultsDividerDesc:       string;
+    blockDefaultsCheckboxDesc:      string;
+    blockDefaultsRadioDesc:         string;
+    blockDefaultsInputFieldDesc:    string;
     sectionColors:          string;
     fieldLore:              string;
     fieldLorePlaceholder:   string;

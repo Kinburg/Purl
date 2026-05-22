@@ -259,9 +259,9 @@ function TabRowsEditor({
             {/* Row height */}
             <label className="flex items-center gap-1 ml-auto">
               <span className="text-xs text-slate-500">{t.rowsEditor.heightLabel}</span>
-              <NumInput value={row.height} min={16} max={400}
+              <NumInput value={row.height} min={16} max={4000}
                 onChange={v => updatePanelRow(tab.id, row.id, { height: v })} suffix="px"
-                className="w-16" />
+                className="w-20" />
             </label>
 
             <button className="text-slate-600 hover:text-red-400 text-xs cursor-pointer opacity-0 group-hover/row:opacity-100 transition-opacity"
@@ -525,6 +525,7 @@ function cellTypeLabelFromT(t: ReturnType<typeof useT>, type: CellContent['type'
     'image-gen':      t.cellModal.typeImageGenShort,
     'image-from-var': t.cellModal.typeImageFromVarShort,
     raw:              t.cellModal.typeRaw,
+    include:          t.cellModal.typeInclude,
     button:           t.cellModal.typeButton,
     list:             t.cellModal.typeList,
     'audio-volume':   t.cellModal.typeAudioVolume,
@@ -608,6 +609,11 @@ function CellPreview({ cell, vars }: { cell: SidebarCell; vars: Variable[] }) {
       {c.code || <em className="text-slate-600 not-italic">{t.rowsEditor.cellCodePlaceholder}</em>}
     </span>
   );
+  if (c.type === 'include') return (
+    <span className="text-xs text-sky-400 font-mono p-1 truncate flex-1">
+      &lt;&lt;include "{c.passageName || <em className="text-slate-600 not-italic">scene name</em>}"&gt;&gt;
+    </span>
+  );
   if (c.type === 'button') return (
     <div className="flex-1 flex items-center justify-center p-1">
       <span
@@ -665,6 +671,7 @@ function makeDefaultContent(type: CellContent['type']): CellContent {
     case 'image-gen':      return { type: 'image-gen', promptMode: 'manual', prompt: '', seedMode: 'random', workflowFile: '', alt: '', src: '', width: 0 } as CellImageGen;
     case 'image-from-var': return { type: 'image-from-var', variableId: '', objectFit: 'cover' } as CellImageFromVar;
     case 'raw':            return { type: 'raw', code: '' } as CellRaw;
+    case 'include':        return { type: 'include', passageName: '' };
     case 'button':         return { type: 'button', label: '', style: { ...DEFAULT_BUTTON_STYLE }, actions: [] } as CellButton;
     case 'list':           return { type: 'list', variableId: '', separator: ', ', emptyText: '', prefix: '', suffix: '' } as CellList;
     case 'audio-volume':   return { type: 'audio-volume', showMuteButton: true } as CellAudioVolume;
@@ -697,6 +704,7 @@ function CellEditModal({
     { value: 'image-gen',      label: t.cellModal.typeImageGen },
     { value: 'image-from-var', label: t.cellModal.typeImageFromVar },
     { value: 'raw',            label: t.cellModal.typeRaw },
+    { value: 'include',        label: t.cellModal.typeInclude },
     { value: 'button',         label: t.cellModal.typeButton },
     { value: 'list',           label: t.cellModal.typeList },
     { value: 'audio-volume',   label: t.cellModal.typeAudioVolume },
@@ -883,6 +891,21 @@ function CellEditModal({
               placeholder={"<<set $x to 1>>\n<<audio 'theme' play>>\n..."}
               value={c.code} onChange={e => onUpdateContent({ ...c, code: e.target.value })} spellCheck={false} />
           </div>
+        )}
+
+        {c.type === 'include' && (
+          <MField label={t.cellModal.includeSceneLabel}>
+            <select
+              className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
+              value={c.passageName}
+              onChange={e => onUpdateContent({ ...c, passageName: e.target.value })}
+            >
+              <option value="">— {t.cellModal.includeScenePicker} —</option>
+              {project.scenes.map(s => (
+                <option key={s.id} value={s.name}>{s.name}</option>
+              ))}
+            </select>
+          </MField>
         )}
 
         {c.type === 'button' && (

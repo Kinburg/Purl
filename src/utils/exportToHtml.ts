@@ -1,8 +1,9 @@
-import type { Project, ProjectSettings, Character, PluginBlockDef } from '../types';
+import type { Project, ProjectSettings, PluginBlockDef } from '../types';
 import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
-import { blockToSC, buildStoryCaptionSC, buildPanelCSS, buildButtonsCSS, buildTooltipCSS, buildPanelScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry } from './exportToTwee';
+import { blockToSC, buildStoryCaptionSC, buildPanelCSS, buildTooltipCSS, buildPanelScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
+import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,11 @@ function escAttr(s: string): string {
 }
 
 // ─── Project settings → CSS / JS ──────────────────────────────────────────────
+
+function withSection(label: string, css: string): string {
+  if (!css) return '';
+  return `/* ═══ ${label} ═══ */\n${css}`;
+}
 
 function buildGlobalCSS(settings?: ProjectSettings): string {
   if (!settings) return '';
@@ -53,39 +59,9 @@ function buildSettingsScript(settings?: ProjectSettings): string {
   return lines.join('\n');
 }
 
-// ─── CSS generation ───────────────────────────────────────────────────────────
-
-function buildCharacterCSS(characters: Character[]): string {
-  if (characters.length === 0) return '';
-  const base = [
-    '.dialogue { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; font-style: italic; }',
-    '.dialogue.dlg-right { flex-direction: row-reverse; }',
-    '.char-avatar { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }',
-    '.char-body { flex: 1; padding: 8px 12px; border-radius: 4px; }',
-    '.char-name { font-weight: bold; display: block; margin-bottom: 4px; }',
-    '.char-text { display: block; margin: 0 !important; padding: 0; }',
-  ].join('\n');
-  const perChar = characters.map(c => {
-    const cls = `char-${c.id}`;
-    return [
-      `.dialogue.${cls} .char-body {`,
-      `  background: ${c.bgColor};`,
-      `  border-left: 4px solid ${c.borderColor};`,
-      `}`,
-      `.dialogue.dlg-right.${cls} .char-body {`,
-      `  border-left: none;`,
-      `  border-right: 4px solid ${c.borderColor};`,
-      `}`,
-      `.dialogue.${cls} .char-name {`,
-      `  color: ${c.nameColor};`,
-      `}`,
-      `.dialogue.${cls} .char-text {`,
-      `  color: ${c.textColor ?? '#e2e8f0'};`,
-      `}`,
-    ].join('\n');
-  }).join('\n\n');
-  return `${base}\n\n${perChar}`;
-}
+// ─── Block type CSS hooks ─────────────────────────────────────────────────────
+// `buildBlockTypesCSS` now lives in styleCascade.ts so the editor preview can
+// reuse it (Phase 4 — preview parity).
 
 // ─── Passage builder ──────────────────────────────────────────────────────────
 
@@ -179,10 +155,14 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   let startPid = pid; // fallback to first scene
 
   scenes.forEach((scene, idx) => {
-    const body = scene.blocks
+    const bgMarkup = scene.background
+      ? exportSceneBg(scene.background, variables, variableNodes)
+      : '';
+    const blocksBody = scene.blocks
       .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
       .filter(Boolean)
       .join('\n');
+    const body = [bgMarkup, blocksBody].filter(Boolean).join('\n');
     const scenePid = pid++;
     if (scene.tags.includes(START_TAG)) startPid = scenePid;
     const exportTags = scene.tags.filter(t => t !== START_TAG);
@@ -219,15 +199,19 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     }
   }
 
-  const charCSS      = buildCharacterCSS(characters);
-  const panelCSS     = buildPanelCSS(sidebarPanel);
-  const buttonCSS    = buildButtonsCSS(scenes);
-  const tipCSS       = buildTooltipCSS();
-  const globalCSS    = buildGlobalCSS(project.settings);
-  const containerCSS = buildContainerCSS();
-  const paperdollCSS = buildPaperdollCSS(project);
-  const inventoryCSS = buildInventoryCSS(project);
-  const combinedCSS = [globalCSS, charCSS, panelCSS, buttonCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const charCSS      = withSection('Dialogue',      buildAllDialogueCss(characters));
+  const panelCSS     = withSection('Sidebar Panel', buildPanelCSS(sidebarPanel));
+  const buttonCSS    = withSection('Buttons',       buildButtonsCascadeCss(scenes, project.settings));
+  const simpleCSS    = withSection('Block overrides', buildSimpleBlocksCascadeCss(scenes, project.settings));
+  const tipCSS       = withSection('Tooltips',      buildTooltipCSS());
+  const globalCSS    = withSection('Global',        buildGlobalCSS(project.settings));
+  const containerCSS = withSection('Containers',    buildContainerCSS());
+  const paperdollCSS = withSection('Paperdoll',     buildPaperdollCSS(project));
+  const inventoryCSS = withSection('Inventory',     buildInventoryCSS(project));
+  const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
+  const userCSSRaw    = (project.customCss ?? '').trim();
+  const userCSS       = userCSSRaw ? `/* ─── User CSS ─── */\n${userCSSRaw}` : '';
+  const combinedCSS   = [globalCSS, charCSS, panelCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, userCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
@@ -241,6 +225,9 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     buildInventoryScript(project),
     buildContainerScript(project),
     buildPaperdollScript(project),
+    hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
+    hasStyleBindings(project) ? buildStyleBindScript(project) : '',
+    buildPopupClassSyncScript(scenes),
     buildPurlSignatureScript(),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load (audio + video)',
@@ -252,6 +239,9 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
       '  }',
       '});',
     ].join('\n') : '',
+    ((project.customScript ?? '').trim())
+      ? `/* ─── User script ─── */\n${(project.customScript ?? '').trim()}`
+      : '',
   ].filter(Boolean).join('\n\n');
 
   return { passages, startPid, combinedCSS, scriptContent };
@@ -259,10 +249,10 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
 
 // ─── Standalone HTML generator ────────────────────────────────────────────────
 
-export function generateStandaloneHtml(project: Project, scTemplate: string, plugins: PluginBlockDef[] = []): string {
+export function generateStandaloneHtml(project: Project, scTemplate: string, plugins: PluginBlockDef[] = []): { html: string; css: string } {
   const { passages, startPid, combinedCSS, scriptContent } = buildPassages(project, plugins);
 
-  const styleBlock  = `<style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">${esc(combinedCSS)}</style>`;
+  const styleBlock  = `<style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style>`;
   const scriptBlock = `<script role="script" id="twine-user-script" type="text/twine-javascript">${scriptContent}</script>`;
 
   const passageBlocks = passages.map(p =>
@@ -298,5 +288,11 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
     `$1${startPid}"`,
   );
 
-  return html;
+  const cssLinks = [
+    '  <link rel="stylesheet" href="story.css">',
+    '  <link rel="stylesheet" href="addon.css">',
+  ].join('\n');
+  html = html.replace('</head>', `${cssLinks}\n</head>`);
+
+  return { html, css: combinedCSS };
 }

@@ -22,7 +22,13 @@ import type { Block, SystemTag } from '../../types';
 
 import { EmojiIcon } from '../shared/EmojiIcons';
 export function SceneEditor() {
-  const { project, activeSceneId, reorderBlocks, updateSceneSettings } = useProjectStore();
+  // Subscribe to the active scene via a derived selector: re-renders only when
+  // the active scene's reference actually changes (immutable updates preserve
+  // refs for unrelated scenes, so typing in another scene won't trigger this).
+  const scene            = useProjectStore(s => s.project.scenes.find(sc => sc.id === s.activeSceneId));
+  const projectScenes    = useProjectStore(s => s.project.scenes);
+  const reorderBlocks    = useProjectStore(s => s.reorderBlocks);
+  const updateSceneSettings = useProjectStore(s => s.updateSceneSettings);
   const t = useT();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
@@ -35,7 +41,6 @@ export function SceneEditor() {
     });
   }, []);
 
-  const scene = project.scenes.find(s => s.id === activeSceneId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   if (!scene) {
@@ -71,8 +76,8 @@ export function SceneEditor() {
       {settingsOpen && (
         <SceneModal
           mode="edit"
-          initial={{ name: scene.name, tags: scene.tags, notes: scene.notes }}
-          takenNames={project.scenes.filter(s => s.id !== scene.id).map(s => s.name)}
+          initial={{ name: scene.name, tags: scene.tags, notes: scene.notes, background: scene.background }}
+          takenNames={projectScenes.filter(s => s.id !== scene.id).map(s => s.name)}
           sceneId={scene.id}
           onSave={data => updateSceneSettings(scene.id, data)}
           onClose={() => setSettingsOpen(false)}

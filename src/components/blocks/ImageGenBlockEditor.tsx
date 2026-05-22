@@ -15,6 +15,12 @@ import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor } from '../shared/ImageMappingEditor';
 import { CellImageBoundGenPanel } from '../shared/CellImageBoundGenModal';
 import type { CellImageBound } from '../../types';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  MEDIA_BLOCK_FIELD_SCHEMA,
+  MEDIA_BLOCK_RAW_CSS_HELP,
+  simpleBlockCascadeClasses,
+} from '../../utils/styleCascade';
 
 import { EmojiIcon } from '../shared/EmojiIcons';
 function detectExt(imageUrl: string, contentType: string | null): string {
@@ -52,6 +58,7 @@ export function ImageGenBlockEditor({
   const ig = t.imageGenBlock;
   const ag = t.avatarGen;
   const { project, projectDir, updateBlock, addAsset, deleteAssetNode, saveSnapshot } = useProjectStore();
+  const cascadeClasses = ['tg-image', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
   const {
     llmEnabled,
     llmProvider,
@@ -718,14 +725,19 @@ export function ImageGenBlockEditor({
 
       {mode === 'static' && currentPreview && (
         <>
-          <img
-            src={currentPreview}
-            alt={block.alt || 'generated'}
-            className="max-h-44 object-contain rounded border border-slate-700 cursor-zoom-in"
-            title={ig.doubleClickToExpand}
-            onDoubleClick={() => setLightboxOpen(true)}
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          {/* Cascade-wrapped preview — width mirrors export's <img width="X">
+              so border-radius/border-width render in real proportions. */}
+          <div className={cascadeClasses}>
+            <img
+              src={currentPreview}
+              alt={block.alt || 'generated'}
+              width={block.width > 0 ? block.width : undefined}
+              title={ig.doubleClickToExpand}
+              style={{ cursor: 'zoom-in' }}
+              onDoubleClick={() => setLightboxOpen(true)}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
           {lightboxOpen && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
@@ -816,6 +828,23 @@ export function ImageGenBlockEditor({
           )}
         </div>
       )}
+
+      {/* Cascade-based custom style override (static only — bound is at project-defaults level) */}
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={MEDIA_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={MEDIA_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
 
       <BlockEffectsPanel delay={block.delay} onDelayChange={v => update({ delay: v })} />
 

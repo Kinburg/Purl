@@ -8,6 +8,13 @@ import { VarInsertButton } from '../shared/VarInsertButton';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
 import { InventoryPopupShortcut } from './InventoryPopupShortcut';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import {
+  BUTTON_FIELD_SCHEMA,
+  BUTTON_RAW_CSS_HELP,
+  buttonElementClasses,
+} from '../../utils/styleCascade';
+import type { ProjectSettings } from '../../types';
 
 const OPERATORS: { value: VarOperator; label: string }[] = [
   { value: '=',  label: '=' },
@@ -79,9 +86,12 @@ function NumberInput({
 interface StyleEditorProps {
   style: ButtonStyle;
   onChange: (patch: Partial<ButtonStyle>) => void;
+  /** The whole block — required to compute cascade classes for the live preview. */
+  block: ButtonBlock;
+  settings: ProjectSettings;
 }
 
-function StyleEditor({ style, onChange }: StyleEditorProps) {
+function StyleEditor({ style, onChange, block, settings }: StyleEditorProps) {
   const t = useT();
   return (
     <div className="flex flex-col gap-2 bg-slate-800/50 border border-slate-700 rounded p-3">
@@ -144,26 +154,21 @@ function StyleEditor({ style, onChange }: StyleEditorProps) {
         </label>
       </div>
 
-      {/* Live preview */}
+      {/* Live preview — uses the same DOM/classes as export, so injected
+          preview CSS (project defaults, spot overrides, per-block Std) shows
+          up identically here. */}
       <div className="mt-2 pt-2 border-t border-slate-700">
         <div className="text-xs text-slate-500 mb-1.5">{t.buttonBlock.previewTitle}</div>
-        <div style={{ width: style.fullWidth ? '100%' : 'fit-content' }}>
-          <span
-            style={{
-              display: style.fullWidth ? 'block' : 'inline-block',
-              background: style.bgColor,
-              color: style.textColor,
-              border: `1px solid ${style.borderColor}`,
-              borderRadius: `${style.borderRadius}px`,
-              padding: `${style.paddingV}px ${style.paddingH}px`,
-              fontSize: `${(style.fontSize / 10).toFixed(1)}em`,
-              fontWeight: style.bold ? 'bold' : 'normal',
-              textAlign: style.fullWidth ? 'center' : undefined,
-              cursor: 'default',
-              userSelect: 'none',
-            }}
-          >
-            {t.buttonBlock.defaultButtonLabel}
+        <div className="tg-preview-wrapper">
+          <span className={buttonElementClasses(block, settings).join(' ')}>
+            {/* `<a>` mirrors the exported <<link>>...<</link>>; href#noop to keep it inert. */}
+            <a
+              href="#"
+              onClick={e => e.preventDefault()}
+              style={{ cursor: 'default', userSelect: 'none', textDecoration: 'none' }}
+            >
+              {block.label || t.buttonBlock.defaultButtonLabel}
+            </a>
           </span>
         </div>
       </div>
@@ -366,7 +371,7 @@ export function ButtonBlockEditor({
   onUpdate?: (patch: Partial<ButtonBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const { updateBlock, saveSnapshot, project } = useProjectStore();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<ButtonBlock>) => updateBlock(sceneId, block.id, p));
   const variables = flattenVariables(variableNodes);
@@ -417,7 +422,7 @@ export function ButtonBlockEditor({
       </div>
 
       {/* Style */}
-      <StyleEditor style={block.style} onChange={patchStyle} />
+      <StyleEditor style={block.style} onChange={patchStyle} block={block} settings={project.settings} />
 
       {/* Actions */}
       <div className="flex flex-col gap-1.5">
@@ -463,6 +468,24 @@ export function ButtonBlockEditor({
           {t.buttonBlock.refreshScene} <span className="font-mono text-slate-500">(Engine.show)</span>
         </span>
       </label>
+
+      {/* Spot-level style override (static only — bound is at project-defaults level) */}
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={BUTTON_FIELD_SCHEMA}
+            rawCssHelp={BUTTON_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
+
       <BlockEffectsPanel
         delay={block.delay}
         onDelayChange={v => update({ delay: v })}

@@ -2,7 +2,9 @@ import { useProjectStore } from '../../store/projectStore';
 import { useT } from '../../i18n';
 import type { IncludeBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
-import { usePluginParams } from '../shared/VariableScope';
+import { usePluginParams, useVariableNodes } from '../shared/VariableScope';
+import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
+import { CONTENT_BLOCK_FIELD_SCHEMA, CONTENT_BLOCK_RAW_CSS_HELP } from '../../utils/styleCascade';
 
 export function IncludeBlockEditor({
   block,
@@ -17,6 +19,7 @@ export function IncludeBlockEditor({
   const t = useT();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
+  const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<IncludeBlock>) => updateBlock(sceneId, block.id, p as never));
 
   const inputCls = 'bg-slate-800 text-slate-200 text-xs rounded px-2 py-0.5 border border-slate-600 outline-none focus:border-indigo-500';
@@ -161,6 +164,22 @@ export function IncludeBlockEditor({
           />
         )}
       </div>
+
+      <details className="border border-slate-700/60 rounded bg-slate-900/30">
+        <summary className="text-xs text-slate-300 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-800/50">
+          {t.styleOverride.sectionTitle}
+        </summary>
+        <div className="px-2 pb-2 pt-1">
+          <StyleOverrideEditor
+            value={block.customStyle}
+            onChange={v => update({ customStyle: v })}
+            variableNodes={variableNodes}
+            allowBound={false}
+            fieldsSchema={CONTENT_BLOCK_FIELD_SCHEMA}
+            rawCssHelp={CONTENT_BLOCK_RAW_CSS_HELP}
+          />
+        </div>
+      </details>
 
       <BlockEffectsPanel
         delay={block.delay}

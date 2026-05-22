@@ -27,7 +27,7 @@ export const geminiProvider: LLMProviderImpl = {
             sysInstruction = systemPrompt.trim();
             userContent = params.rawUserPrompt;
         } else {
-            const structured = constructGenerationPrompt(systemPrompt, project, scene, blockId, currentValue, mode);
+            const structured = constructGenerationPrompt(systemPrompt, project, scene, blockId, currentValue, mode, params.translationLanguage);
             sysInstruction = structured.systemInstruction;
             userContent = structured.userPrompt;
         }
