@@ -59,7 +59,8 @@ export function ContainerEditor({
   mode, initial, takenNames, takenVarNames, onSave, onClose,
 }: Props) {
   const t = useT();
-  const { project, projectDir } = useProjectStore();
+  const project    = useProjectStore(s => s.project);
+  const projectDir = useProjectStore(s => s.projectDir);
   const items = project.items ?? [];
 
   const [tab, setTab] = useState<TabId>('basics');

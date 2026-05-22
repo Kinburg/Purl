@@ -13,7 +13,9 @@ export function AudioBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<AudioBlock>) => void;
 }) {
-  const { project, projectDir, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const projectDir  = useProjectStore(s => s.projectDir);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const update = onUpdate ?? ((p: Partial<AudioBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
   const audioAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'audio');

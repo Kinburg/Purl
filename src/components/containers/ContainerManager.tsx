@@ -27,7 +27,10 @@ type ModalState =
 
 export function ContainerManager() {
   const t = useT();
-  const { project, addContainer, updateContainer, deleteContainer } = useProjectStore();
+  const project         = useProjectStore(s => s.project);
+  const addContainer    = useProjectStore(s => s.addContainer);
+  const updateContainer = useProjectStore(s => s.updateContainer);
+  const deleteContainer = useProjectStore(s => s.deleteContainer);
   const containers = project.containers ?? [];
   const [modalState, setModalState] = useState<ModalState>(null);
   const confirmDeleteCharacter = useEditorPrefsStore(s => s.confirmDeleteCharacter);

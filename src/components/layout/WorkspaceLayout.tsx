@@ -19,7 +19,8 @@ function ResizeHandle({ orientation = 'vertical' }: { orientation?: 'vertical' |
 }
 
 function SidebarResizeHandle() {
-  const { sidebarWidth, setSidebarWidth } = useProjectStore();
+  const sidebarWidth    = useProjectStore(s => s.sidebarWidth);
+  const setSidebarWidth = useProjectStore(s => s.setSidebarWidth);
   const dragging = useRef(false);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -54,7 +55,8 @@ function SidebarResizeHandle() {
 }
 
 export function WorkspaceLayout() {
-  const { panelLayout, setPanelLayout } = useEditorPrefsStore();
+  const panelLayout    = useEditorPrefsStore(s => s.panelLayout);
+  const setPanelLayout = useEditorPrefsStore(s => s.setPanelLayout);
   const { previewVisible, graphVisible, mainSizePct, previewSizePct } = panelLayout;
   const rightVisible = previewVisible || graphVisible;
 

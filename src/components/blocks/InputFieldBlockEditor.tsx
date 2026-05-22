@@ -36,7 +36,9 @@ export function InputFieldBlockEditor({
   onUpdate?: (patch: Partial<InputFieldBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<InputFieldBlock>) => updateBlock(sceneId, block.id, p));
   const variables = flattenVariables(variableNodes);

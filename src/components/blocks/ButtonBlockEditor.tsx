@@ -188,7 +188,7 @@ interface ActionRowProps {
 
 function ActionRow({ action, variables, onChange, onDelete, onFocusValue }: ActionRowProps) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
@@ -371,7 +371,9 @@ export function ButtonBlockEditor({
   onUpdate?: (patch: Partial<ButtonBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock   = useProjectStore(s => s.updateBlock);
+  const saveSnapshot  = useProjectStore(s => s.saveSnapshot);
+  const project       = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<ButtonBlock>) => updateBlock(sceneId, block.id, p));
   const variables = flattenVariables(variableNodes);

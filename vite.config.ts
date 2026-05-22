@@ -27,4 +27,25 @@ export default defineConfig({
       renderer: {},
     }),
   ],
+  build: {
+    // Single-chunk renderer was 1.8 MB pre-split. manualChunks separates heavy
+    // libs that aren't always needed at first paint — graph (xyflow + dagre)
+    // and LLM SDK are the big wins. See plans/performance_optimizations_followup.md
+    //
+    // react/react-dom intentionally stay in the main chunk: Vite groups them with
+    // their downstream-bound users automatically, and a stand-alone vendor chunk
+    // came out empty under React 19 + the `react()` plugin's runtime.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'graph':  ['@xyflow/react', '@dagrejs/dagre'],
+          'dnd':    ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          'llm':    ['@google/genai'],
+          'panels': ['react-resizable-panels'],
+          'toast':  ['sonner'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1300,
+  },
 });

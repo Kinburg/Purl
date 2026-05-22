@@ -20,8 +20,9 @@ interface Props {
 }
 
 export function InsertZone({ sceneId, insertIndex, isLast, onAdd, onPaste, excludeTypes }: Props) {
-  const { addBlock, pasteToScene } = useProjectStore();
-  const { clipboardBlock } = useEditorStore();
+  const addBlock       = useProjectStore(s => s.addBlock);
+  const pasteToScene   = useProjectStore(s => s.pasteToScene);
+  const clipboardBlock = useEditorStore(s => s.clipboardBlock);
   const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
 

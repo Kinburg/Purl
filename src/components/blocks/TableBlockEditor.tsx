@@ -50,8 +50,9 @@ export function TableBlockEditor({
   onUpdate?: (patch: Partial<TableBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
-  const project = useProjectStore(s => s.project);
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const vars = flattenVariables(variableNodes);
   const assetNodes = project.assetNodes;
@@ -567,7 +568,7 @@ function TCellEditModal({
   onClose: () => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const c = cell.content;
   const [genModalOpen, setGenModalOpen] = useState(false);
@@ -963,7 +964,7 @@ function TCellButtonEditor({
   onUpdateContent: (content: CellContent) => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');

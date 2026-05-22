@@ -124,10 +124,12 @@ interface Props {
 
 export function ItemEditor({ mode, itemId, initial, takenNames, takenVarNames, onSave, onClose }: Props) {
   const t = useT();
-  const {
-    project, projectDir,
-    addVariable, addVariableGroup, updateVariable, deleteVariableNode,
-  } = useProjectStore();
+  const project            = useProjectStore(s => s.project);
+  const projectDir         = useProjectStore(s => s.projectDir);
+  const addVariable        = useProjectStore(s => s.addVariable);
+  const addVariableGroup   = useProjectStore(s => s.addVariableGroup);
+  const updateVariable     = useProjectStore(s => s.updateVariable);
+  const deleteVariableNode = useProjectStore(s => s.deleteVariableNode);
 
   const liveItem = mode === 'edit' && itemId
     ? (project.items ?? []).find(i => i.id === itemId)

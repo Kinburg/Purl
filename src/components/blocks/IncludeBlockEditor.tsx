@@ -16,7 +16,9 @@ export function IncludeBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<IncludeBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const t = useT();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');

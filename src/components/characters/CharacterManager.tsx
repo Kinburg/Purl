@@ -41,7 +41,10 @@ type ModalState =
 
 export function CharacterManager() {
   const t = useT();
-  const { project, addCharacter, updateCharacter, deleteCharacter } = useProjectStore();
+  const project          = useProjectStore(s => s.project);
+  const addCharacter     = useProjectStore(s => s.addCharacter);
+  const updateCharacter  = useProjectStore(s => s.updateCharacter);
+  const deleteCharacter  = useProjectStore(s => s.deleteCharacter);
   const { characters } = project;
   const [modalState, setModalState] = useState<ModalState>(null);
   const confirmDeleteCharacter = useEditorPrefsStore(s => s.confirmDeleteCharacter);

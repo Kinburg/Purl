@@ -64,7 +64,7 @@ function InnerBlockEditor({
   sceneId: string;
   dialogueBlockId: string;
 }) {
-  const { updateDialogueInnerBlock } = useProjectStore();
+  const updateDialogueInnerBlock = useProjectStore(s => s.updateDialogueInnerBlock);
   const t = useT();
   const onUpdate = (patch: Partial<Block>) =>
     updateDialogueInnerBlock(sceneId, dialogueBlockId, block.id, patch);
@@ -153,8 +153,9 @@ function InnerBlocksList({
   block: DialogueBlock;
   sceneId: string;
 }) {
-  const { addDialogueInnerBlock, deleteDialogueInnerBlock, reorderDialogueInnerBlocks } =
-    useProjectStore();
+  const addDialogueInnerBlock      = useProjectStore(s => s.addDialogueInnerBlock);
+  const deleteDialogueInnerBlock   = useProjectStore(s => s.deleteDialogueInnerBlock);
+  const reorderDialogueInnerBlocks = useProjectStore(s => s.reorderDialogueInnerBlocks);
   const t = useT();
 
   const innerBlocks = block.innerBlocks ?? [];

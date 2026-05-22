@@ -20,7 +20,8 @@ export function PopupBlockEditor({
   onUpdate?: (patch: Partial<PopupBlock>) => void;
 }) {
   const t = useT();
-  const { project, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<PopupBlock>) => updateBlock(sceneId, block.id, p));
 

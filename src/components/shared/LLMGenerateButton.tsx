@@ -36,7 +36,9 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
     llmGenerationHistory,
     llmTranslationLanguage,
   } = useEditorPrefsStore();
-  const { project, saveSnapshot, updateBlock } = useProjectStore();
+  const project      = useProjectStore(s => s.project);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const updateBlock  = useProjectStore(s => s.updateBlock);
   const memHistory = useGenerationHistoryStore();
   const [loading, setLoading] = useState<LLMMode | null>(null);
   const [open, setOpen] = useState(false);

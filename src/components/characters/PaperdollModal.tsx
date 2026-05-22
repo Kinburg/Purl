@@ -347,7 +347,7 @@ export function PaperdollModal({
   liveChar, onClose,
 }: Props) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [genModalOpen, setGenModalOpen] = useState(false);
 

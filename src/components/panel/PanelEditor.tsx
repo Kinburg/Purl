@@ -23,14 +23,12 @@ import { InventoryPopupShortcut } from '../blocks/InventoryPopupShortcut';
 
 export function PanelEditor() {
   const t = useT();
-  const {
-    project,
-    addPanelTab,
-    updatePanelTab,
-    updatePanelStyle,
-    deletePanelTab,
-    reorderPanelTabs,
-  } = useProjectStore();
+  const project           = useProjectStore(s => s.project);
+  const addPanelTab       = useProjectStore(s => s.addPanelTab);
+  const updatePanelTab    = useProjectStore(s => s.updatePanelTab);
+  const updatePanelStyle  = useProjectStore(s => s.updatePanelStyle);
+  const deletePanelTab    = useProjectStore(s => s.deletePanelTab);
+  const reorderPanelTabs  = useProjectStore(s => s.reorderPanelTabs);
   const { sidebarPanel } = project;
   const [activeTabId, setActiveTabId] = useState<string | null>(
     sidebarPanel.tabs[0]?.id ?? null
@@ -235,7 +233,10 @@ function TabRowsEditor({
   assetNodes: AssetTreeNode[];
 }) {
   const t = useT();
-  const { addPanelRow, updatePanelRow, deletePanelRow, addPanelCell } = useProjectStore();
+  const addPanelRow    = useProjectStore(s => s.addPanelRow);
+  const updatePanelRow = useProjectStore(s => s.updatePanelRow);
+  const deletePanelRow = useProjectStore(s => s.deletePanelRow);
+  const addPanelCell   = useProjectStore(s => s.addPanelCell);
   const { ask, modal: confirmModal } = useConfirm();
   const [widthsOpenMap, setWidthsOpenMap] = useState<Record<string, boolean>>({});
   const toggleWidths = (rowId: string) =>
@@ -349,7 +350,7 @@ function CellWidthBar({
   row: SidebarRow;
 }) {
   const t = useT();
-  const { updatePanelCell } = useProjectStore();
+  const updatePanelCell = useProjectStore(s => s.updatePanelCell);
 
   const total = row.cells.reduce((s, c) => s + c.width, 0);
   const offBy = total - 100;
@@ -419,7 +420,7 @@ function DragDivider({
   tabId: string;
   rowId: string;
 }) {
-  const { updatePanelCell } = useProjectStore();
+  const updatePanelCell = useProjectStore(s => s.updatePanelCell);
   const ref = useRef<HTMLDivElement>(null);
 
   const onMouseDown = (e: React.MouseEvent) => {
@@ -479,7 +480,8 @@ function CellEditor({
   assetNodes: AssetTreeNode[];
 }) {
   const t = useT();
-  const { deletePanelCell, updateCellContent } = useProjectStore();
+  const deletePanelCell   = useProjectStore(s => s.deletePanelCell);
+  const updateCellContent = useProjectStore(s => s.updateCellContent);
   const [editing, setEditing] = useState(false);
 
   const updateContent = (c: CellContent) => updateCellContent(tabId, row.id, cell.id, c);
@@ -690,7 +692,7 @@ function CellEditModal({
   onClose: () => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const c = cell.content;
 
   const [genModalOpen, setGenModalOpen] = useState(false);
@@ -1075,7 +1077,7 @@ function CheckField({
 
 function VarSelect({ value, onChange, filterType }: { value: string; onChange: (id: string) => void; filterType?: import('../../types').VariableType }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   return (
     <MField label={t.cellModal.typeVariable}>
       <VariablePicker
@@ -1121,7 +1123,7 @@ function CellButtonEditor({
   onUpdateContent: (content: CellContent) => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const scenes = project.scenes;
 
   const patchStyle = (patch: Partial<ButtonStyle>) =>

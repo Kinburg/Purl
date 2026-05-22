@@ -236,7 +236,7 @@ function flattenGroups(nodes: VariableTreeNode[], prefix = ''): { id: string; pa
 
 function ParamsSection({ draft, patch }: { draft: PluginBlockDef; patch: (p: Partial<PluginBlockDef>) => void }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const allGroups = useMemo(() => flattenGroups(project.variableNodes), [project.variableNodes]);
   const inputCls =
     'bg-slate-700 text-slate-200 text-xs rounded px-2 py-1 border border-slate-600 outline-none focus:border-indigo-500 transition-colors';

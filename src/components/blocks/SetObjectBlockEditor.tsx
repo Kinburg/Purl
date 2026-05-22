@@ -136,7 +136,8 @@ export function SetObjectBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<SetObjectBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const variables = flattenVariables(variableNodes);
   const t = useT();

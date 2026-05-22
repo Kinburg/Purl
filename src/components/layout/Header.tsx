@@ -31,19 +31,33 @@ function truncatePath(p: string, segments = 2): string {
 }
 
 export function Header() {
-  const {
-    project, projectDir,
-    setProjectTitle, setProjectDir, resetProject, loadProject,
-    undo, redo, canUndo, canRedo,
-  } = useProjectStore();
-  const { locale, setLocale } = useLocaleStore();
-  const { setProjectSettingsOpen, setEditorPrefsOpen, setLLMSettingsOpen } = useEditorStore();
+  // Selectors instead of destructuring — Header is 958 lines and re-renders on
+  // every project change. Most fields are accessed only inside event handlers;
+  // pulling them via selectors keeps Header subscribed to exactly what it reads.
+  const project         = useProjectStore(s => s.project);
+  const projectDir      = useProjectStore(s => s.projectDir);
+  const setProjectTitle = useProjectStore(s => s.setProjectTitle);
+  const setProjectDir   = useProjectStore(s => s.setProjectDir);
+  const resetProject    = useProjectStore(s => s.resetProject);
+  const loadProject     = useProjectStore(s => s.loadProject);
+  const undo            = useProjectStore(s => s.undo);
+  const redo            = useProjectStore(s => s.redo);
+  const canUndo         = useProjectStore(s => s.canUndo);
+  const canRedo         = useProjectStore(s => s.canRedo);
+
+  const locale    = useLocaleStore(s => s.locale);
+  const setLocale = useLocaleStore(s => s.setLocale);
+
+  const setProjectSettingsOpen = useEditorStore(s => s.setProjectSettingsOpen);
+  const setEditorPrefsOpen     = useEditorStore(s => s.setEditorPrefsOpen);
+  const setLLMSettingsOpen     = useEditorStore(s => s.setLLMSettingsOpen);
 
   const confirmOpenFolderAfterExport = useEditorPrefsStore(s => s.confirmOpenFolderAfterExport);
+  const panelLayout                  = useEditorPrefsStore(s => s.panelLayout);
+  const togglePreviewPanel           = useEditorPrefsStore(s => s.togglePreviewPanel);
+  const toggleGraphPanel             = useEditorPrefsStore(s => s.toggleGraphPanel);
 
   const t = useT();
-
-  const { panelLayout, togglePreviewPanel, toggleGraphPanel } = useEditorPrefsStore();
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft]     = useState('');

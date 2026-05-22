@@ -164,8 +164,10 @@ export function ForBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<ForBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot } = useProjectStore();
-  const { clipboardBlock, copyToClipboard } = useEditorStore();
+  const updateBlock     = useProjectStore(s => s.updateBlock);
+  const saveSnapshot    = useProjectStore(s => s.saveSnapshot);
+  const clipboardBlock  = useEditorStore(s => s.clipboardBlock);
+  const copyToClipboard = useEditorStore(s => s.copyToClipboard);
   const t = useT();
 
   const update = onUpdate ?? ((p: Partial<ForBlock>) => updateBlock(sceneId, block.id, p as never));

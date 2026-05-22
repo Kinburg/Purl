@@ -14,7 +14,9 @@ import { SIDEBAR_SVG_ICONS } from './SidebarIcons';
 type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'panel' | 'watchers' | 'items' | 'containers' | 'plugins';
 
 export function Sidebar() {
-  const { activeSidebarTab, setSidebarTab, sidebarWidth } = useProjectStore();
+  const activeSidebarTab = useProjectStore(s => s.activeSidebarTab);
+  const setSidebarTab    = useProjectStore(s => s.setSidebarTab);
+  const sidebarWidth     = useProjectStore(s => s.sidebarWidth);
   const t = useT();
 
   const TABS: { id: Tab; label: string }[] = [

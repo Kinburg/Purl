@@ -166,7 +166,7 @@ function ActionRow({
   onFocusValue: () => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const isPopup = action.type === 'open-popup';
 
@@ -328,7 +328,9 @@ export function LinkBlockEditor({
   onUpdate?: (patch: Partial<LinkBlock>) => void;
 }) {
   const t = useT();
-  const { project, updateBlock, saveSnapshot } = useProjectStore();
+  const project      = useProjectStore(s => s.project);
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const update = onUpdate ?? ((p: Partial<LinkBlock>) => updateBlock(sceneId, block.id, p));

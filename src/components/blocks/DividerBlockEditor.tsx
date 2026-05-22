@@ -20,7 +20,9 @@ export function DividerBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<DividerBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<DividerBlock>) => updateBlock(sceneId, block.id, p as never));

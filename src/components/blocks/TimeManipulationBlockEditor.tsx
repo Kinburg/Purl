@@ -15,7 +15,8 @@ export function TimeManipulationBlockEditor({
   onUpdate?: (patch: Partial<TimeManipulationBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<TimeManipulationBlock>) => updateBlock(sceneId, block.id, p as never));
 

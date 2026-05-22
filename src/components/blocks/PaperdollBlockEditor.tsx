@@ -12,7 +12,8 @@ export function PaperdollBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<PaperdollBlock>) => void;
 }) {
-  const { project, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const update = onUpdate ?? ((p: Partial<PaperdollBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
 

@@ -58,26 +58,29 @@ export function ImageGenBlockEditor({
   const t = useT();
   const ig = t.imageGenBlock;
   const ag = t.avatarGen;
-  const { project, projectDir, updateBlock, addAsset, deleteAssetNode, saveSnapshot } = useProjectStore();
+  const project         = useProjectStore(s => s.project);
+  const projectDir      = useProjectStore(s => s.projectDir);
+  const updateBlock     = useProjectStore(s => s.updateBlock);
+  const addAsset        = useProjectStore(s => s.addAsset);
+  const deleteAssetNode = useProjectStore(s => s.deleteAssetNode);
+  const saveSnapshot    = useProjectStore(s => s.saveSnapshot);
   const cascadeClasses = ['tg-image', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
-  const {
-    llmEnabled,
-    llmProvider,
-    llmUrl,
-    llmGeminiApiKey,
-    llmGeminiModel,
-    llmOpenaiUrl,
-    llmOpenaiApiKey,
-    llmOpenaiModel,
-    llmMaxTokens,
-    llmTemperature,
-    llmSystemPrompt,
-    imageGenProvider,
-    comfyUiUrl,
-    comfyUiWorkflowsDir,
-    pollinationsModel,
-    pollinationsToken,
-  } = useEditorPrefsStore();
+  const llmEnabled          = useEditorPrefsStore(s => s.llmEnabled);
+  const llmProvider         = useEditorPrefsStore(s => s.llmProvider);
+  const llmUrl              = useEditorPrefsStore(s => s.llmUrl);
+  const llmGeminiApiKey     = useEditorPrefsStore(s => s.llmGeminiApiKey);
+  const llmGeminiModel      = useEditorPrefsStore(s => s.llmGeminiModel);
+  const llmOpenaiUrl        = useEditorPrefsStore(s => s.llmOpenaiUrl);
+  const llmOpenaiApiKey     = useEditorPrefsStore(s => s.llmOpenaiApiKey);
+  const llmOpenaiModel      = useEditorPrefsStore(s => s.llmOpenaiModel);
+  const llmMaxTokens        = useEditorPrefsStore(s => s.llmMaxTokens);
+  const llmTemperature      = useEditorPrefsStore(s => s.llmTemperature);
+  const llmSystemPrompt     = useEditorPrefsStore(s => s.llmSystemPrompt);
+  const imageGenProvider    = useEditorPrefsStore(s => s.imageGenProvider);
+  const comfyUiUrl          = useEditorPrefsStore(s => s.comfyUiUrl);
+  const comfyUiWorkflowsDir = useEditorPrefsStore(s => s.comfyUiWorkflowsDir);
+  const pollinationsModel   = useEditorPrefsStore(s => s.pollinationsModel);
+  const pollinationsToken   = useEditorPrefsStore(s => s.pollinationsToken);
 
   const update = onUpdate ?? ((p: Partial<ImageGenBlock>) => updateBlock(sceneId, block.id, p as never));
   const variableNodes = useVariableNodes();

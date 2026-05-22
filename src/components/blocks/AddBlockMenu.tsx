@@ -331,8 +331,9 @@ interface Props {
 }
 
 export function AddBlockMenu({ sceneId, onAdd, excludeTypes = [], initialOpen, onClose }: Props) {
-  const { addBlock } = useProjectStore();
-  const { recentBlockTypes, trackRecentBlock } = useEditorPrefsStore();
+  const addBlock         = useProjectStore(s => s.addBlock);
+  const recentBlockTypes = useEditorPrefsStore(s => s.recentBlockTypes);
+  const trackRecentBlock = useEditorPrefsStore(s => s.trackRecentBlock);
   const plugins = usePluginStore((s) => s.plugins);
   const t = useT();
 

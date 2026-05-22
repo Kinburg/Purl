@@ -22,7 +22,9 @@ export function VideoBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<VideoBlock>) => void;
 }) {
-  const { project, projectDir, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const projectDir  = useProjectStore(s => s.projectDir);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<VideoBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();

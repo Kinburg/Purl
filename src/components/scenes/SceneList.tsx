@@ -231,30 +231,26 @@ type GroupModalState =
 // ─── Main SceneList ───────────────────────────────────────────────────────────
 
 export function SceneList() {
-  const {
-    project,
-    activeSceneId,
-    setActiveScene,
-    addSceneWithData,
-    deleteScene,
-    updateSceneSettings,
-    duplicateScene,
-    reorderGroupScenes,
-    moveSceneToGroup,
-    addSceneGroup,
-    updateSceneGroup,
-    deleteSceneGroup,
-    deleteSceneGroupWithScenes,
-  } = useProjectStore();
+  const project                    = useProjectStore(s => s.project);
+  const activeSceneId              = useProjectStore(s => s.activeSceneId);
+  const setActiveScene             = useProjectStore(s => s.setActiveScene);
+  const addSceneWithData           = useProjectStore(s => s.addSceneWithData);
+  const deleteScene                = useProjectStore(s => s.deleteScene);
+  const updateSceneSettings        = useProjectStore(s => s.updateSceneSettings);
+  const duplicateScene             = useProjectStore(s => s.duplicateScene);
+  const reorderGroupScenes         = useProjectStore(s => s.reorderGroupScenes);
+  const moveSceneToGroup           = useProjectStore(s => s.moveSceneToGroup);
+  const addSceneGroup              = useProjectStore(s => s.addSceneGroup);
+  const updateSceneGroup           = useProjectStore(s => s.updateSceneGroup);
+  const deleteSceneGroup           = useProjectStore(s => s.deleteSceneGroup);
+  const deleteSceneGroupWithScenes = useProjectStore(s => s.deleteSceneGroupWithScenes);
   const t = useT();
 
-  const searchQuery = useEditorStore(s => s.searchQuery);
-  const setSearchQuery = useEditorStore(s => s.setSearchQuery);
-  const {
-    confirmDeleteScene,
-    confirmDeleteGroup,
-    deleteGroupWithScenes,
-  } = useEditorPrefsStore();
+  const searchQuery     = useEditorStore(s => s.searchQuery);
+  const setSearchQuery  = useEditorStore(s => s.setSearchQuery);
+  const confirmDeleteScene    = useEditorPrefsStore(s => s.confirmDeleteScene);
+  const confirmDeleteGroup    = useEditorPrefsStore(s => s.confirmDeleteGroup);
+  const deleteGroupWithScenes = useEditorPrefsStore(s => s.deleteGroupWithScenes);
 
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
   const [filterMode, setFilterMode] = useState<'or' | 'and'>('or');

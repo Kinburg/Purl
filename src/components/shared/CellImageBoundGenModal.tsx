@@ -224,12 +224,25 @@ export function CellImageBoundGenPanel({
   const t = useT();
   const ag = t.avatarGen;   // generic strings shared with avatar gen
   const cb = t.cellBoundGen; // overrides for cell-specific context
-  const { project, projectDir, addAsset } = useProjectStore();
-  const {
-    llmEnabled, llmProvider, llmUrl, llmGeminiApiKey, llmGeminiModel,
-    llmOpenaiUrl, llmOpenaiApiKey, llmOpenaiModel, llmMaxTokens, llmTemperature, llmSystemPrompt,
-    imageGenProvider, comfyUiUrl, comfyUiWorkflowsDir, pollinationsModel, pollinationsToken,
-  } = useEditorPrefsStore();
+  const project    = useProjectStore(s => s.project);
+  const projectDir = useProjectStore(s => s.projectDir);
+  const addAsset   = useProjectStore(s => s.addAsset);
+  const llmEnabled          = useEditorPrefsStore(s => s.llmEnabled);
+  const llmProvider         = useEditorPrefsStore(s => s.llmProvider);
+  const llmUrl              = useEditorPrefsStore(s => s.llmUrl);
+  const llmGeminiApiKey     = useEditorPrefsStore(s => s.llmGeminiApiKey);
+  const llmGeminiModel      = useEditorPrefsStore(s => s.llmGeminiModel);
+  const llmOpenaiUrl        = useEditorPrefsStore(s => s.llmOpenaiUrl);
+  const llmOpenaiApiKey     = useEditorPrefsStore(s => s.llmOpenaiApiKey);
+  const llmOpenaiModel      = useEditorPrefsStore(s => s.llmOpenaiModel);
+  const llmMaxTokens        = useEditorPrefsStore(s => s.llmMaxTokens);
+  const llmTemperature      = useEditorPrefsStore(s => s.llmTemperature);
+  const llmSystemPrompt     = useEditorPrefsStore(s => s.llmSystemPrompt);
+  const imageGenProvider    = useEditorPrefsStore(s => s.imageGenProvider);
+  const comfyUiUrl          = useEditorPrefsStore(s => s.comfyUiUrl);
+  const comfyUiWorkflowsDir = useEditorPrefsStore(s => s.comfyUiWorkflowsDir);
+  const pollinationsModel   = useEditorPrefsStore(s => s.pollinationsModel);
+  const pollinationsToken   = useEditorPrefsStore(s => s.pollinationsToken);
 
   const defaultLabel = ag.slotLabelDefault;
 

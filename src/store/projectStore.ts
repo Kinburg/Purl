@@ -59,7 +59,9 @@ export { flattenVariables, flattenAssets };
 function uuid(): string { return crypto.randomUUID(); }
 function generateIfid(): string { return uuid().toUpperCase(); }
 
-const HISTORY_LIMIT = 100;
+// 50 steps is plenty for an editor workflow; 100 doubled memory for no real gain
+// (each snapshot references a whole Project object — for big stories that's MBs).
+const HISTORY_LIMIT = 50;
 
 export const DEFAULT_PANEL_STYLE: PanelStyle = {
   rowGap:          2,

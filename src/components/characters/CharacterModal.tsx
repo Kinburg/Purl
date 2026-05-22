@@ -138,11 +138,15 @@ interface Props {
 
 export function CharacterModal({ mode, charId, initial, takenNames, takenVarNames, onSave, onClose }: Props) {
   const t = useT();
-  const {
-    project,
-    addVariable, addVariableGroup, updateVariable, deleteVariableNode,
-    addPaperdollSlot, updatePaperdollSlot, deletePaperdollSlot, setPaperdollConfig,
-  } = useProjectStore();
+  const project              = useProjectStore(s => s.project);
+  const addVariable          = useProjectStore(s => s.addVariable);
+  const addVariableGroup     = useProjectStore(s => s.addVariableGroup);
+  const updateVariable       = useProjectStore(s => s.updateVariable);
+  const deleteVariableNode   = useProjectStore(s => s.deleteVariableNode);
+  const addPaperdollSlot     = useProjectStore(s => s.addPaperdollSlot);
+  const updatePaperdollSlot  = useProjectStore(s => s.updatePaperdollSlot);
+  const deletePaperdollSlot  = useProjectStore(s => s.deletePaperdollSlot);
+  const setPaperdollConfig   = useProjectStore(s => s.setPaperdollConfig);
   const assetNodes = project.assetNodes;
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -400,7 +404,7 @@ const MODAL_PREVIEW_SCOPE = 'purl-modal-dlg-preview';
 
 function CharacterPreview({ char, avatarCfg, charId: _charId }: { char: Omit<Character, 'id'>; avatarCfg: AvatarConfig; charId?: string }) {
   const t = useT();
-  const { projectDir } = useProjectStore();
+  const projectDir = useProjectStore(s => s.projectDir);
 
   // Avatar cycling (unchanged)
   const boundSrcs = avatarCfg.mode === 'bound'
@@ -778,7 +782,7 @@ function AvatarTab({
   charVarName: string; charName: string; charLlmDescr?: string;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const [genModalOpen, setGenModalOpen] = useState(false);
 
   return (
@@ -1005,7 +1009,7 @@ function PaperdollEditor({
   setPaperdollConfig: (charId: string, config: PaperdollConfig | undefined) => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [genModalOpen, setGenModalOpen] = useState(false);
 
