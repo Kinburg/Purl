@@ -1360,6 +1360,9 @@ function tableCellInnerToSC(cell: SidebarCell, vars: Variable[], nodes: Variable
 
     case 'raw': return c.code;
 
+    case 'include':
+      return c.passageName ? `<<include "${c.passageName}">>` : '';
+
     case 'button':
       return buildCellButtonSC(c, cell.id, vars, nodes, idToName);
 
@@ -1467,6 +1470,10 @@ function cellToSC(cell: SidebarCell, vars: Variable[], nodes: VariableTreeNode[]
 
     case 'raw':
       inner = c.code;
+      break;
+
+    case 'include':
+      inner = c.passageName ? `<<include "${c.passageName}">>` : '';
       break;
 
     case 'image-bound': {

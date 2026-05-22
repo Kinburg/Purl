@@ -642,6 +642,9 @@ export interface Translations {
     typeImageBound: string;
     typeImageBoundShort: string;
     typeRaw: string;
+    typeInclude: string;
+    includeSceneLabel: string;
+    includeScenePicker: string;
     typeButton: string;
     // ── Button cell fields ──
     buttonLabelField: string;

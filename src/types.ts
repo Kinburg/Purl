@@ -1270,6 +1270,17 @@ export interface CellRaw {
   code: string;
 }
 
+/**
+ * Embeds another passage (scene) inside a sidebar cell via `<<include "name">>`.
+ * Lets users keep complex panel content in a regular Scene (with typed blocks)
+ * and reference it from the sidebar, instead of duplicating logic across cells.
+ */
+export interface CellInclude {
+  type: 'include';
+  /** Target scene NAME (consistent with IncludeBlock.passageName). */
+  passageName: string;
+}
+
 /** Displays the contents of an array variable as a joined string */
 export interface CellList {
   type: 'list';
@@ -1331,6 +1342,7 @@ export type CellContent =
   | CellImageGen
   | CellImageFromVar
   | CellRaw
+  | CellInclude
   | CellButton
   | CellList
   | CellAudioVolume

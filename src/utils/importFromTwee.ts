@@ -1,4 +1,4 @@
-import type { Project, Scene, VariableTreeNode } from '../types';
+import type { Project, Scene, SidebarPanel, VariableTreeNode } from '../types';
 import { parseStoryInit } from './twee/storyInitParser';
 import { createBuildContext, passageBodyToBlocks } from './twee/blockBuilder';
 
@@ -185,6 +185,36 @@ export function importFromTweeSource(text: string): ImportResult {
   const cssChunks: string[] = [];
   const jsChunks:  string[] = [];
 
+  // ── StoryCaption → dedicated Scene + SidebarPanel with one CellInclude ───
+  // The original caption body becomes a regular scene (typed blocks via the
+  // block builder), and the sidebar references it via `<<include "...">>`.
+  // This way the user edits panel content in the normal scene editor.
+  let sidebarPanel: SidebarPanel = { tabs: [], liveUpdate: false };
+  const captionPassage = passages.find(p => p.name === 'StoryCaption');
+  const captionSceneName = 'SidebarPanel';   // distinct from system `StoryCaption`
+  let captionSceneId: string | null = null;
+  if (captionPassage && captionPassage.body.trim()) {
+    sidebarPanel = {
+      tabs: [{
+        id: uid(),
+        label: 'Sidebar',
+        rows: [{
+          id: uid(),
+          height: 80,
+          cells: [{
+            id: uid(),
+            width: 100,
+            content: { type: 'include', passageName: captionSceneName },
+          }],
+        }],
+      }],
+      liveUpdate: false,
+    };
+    // The scene itself is built inside the main passage loop below (we mark
+    // its id here so we can rename / locate it).
+    captionSceneId = uid();
+  }
+
   // ── Scenes (Phase 2: token-driven block recognition) ──────────────────────
   const SYSTEM_NAMES = new Set([
     'StoryTitle', 'StoryData', 'StoryInit',
@@ -211,13 +241,17 @@ export function importFromTweeSource(text: string): ImportResult {
       continue;
     }
 
-    const sceneId = uid();
+    // StoryCaption → process body as a normal scene but rename it so the
+    // exporter doesn't conflict with the auto-generated `::StoryCaption`.
+    const isCaption = p.name === 'StoryCaption';
+    const sceneName = isCaption ? captionSceneName : p.name;
+    const sceneId = isCaption && captionSceneId ? captionSceneId : uid();
     const blocks = passageBodyToBlocks(p.body, ctx);
 
     // Preserve foreign tags except the system names we already consumed.
     const tags = p.tags.filter(t => !SYSTEM_NAMES.has(t));
 
-    const scene: Scene = { id: sceneId, name: p.name, tags, blocks };
+    const scene: Scene = { id: sceneId, name: sceneName, tags, blocks };
 
     const pos = p.meta.position;
     if (typeof pos === 'string') {
@@ -284,7 +318,7 @@ export function importFromTweeSource(text: string): ImportResult {
     containers: [],
     variableNodes,
     assetNodes: [],
-    sidebarPanel: { tabs: [], liveUpdate: false },
+    sidebarPanel,
     watchers: [],
     customCss,
     customScript,
