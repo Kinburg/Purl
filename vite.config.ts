@@ -2,9 +2,16 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import electron from 'vite-plugin-electron/simple';
+import pkg from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    // Expose just the version string at build time instead of importing the
+    // full package.json into the renderer bundle (pulled in deps, build config,
+    // etc. — ~5-10 KB of dead bytes).
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
     proxy: {
       '/pollinations': {

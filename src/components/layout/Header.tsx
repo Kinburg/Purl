@@ -18,7 +18,6 @@ import {
 } from '../../utils/scRuntime';
 import { fsApi, joinPath, safeName } from '../../lib/fsApi';
 import { toast } from 'sonner';
-import pkg from '../../../package.json' with { type: 'json' };
 import { Icon } from './HeaderIcons';
 import { LocaleSelect } from './LocaleSelect';
 
@@ -857,7 +856,7 @@ export function Header() {
               </div>
               <h2 className="text-xl font-bold text-white mb-1">Purl</h2>
               <p className="text-slate-400 text-sm mb-4">
-                {t.header.aboutVersion(pkg.version)}
+                {t.header.aboutVersion(__APP_VERSION__)}
               </p>
               <div className="h-px bg-slate-700/50 mb-4" />
               <button

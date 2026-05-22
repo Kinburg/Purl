@@ -1,11 +1,19 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useRef } from 'react';
 import { Group, Panel, Separator, type Layout } from 'react-resizable-panels';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useProjectStore } from '../../store/projectStore';
 import { Sidebar } from './Sidebar';
 import { SceneEditor } from '../scenes/SceneEditor';
-import { PreviewPanel } from '../preview/PreviewPanel';
-import { SceneGraphPanel } from '../graph/SceneGraphPanel';
+
+// PreviewPanel and SceneGraphPanel are off by default and pull in heavy deps
+// (xyflow + dagre live in the `graph` chunk). Render them lazily so the
+// initial load doesn't even resolve their imports unless they're toggled on.
+const PreviewPanel    = lazy(() => import('../preview/PreviewPanel').then(m => ({ default: m.PreviewPanel })));
+const SceneGraphPanel = lazy(() => import('../graph/SceneGraphPanel').then(m => ({ default: m.SceneGraphPanel })));
+
+function PanelFallback() {
+  return <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">Loading…</div>;
+}
 
 function ResizeHandle({ orientation = 'vertical' }: { orientation?: 'vertical' | 'horizontal' }) {
   const isVertical = orientation === 'vertical';
@@ -95,31 +103,33 @@ export function WorkspaceLayout() {
           <ResizeHandle orientation="vertical" />
 
           <Panel id="right-panel" minSize={250} className="flex flex-col min-h-0">
-            {previewVisible && graphVisible ? (
-              <Group
-                orientation="vertical"
-                id="right-group"
-                defaultLayout={rightLayout}
-                onLayoutChanged={(layout) => {
-                  const preview = layout['preview-panel'];
-                  if (preview != null && Math.abs(preview - previewSizePct) > 0.5) {
-                    setPanelLayout({ previewSizePct: Math.round(preview) });
-                  }
-                }}
-              >
-                <Panel id="preview-panel" minSize={150} className="flex flex-col min-h-0">
-                  <PreviewPanel />
-                </Panel>
-                <ResizeHandle orientation="horizontal" />
-                <Panel id="graph-panel" minSize={150} className="flex flex-col min-h-0">
-                  <SceneGraphPanel />
-                </Panel>
-              </Group>
-            ) : previewVisible ? (
-              <PreviewPanel />
-            ) : (
-              <SceneGraphPanel />
-            )}
+            <Suspense fallback={<PanelFallback />}>
+              {previewVisible && graphVisible ? (
+                <Group
+                  orientation="vertical"
+                  id="right-group"
+                  defaultLayout={rightLayout}
+                  onLayoutChanged={(layout) => {
+                    const preview = layout['preview-panel'];
+                    if (preview != null && Math.abs(preview - previewSizePct) > 0.5) {
+                      setPanelLayout({ previewSizePct: Math.round(preview) });
+                    }
+                  }}
+                >
+                  <Panel id="preview-panel" minSize={150} className="flex flex-col min-h-0">
+                    <PreviewPanel />
+                  </Panel>
+                  <ResizeHandle orientation="horizontal" />
+                  <Panel id="graph-panel" minSize={150} className="flex flex-col min-h-0">
+                    <SceneGraphPanel />
+                  </Panel>
+                </Group>
+              ) : previewVisible ? (
+                <PreviewPanel />
+              ) : (
+                <SceneGraphPanel />
+              )}
+            </Suspense>
           </Panel>
         </Group>
       ) : (

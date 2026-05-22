@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from './store/projectStore';
 import { useEditorStore } from './store/editorStore';
 import { useEditorPrefsStore } from './store/editorPrefsStore';
@@ -6,10 +6,14 @@ import { usePluginStore } from './store/pluginStore';
 import { Header } from './components/layout/Header';
 import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
 
-import { ProjectSettingsModal } from './components/project/ProjectSettingsModal';
-import { EditorPrefsModal } from './components/editor/EditorPrefsModal';
-import { AISettingsModal } from './components/editor/LLMSettingsModal';
-import { PluginEditorModal } from './components/plugins/PluginEditorModal';
+// Modals are lazy-loaded: they each pull in their own dependencies (icon
+// generators, prefs UI, plugin builder…) that are useless until the user
+// opens them. Each becomes its own chunk fetched on first open.
+const ProjectSettingsModal = lazy(() => import('./components/project/ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })));
+const EditorPrefsModal     = lazy(() => import('./components/editor/EditorPrefsModal').then(m => ({ default: m.EditorPrefsModal })));
+const AISettingsModal      = lazy(() => import('./components/editor/LLMSettingsModal').then(m => ({ default: m.AISettingsModal })));
+const PluginEditorModal    = lazy(() => import('./components/plugins/PluginEditorModal').then(m => ({ default: m.PluginEditorModal })));
+
 import { useAutosave } from './hooks/useAutosave';
 import { Toaster } from 'sonner';
 import { useT } from './i18n';
@@ -35,6 +39,10 @@ export default function App() {
   const setEditorPrefsOpen     = useEditorStore(s => s.setEditorPrefsOpen);
   const llmSettingsOpen        = useEditorStore(s => s.llmSettingsOpen);
   const setLLMSettingsOpen     = useEditorStore(s => s.setLLMSettingsOpen);
+  // PluginEditorModal manages its own visibility via this target — render it
+  // only while target is set so the chunk loads on-demand AND the React tree
+  // unmounts when the editor closes (frees its draft state).
+  const pluginEditorTarget     = useEditorStore(s => s.pluginEditorTarget);
 
   const compactMode = useEditorPrefsStore(s => s.compactMode);
   const saveOnExit  = useEditorPrefsStore(s => s.saveOnExit);
@@ -133,19 +141,21 @@ export default function App() {
     <div className={`flex flex-col h-screen overflow-hidden${compactMode ? ' compact' : ''}`}>
       <Header />
       <WorkspaceLayout />
-      {projectSettingsOpen && (
-        <ProjectSettingsModal
-          mode={projectDir ? 'edit' : 'create'}
-          onClose={() => setProjectSettingsOpen(false)}
-        />
-      )}
-      {editorPrefsOpen && (
-        <EditorPrefsModal onClose={() => setEditorPrefsOpen(false)} />
-      )}
-      {llmSettingsOpen && (
-        <AISettingsModal onClose={() => setLLMSettingsOpen(false)} />
-      )}
-      <PluginEditorModal />
+      <Suspense fallback={null}>
+        {projectSettingsOpen && (
+          <ProjectSettingsModal
+            mode={projectDir ? 'edit' : 'create'}
+            onClose={() => setProjectSettingsOpen(false)}
+          />
+        )}
+        {editorPrefsOpen && (
+          <EditorPrefsModal onClose={() => setEditorPrefsOpen(false)} />
+        )}
+        {llmSettingsOpen && (
+          <AISettingsModal onClose={() => setLLMSettingsOpen(false)} />
+        )}
+        {pluginEditorTarget !== null && <PluginEditorModal />}
+      </Suspense>
 
       {/* Close confirmation modal */}
       {closeModalOpen && (
