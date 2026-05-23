@@ -18,56 +18,88 @@ jobs:
           fetch-depth: 0
           ref: pre-release
 
-      - name: Determine version bump
-        id: bump
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-        run: |
-          if [[ "$COMMIT_MSG" =~ ^Merge\  ]]; then
-            echo "bump=none" >> $GITHUB_OUTPUT
-          elif [[ "$COMMIT_MSG" =~ ^feat(\(.+\))?: ]]; then
-            echo "bump=minor" >> $GITHUB_OUTPUT
-          elif [[ "$COMMIT_MSG" =~ ^fix(\(.+\))?: ]]; then
-            echo "bump=patch" >> $GITHUB_OUTPUT
-          elif [[ "$COMMIT_MSG" =~ ^(site|chore)(\(.+\))?: ]]; then
-            echo "bump=none" >> $GITHUB_OUTPUT
-          else
-            echo "bump=invalid" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Validate commit message format
-        if: steps.bump.outputs.bump == 'invalid'
-        run: |
-          echo ""
-          echo "Неверный формат сообщения коммита."
-          echo ""
-          echo "Допустимые форматы:"
-          echo "  feat: описание   ->  minor (1.x.0) — новая функциональность"
-          echo "  fix: описание    ->  patch (1.2.x) — баг-фикс или улучшение"
-          echo "  site: описание   ->  без изменения версии (лендинг)"
-          echo "  chore: описание  ->  без изменения версии (тулинг, deps, рефакторинг)"
-          echo ""
-          echo "Ваш коммит: \"${{ github.event.head_commit.message }}\""
-          echo ""
-          exit 1
-
       - name: Setup Node
-        if: steps.bump.outputs.bump != 'none' && steps.bump.outputs.bump != 'invalid'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      - name: Compute target version from all commits in push
+        id: compute
+        env:
+          COMMITS_JSON: ${{ toJson(github.event.commits) }}
+        run: |
+          set -e
+
+          CURRENT=$(node -p "require('./package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          LEN=$(echo "$COMMITS_JSON" | jq 'length')
+          echo "Current version: $CURRENT"
+          echo "Commits in push: $LEN"
+          echo ""
+
+          INVALID=""
+
+          for i in $(seq 0 $((LEN - 1))); do
+            FULL_MSG=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
+            FIRST_LINE=$(echo "$FULL_MSG" | head -n 1)
+            echo "→ $FIRST_LINE"
+
+            # Skip merge commits and prior bot bumps
+            if [[ "$FIRST_LINE" =~ ^Merge\  ]]; then
+              echo "  skip: merge commit"
+              continue
+            fi
+            if [[ "$FIRST_LINE" =~ ^chore:\ bump\ version\ to\  ]]; then
+              echo "  skip: bot version bump"
+              continue
+            fi
+
+            if [[ "$FIRST_LINE" =~ ^feat(\(.+\))?: ]]; then
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "  apply: minor → $MAJOR.$MINOR.$PATCH"
+            elif [[ "$FIRST_LINE" =~ ^fix(\(.+\))?: ]]; then
+              PATCH=$((PATCH + 1))
+              echo "  apply: patch → $MAJOR.$MINOR.$PATCH"
+            elif [[ "$FIRST_LINE" =~ ^(site|chore)(\(.+\))?: ]]; then
+              echo "  skip: no version change"
+            else
+              INVALID="$INVALID\n  - $FIRST_LINE"
+            fi
+          done
+
+          echo ""
+
+          if [ -n "$INVALID" ]; then
+            echo "Неверный формат сообщения коммита."
+            echo ""
+            echo "Допустимые форматы:"
+            echo "  feat: описание   ->  minor (1.x.0) — новая функциональность"
+            echo "  fix: описание    ->  patch (1.2.x) — баг-фикс или улучшение"
+            echo "  site: описание   ->  без изменения версии (лендинг)"
+            echo "  chore: описание  ->  без изменения версии (тулинг, deps, рефакторинг)"
+            echo ""
+            echo "Найдены некорректные коммиты:"
+            echo -e "$INVALID"
+            exit 1
+          fi
+
+          TARGET="$MAJOR.$MINOR.$PATCH"
+          echo "Target version: $TARGET"
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+
       - name: Configure git
-        if: steps.bump.outputs.bump != 'none' && steps.bump.outputs.bump != 'invalid'
+        if: steps.compute.outputs.target != steps.compute.outputs.current
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version in package.json (no tag)
-        if: steps.bump.outputs.bump != 'none' && steps.bump.outputs.bump != 'invalid'
+        if: steps.compute.outputs.target != steps.compute.outputs.current
         run: |
-          npm version ${{ steps.bump.outputs.bump }} --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
+          npm version ${{ steps.compute.outputs.target }} --no-git-tag-version
           git add package.json package-lock.json docs/index.html
-          git commit -m "chore: bump version to $NEW_VERSION"
+          git commit -m "chore: bump version to ${{ steps.compute.outputs.target }}"
           git push
