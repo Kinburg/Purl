@@ -27,7 +27,7 @@ jobs:
             echo "bump=none" >> $GITHUB_OUTPUT
           elif [[ "$COMMIT_MSG" =~ ^feat(\(.+\))?: ]]; then
             echo "bump=minor" >> $GITHUB_OUTPUT
-          elif [[ "$COMMIT_MSG" =~ ^(update|fix)(\(.+\))?: ]]; then
+          elif [[ "$COMMIT_MSG" =~ ^fix(\(.+\))?: ]]; then
             echo "bump=patch" >> $GITHUB_OUTPUT
           elif [[ "$COMMIT_MSG" =~ ^(site|chore)(\(.+\))?: ]]; then
             echo "bump=none" >> $GITHUB_OUTPUT
@@ -42,11 +42,10 @@ jobs:
           echo "Неверный формат сообщения коммита."
           echo ""
           echo "Допустимые форматы:"
-          echo "  feat: описание    ->  minor (1.x.0) — новая функциональность"
-          echo "  update: описание  ->  patch (1.2.x) — улучшение существующего"
-          echo "  fix: описание     ->  patch (1.2.x) — баг-фикс"
-          echo "  site: описание    ->  без изменения версии"
-          echo "  chore: описание   ->  без изменения версии"
+          echo "  feat: описание   ->  minor (1.x.0) — новая функциональность"
+          echo "  fix: описание    ->  patch (1.2.x) — баг-фикс или улучшение"
+          echo "  site: описание   ->  без изменения версии (лендинг)"
+          echo "  chore: описание  ->  без изменения версии (тулинг, deps, рефакторинг)"
           echo ""
           echo "Ваш коммит: \"${{ github.event.head_commit.message }}\""
           echo ""
@@ -69,6 +68,6 @@ jobs:
         run: |
           npm version ${{ steps.bump.outputs.bump }} --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
-          git add package.json package-lock.json
+          git add package.json package-lock.json docs/index.html
           git commit -m "chore: bump version to $NEW_VERSION"
           git push

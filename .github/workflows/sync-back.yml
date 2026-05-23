@@ -1,0 +1,52 @@
+name: Sync master back to pre-release
+
+# After a release lands on master, ensure pre-release is in sync. With "Rebase
+# and merge" on the PR pre-release -> master, the two branches have identical
+# content but different commit SHAs, so we open a PR master -> pre-release for
+# the maintainer to merge (also rebase-merge) and reset the SHAs.
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if pre-release is behind master
+        id: check
+        run: |
+          AHEAD=$(git rev-list --count origin/pre-release..origin/master)
+          echo "ahead=$AHEAD" >> $GITHUB_OUTPUT
+          echo "master is $AHEAD commits ahead of pre-release"
+
+      - name: Check for existing sync PR
+        if: steps.check.outputs.ahead != '0'
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COUNT=$(gh pr list --base pre-release --head master --state open --json number --jq 'length')
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Open sync PR
+        if: steps.check.outputs.ahead != '0' && steps.existing.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base pre-release \
+            --head master \
+            --title "chore: sync master back to pre-release" \
+            --body "Auto-generated to keep \`pre-release\` in sync with \`master\` after a release.
+
+          Merge with **Rebase and merge** to align commit SHAs across both branches."

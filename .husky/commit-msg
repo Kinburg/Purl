@@ -7,7 +7,7 @@ case "$commit_msg" in
   chore:\ bump\ version\ to\ *) exit 0 ;;
 esac
 
-pattern="^(feat|update|fix|site|chore)(\(.+\))?: .+"
+pattern="^(feat|fix|site|chore)(\(.+\))?: .+"
 
 if ! echo "$commit_msg" | grep -qE "$pattern"; then
   echo ""
@@ -15,10 +15,9 @@ if ! echo "$commit_msg" | grep -qE "$pattern"; then
   echo ""
   echo "Acceptable formats:"
   echo "feat: description -> minor (1.x.0) — new feature"
-  echo "update: description -> patch (1.2.x) — improvement to existing feature"
-  echo "fix: description -> patch (1.2.x) — bug fix"
-  echo "site: description -> no version change"
-  echo "chore: description -> no version change"
+  echo "fix: description -> patch (1.2.x) — bug fix or improvement"
+  echo "site: description -> no version change (landing page)"
+  echo "chore: description -> no version change (tooling, deps, refactor)"
   echo ""
   echo "Your commit was: $commit_msg"
   echo ""
