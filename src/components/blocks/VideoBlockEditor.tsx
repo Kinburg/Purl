@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useProjectStore, flattenAssets } from '../../store/projectStore';
+import { useEffect, useMemo, useState } from 'react';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatAssets } from '../../hooks/useFlatVariables';
 import type { VideoBlock } from '../../types';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { useT } from '../../i18n';
@@ -28,7 +29,8 @@ export function VideoBlockEditor({
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<VideoBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
-  const videoAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'video');
+  const allAssets = useFlatAssets();
+  const videoAssets = useMemo(() => allAssets.filter(a => a.assetType === 'video'), [allAssets]);
   const cascadeClasses = ['tg-video', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
   const hasOverride =
     !!project.settings.defaultBlockStyles?.video?.enabled ||

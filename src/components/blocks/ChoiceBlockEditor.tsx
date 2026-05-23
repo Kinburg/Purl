@@ -7,7 +7,7 @@ import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { VarInsertButton } from '../shared/VarInsertButton';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
-import { flattenVariables } from '../../utils/treeUtils';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import {
   CHOICE_FIELD_SCHEMA,
@@ -268,7 +268,7 @@ export function ChoiceBlockEditor({
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
   const scenes = projectScenes.filter(s => !s.tags.some(tag => (SYSTEM_TAGS as readonly string[]).includes(tag)));
   const t = useT();
-  const vars = flattenVariables(variableNodes);
+  const vars = useFlatVariablesOf(variableNodes);
   const cascadeClasses = ['tg-choice', ...simpleBlockCascadeClasses(block, projectSettings)].join(' ');
   const hasOverride =
     !!projectSettings.defaultBlockStyles?.choice?.enabled ||

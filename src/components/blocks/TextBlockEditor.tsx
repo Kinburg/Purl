@@ -6,7 +6,8 @@ import type { TextBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { TextInsertToolbar } from '../shared/TextInsertToolbar';
 import { LLMGenerateButton } from '../shared/LLMGenerateButton';
-import { flattenVariables, flattenAssets } from '../../utils/treeUtils';
+import { useMemo } from 'react';
+import { useFlatVariablesOf, useFlatAssetsOf } from '../../hooks/useFlatVariables';
 import { useVariableNodes } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import {
@@ -37,8 +38,9 @@ export function TextBlockEditor({
   // Debounced draft of the textarea content — store commit on blur or after
   // 300 ms of idle; eliminates per-keystroke project re-renders.
   const contentDraft = useDraftValue(block.content, v => update({ content: v }));
-  const vars = flattenVariables(variableNodes);
-  const imgAssets = flattenAssets(assetNodes).filter(a => a.assetType === 'image');
+  const vars = useFlatVariablesOf(variableNodes);
+  const allAssets = useFlatAssetsOf(assetNodes);
+  const imgAssets = useMemo(() => allAssets.filter(a => a.assetType === 'image'), [allAssets]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cascadeClasses = ['tg-text', ...simpleBlockCascadeClasses(block, settings)].join(' ');
   // Show preview only when a style override / default actually affects this block —

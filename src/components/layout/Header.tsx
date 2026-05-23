@@ -84,7 +84,8 @@ export function Header() {
     const api = window.electronAPI;
     if (!api?.isWindowMaximized) return;
     api.isWindowMaximized().then(v => setIsMaximized(v));
-    api.onWindowMaximized?.(v => setIsMaximized(v));
+    const unsubscribe = api.onWindowMaximized?.(v => setIsMaximized(v));
+    return unsubscribe;
   }, []);
 
   // Handle Escape to close About modal

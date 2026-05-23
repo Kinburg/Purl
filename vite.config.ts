@@ -5,7 +5,7 @@ import electron from 'vite-plugin-electron/simple';
 import pkg from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
     // Expose just the version string at build time instead of importing the
     // full package.json into the renderer bundle (pulled in deps, build config,
@@ -34,6 +34,13 @@ export default defineConfig({
       renderer: {},
     }),
   ],
+  esbuild: mode === 'production' ? {
+    // Strip `console.*` and `debugger` from production builds only — dev/HMR
+    // keeps all logging intact. `console.error` inside autosave etc. is
+    // useless in packaged Electron anyway (no DevTools available to the end
+    // user) and bloats the bundle.
+    drop: ['console', 'debugger'],
+  } : {},
   build: {
     // Single-chunk renderer was 1.8 MB pre-split. manualChunks separates heavy
     // libs that aren't always needed at first paint — graph (xyflow + dagre)
@@ -55,4 +62,4 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1300,
   },
-});
+}));

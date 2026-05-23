@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariables } from '../../hooks/useFlatVariables';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT } from '../../i18n';
 import { useConfirm } from '../shared/ConfirmModal';
@@ -403,7 +404,7 @@ export function WatcherManager() {
   const updateWatcher  = useProjectStore(s => s.updateWatcher);
   const deleteWatcher  = useProjectStore(s => s.deleteWatcher);
   const watchers = project.watchers ?? [];
-  const vars = flattenVariables(project.variableNodes);
+  const vars = useFlatVariables();
   const scenes = project.scenes;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);

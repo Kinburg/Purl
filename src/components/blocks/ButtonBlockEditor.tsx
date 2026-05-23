@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
-import type { ButtonBlock, ButtonAction, ButtonStyle, VarOperator } from '../../types';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
+import type { ButtonBlock, ButtonAction, ButtonStyle, VarOperator, Variable } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
@@ -180,7 +181,7 @@ function StyleEditor({ style, onChange, block, settings }: StyleEditorProps) {
 
 interface ActionRowProps {
   action: ButtonAction;
-  variables: ReturnType<typeof flattenVariables>;
+  variables: Variable[];
   onChange: (patch: Partial<ButtonAction>) => void;
   onDelete: () => void;
   onFocusValue: () => void;
@@ -376,7 +377,7 @@ export function ButtonBlockEditor({
   const project       = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<ButtonBlock>) => updateBlock(sceneId, block.id, p));
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   const labelRef = useRef<HTMLInputElement>(null);
 
   // Patch helpers

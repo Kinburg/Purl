@@ -6,7 +6,8 @@ import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useProjectStore, flattenVariables, deepCloneBlock } from '../../store/projectStore';
+import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useEditorStore } from '../../store/editorStore';
 import { useT, blockTypeLabel } from '../../i18n';
 import { useVariableNodes } from '../shared/VariableScope';
@@ -131,7 +132,7 @@ function SourceInput({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const variableNodes = useVariableNodes();
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   return (
     <div className="flex-1 flex items-center gap-1 min-w-0">
       <input

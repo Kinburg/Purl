@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { useProjectStore, flattenVariables, DEFAULT_PANEL_STYLE, redistributeWidths } from '../../store/projectStore';
+import { useProjectStore, DEFAULT_PANEL_STYLE, redistributeWidths } from '../../store/projectStore';
+import { useFlatVariables } from '../../hooks/useFlatVariables';
 import { useT } from '../../i18n';
 import type {
   SidebarTab, SidebarRow, SidebarCell, CellContent, PanelStyle,
@@ -37,7 +38,7 @@ export function PanelEditor() {
   const [tabNameDraft, setTabNameDraft] = useState('');
   const { ask, modal: confirmModal } = useConfirm();
 
-  const vars = flattenVariables(project.variableNodes);
+  const vars = useFlatVariables();
   const assetNodes = project.assetNodes;
   const activeTab = sidebarPanel.tabs.find(t => t.id === activeTabId) ?? null;
   const style: PanelStyle = sidebarPanel.style ?? DEFAULT_PANEL_STYLE;

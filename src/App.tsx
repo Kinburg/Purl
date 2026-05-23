@@ -88,11 +88,14 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Listen for close-requested from Electron
+  // Listen for close-requested from Electron. preload returns an unsubscribe
+  // function — wire it into the effect cleanup so HMR re-runs don't pile up
+  // duplicate listeners (also makes this match standard React effect hygiene).
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.onCloseRequested) return;
-    api.onCloseRequested(() => setCloseModalOpen(true));
+    const unsubscribe = api.onCloseRequested(() => setCloseModalOpen(true));
+    return unsubscribe;
   }, []);
 
   async function handleSaveAndExit() {

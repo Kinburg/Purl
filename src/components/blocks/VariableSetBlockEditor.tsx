@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import type { VariableSetBlock, VarOperator, RandomConfig, VarValueMode, StringBoundEntry } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
@@ -48,7 +49,7 @@ export function VariableSetBlockEditor({
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<VariableSetBlock>) => updateBlock(sceneId, block.id, p as never));
-  const variables   = flattenVariables(variableNodes);
+  const variables   = useFlatVariablesOf(variableNodes);
   const selectedVar = variables.find(v => v.id === block.variableId);
   const exprInputRef    = useRef<HTMLInputElement>(null);
   const manualValueRef  = useRef<HTMLInputElement>(null);

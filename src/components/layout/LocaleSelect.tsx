@@ -8,7 +8,8 @@ export function LocaleSelect({
 }: {
   value: string;
   options: Locale[];
-  onChange: (code: string) => void;
+  /** May be async (lazy-loaded locales return a Promise). The return value is ignored. */
+  onChange: (code: string) => void | Promise<void>;
 }) {
   const { open, toggle, close, triggerRef, panelRef } = useDropdown<HTMLDivElement>();
   const current = options.find(l => l.code === value);

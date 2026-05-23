@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
-import type { LinkBlock, ButtonAction, ButtonStyle, VarOperator, LinkTarget } from '../../types';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
+import type { LinkBlock, ButtonAction, ButtonStyle, VarOperator, LinkTarget, Variable } from '../../types';
 import { SYSTEM_TAGS } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
@@ -160,7 +161,7 @@ function ActionRow({
   action, variables, onChange, onDelete, onFocusValue,
 }: {
   action: ButtonAction;
-  variables: ReturnType<typeof flattenVariables>;
+  variables: Variable[];
   onChange: (patch: Partial<ButtonAction>) => void;
   onDelete: () => void;
   onFocusValue: () => void;
@@ -334,7 +335,7 @@ export function LinkBlockEditor({
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const update = onUpdate ?? ((p: Partial<LinkBlock>) => updateBlock(sceneId, block.id, p));
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   const labelRef = useRef<HTMLInputElement>(null);
   const scenes = project.scenes.filter(s => s.id !== sceneId && !s.tags.some(tag => (SYSTEM_TAGS as readonly string[]).includes(tag)));
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');

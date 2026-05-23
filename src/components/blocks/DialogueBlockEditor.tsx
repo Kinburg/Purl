@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
@@ -28,7 +28,7 @@ import { TextInsertToolbar } from '../shared/TextInsertToolbar';
 import { LLMGenerateButton } from '../shared/LLMGenerateButton';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import { DIALOGUE_FIELD_SCHEMA, DIALOGUE_RAW_CSS_HELP } from '../../utils/styleCascade';
-import { flattenVariables, flattenAssets } from '../../utils/treeUtils';
+import { useFlatVariablesOf, useFlatAssetsOf } from '../../hooks/useFlatVariables';
 import { useVariableNodes } from '../shared/VariableScope';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { dialogueElementClasses, buildDialogueSpotStyleBlock } from '../../utils/styleCascade';
@@ -233,8 +233,9 @@ export function DialogueBlockEditor({
   const update = onUpdate ?? ((p: Partial<DialogueBlock>) => updateBlock(sceneId, block.id, p as never));
   // Debounced draft for the dialogue text — same pattern as TextBlock.
   const textDraft = useDraftValue(block.text, v => update({ text: v }));
-  const vars = flattenVariables(variableNodes);
-  const imgAssets = flattenAssets(assetNodes).filter(a => a.assetType === 'image');
+  const vars = useFlatVariablesOf(variableNodes);
+  const allAssets = useFlatAssetsOf(assetNodes);
+  const imgAssets = useMemo(() => allAssets.filter(a => a.assetType === 'image'), [allAssets]);
   const dialogueRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedChar = characters.find(c => c.id === block.characterId);

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { useProjectStore, flattenVariables, DEFAULT_PANEL_STYLE, redistributeWidths } from '../../store/projectStore';
+import { useProjectStore, DEFAULT_PANEL_STYLE, redistributeWidths } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useT } from '../../i18n';
 import type {
   TableBlock, SidebarRow, SidebarCell, CellContent, PanelStyle,
@@ -54,7 +55,7 @@ export function TableBlockEditor({
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const project      = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
-  const vars = flattenVariables(variableNodes);
+  const vars = useFlatVariablesOf(variableNodes);
   const assetNodes = project.assetNodes;
 
   const update = onUpdate ?? ((p: Partial<TableBlock>) => updateBlock(sceneId, block.id, p as never));
