@@ -39,7 +39,7 @@ The core of Purl is its intuitive scene editor, where you build your story using
 ### Tools
 - **Scene Graph**: An interactive node-based map visualizing transitions between passages, with drag-and-drop nodes (separate window).
 - **Code Preview**: A live-updating `.twee` output for the active scene (separate window), showing the generated code in real-time.
-- **Localization**: UI available in English and Russian.
+- **Localization**: UI available in English and Ukrainian.
 
 ## Installation
 

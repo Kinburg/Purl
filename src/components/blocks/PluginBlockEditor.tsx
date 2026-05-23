@@ -25,9 +25,11 @@ export function PluginBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<PluginBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
-  const { plugins } = usePluginStore();
-  const { openPluginEditor } = useEditorStore();
+  const updateBlock      = useProjectStore(s => s.updateBlock);
+  const saveSnapshot     = useProjectStore(s => s.saveSnapshot);
+  const project          = useProjectStore(s => s.project);
+  const plugins          = usePluginStore(s => s.plugins);
+  const openPluginEditor = useEditorStore(s => s.openPluginEditor);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<PluginBlock>) => updateBlock(sceneId, block.id, p as never));

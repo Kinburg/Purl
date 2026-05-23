@@ -134,10 +134,13 @@ interface PendingGroup {
 
 export function AssetManager() {
   const t = useT();
-  const {
-    project, projectDir, setProjectDir,
-    addAssetGroup, addAsset, deleteAssetNode, syncAssets,
-  } = useProjectStore();
+  const project         = useProjectStore(s => s.project);
+  const projectDir      = useProjectStore(s => s.projectDir);
+  const setProjectDir   = useProjectStore(s => s.setProjectDir);
+  const addAssetGroup   = useProjectStore(s => s.addAssetGroup);
+  const addAsset        = useProjectStore(s => s.addAsset);
+  const deleteAssetNode = useProjectStore(s => s.deleteAssetNode);
+  const syncAssets      = useProjectStore(s => s.syncAssets);
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [inspectedAsset, setInspectedAsset] = useState<Asset | null>(null);

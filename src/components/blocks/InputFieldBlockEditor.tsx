@@ -1,4 +1,5 @@
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import type { InputFieldBlock } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
@@ -36,10 +37,12 @@ export function InputFieldBlockEditor({
   onUpdate?: (patch: Partial<InputFieldBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<InputFieldBlock>) => updateBlock(sceneId, block.id, p));
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   const selectedVar = variables.find(v => v.id === block.variableId);
   const cascadeClasses = ['tg-input-field', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');
   const hasOverride =

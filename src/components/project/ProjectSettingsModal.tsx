@@ -133,8 +133,13 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   const ps = t.projectSettings;
   const ig = t.imageGenBlock;
 
-  const { project, projectDir, updateProjectMeta, loadProject } = useProjectStore();
-  const { setProjectSettingsOpen } = useEditorStore();
+  const project             = useProjectStore(s => s.project);
+  const projectDir          = useProjectStore(s => s.projectDir);
+  const updateProjectMeta   = useProjectStore(s => s.updateProjectMeta);
+  const loadProject         = useProjectStore(s => s.loadProject);
+  const setProjectSettingsOpen = useEditorStore(s => s.setProjectSettingsOpen);
+  // Whole-store subscription is intentional here: this modal renders dozens of
+  // prefs fields and is short-lived (only mounted while open).
   const prefs = useEditorPrefsStore();
   const {
     llmEnabled, llmProvider,

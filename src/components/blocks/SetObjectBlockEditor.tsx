@@ -1,4 +1,5 @@
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useVariableNodes } from '../shared/VariableScope';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useT } from '../../i18n';
@@ -136,9 +137,10 @@ export function SetObjectBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<SetObjectBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   const t = useT();
 
   const update = onUpdate ?? ((p: Partial<SetObjectBlock>) => updateBlock(sceneId, block.id, p as never));

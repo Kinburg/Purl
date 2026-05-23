@@ -6,7 +6,8 @@ import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useProjectStore, flattenVariables, deepCloneBlock } from '../../store/projectStore';
+import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useEditorStore } from '../../store/editorStore';
 import { useT, blockTypeLabel } from '../../i18n';
 import { useVariableNodes } from '../shared/VariableScope';
@@ -131,7 +132,7 @@ function SourceInput({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const variableNodes = useVariableNodes();
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   return (
     <div className="flex-1 flex items-center gap-1 min-w-0">
       <input
@@ -164,8 +165,10 @@ export function ForBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<ForBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot } = useProjectStore();
-  const { clipboardBlock, copyToClipboard } = useEditorStore();
+  const updateBlock     = useProjectStore(s => s.updateBlock);
+  const saveSnapshot    = useProjectStore(s => s.saveSnapshot);
+  const clipboardBlock  = useEditorStore(s => s.clipboardBlock);
+  const copyToClipboard = useEditorStore(s => s.copyToClipboard);
   const t = useT();
 
   const update = onUpdate ?? ((p: Partial<ForBlock>) => updateBlock(sceneId, block.id, p as never));

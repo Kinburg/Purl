@@ -1,4 +1,6 @@
-import { useProjectStore, flattenAssets } from '../../store/projectStore';
+import { useMemo } from 'react';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatAssets } from '../../hooks/useFlatVariables';
 import type { AudioBlock } from '../../types';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { useT } from '../../i18n';
@@ -13,10 +15,12 @@ export function AudioBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<AudioBlock>) => void;
 }) {
-  const { project, projectDir, updateBlock } = useProjectStore();
+  const projectDir  = useProjectStore(s => s.projectDir);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const update = onUpdate ?? ((p: Partial<AudioBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
-  const audioAssets = flattenAssets(project.assetNodes).filter(a => a.assetType === 'audio');
+  const allAssets = useFlatAssets();
+  const audioAssets = useMemo(() => allAssets.filter(a => a.assetType === 'audio'), [allAssets]);
 
   function resolvePreviewSrc(src: string): string {
     if (src.startsWith('assets/') && projectDir) {

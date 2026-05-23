@@ -25,7 +25,9 @@ export function ImageBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<ImageBlock>) => void;
 }) {
-  const { project, projectDir, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const projectDir  = useProjectStore(s => s.projectDir);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<ImageBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();

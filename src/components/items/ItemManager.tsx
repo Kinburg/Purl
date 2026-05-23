@@ -26,7 +26,10 @@ type ModalState =
 
 export function ItemManager() {
   const t = useT();
-  const { project, addItem, updateItem, deleteItem } = useProjectStore();
+  const project    = useProjectStore(s => s.project);
+  const addItem    = useProjectStore(s => s.addItem);
+  const updateItem = useProjectStore(s => s.updateItem);
+  const deleteItem = useProjectStore(s => s.deleteItem);
   const items = project.items ?? [];
   const [modalState, setModalState] = useState<ModalState>(null);
   const confirmDeleteCharacter = useEditorPrefsStore(s => s.confirmDeleteCharacter);
@@ -121,7 +124,7 @@ function ItemRow({
   onDelete: () => void;
 }) {
   const t = useT();
-  const { projectDir } = useProjectStore();
+  const projectDir = useProjectStore(s => s.projectDir);
 
   // Resolve local file URL for icon preview
   const rawIconSrc = item.iconConfig?.src ?? '';

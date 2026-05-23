@@ -62,7 +62,7 @@ interface Props {
 
 export function PluginBodyEditor({ blocks, onChange, params, collapsed: collapsedProp, onCollapsedChange }: Props) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const virtualNodes = useMemo(
     () => paramsToVirtualNodes(params, project.variableNodes),
     [params, project.variableNodes],

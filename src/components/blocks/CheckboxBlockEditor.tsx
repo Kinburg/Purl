@@ -21,7 +21,9 @@ export function CheckboxBlockEditor({
   onUpdate?: (patch: Partial<CheckboxBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const project      = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const patch = onUpdate ?? ((p: Partial<CheckboxBlock>) => updateBlock(sceneId, block.id, p));
   const cascadeClasses = ['tg-checkbox', ...simpleBlockCascadeClasses(block, project.settings)].join(' ');

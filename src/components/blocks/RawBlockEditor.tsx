@@ -14,7 +14,10 @@ export function RawBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<RawBlock>) => void;
 }) {
-  const { updateBlock, saveSnapshot, replaceBlock, project } = useProjectStore();
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const replaceBlock = useProjectStore(s => s.replaceBlock);
+  const project      = useProjectStore(s => s.project);
   const t = useT();
   const update = onUpdate ?? ((p: Partial<RawBlock>) => updateBlock(sceneId, block.id, p as never));
 

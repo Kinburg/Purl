@@ -12,7 +12,8 @@ export function InventoryBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<InventoryBlock>) => void;
 }) {
-  const { project, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const update = onUpdate ?? ((p: Partial<InventoryBlock>) => updateBlock(sceneId, block.id, p as never));
   const t = useT();
   const hero = project.characters.find(c => c.isHero);

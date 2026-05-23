@@ -15,7 +15,8 @@ import {
 } from '@dnd-kit/sortable';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { CSS } from '@dnd-kit/utilities';
-import { useProjectStore, flattenVariables, deepCloneBlock } from '../../store/projectStore';
+import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useEditorStore } from '../../store/editorStore';
 import { VariablePicker } from '../shared/VariablePicker';
 import { VarInsertButton } from '../shared/VarInsertButton';
@@ -252,7 +253,7 @@ export function ConditionBlockEditor({
   const copyToClipboard       = useEditorStore(s => s.copyToClipboard);
   const t = useT();
   const variableNodes = useVariableNodes();
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 

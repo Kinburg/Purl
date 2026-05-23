@@ -12,7 +12,8 @@ interface Props {
 
 export function ContainerBlockEditor({ block, sceneId, onUpdate }: Props) {
   const t = useT();
-  const { project, updateBlock } = useProjectStore();
+  const project     = useProjectStore(s => s.project);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const update = onUpdate ?? ((p: Partial<ContainerBlock>) => updateBlock(sceneId, block.id, p as never));
 
   const containers = project.containers ?? [];

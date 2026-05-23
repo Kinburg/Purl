@@ -71,7 +71,9 @@ const IconSparkle = () => (
 
 export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId }: Props) {
   const t = useT();
-  const { project, projectDir, makeStartScene } = useProjectStore();
+  const project        = useProjectStore(s => s.project);
+  const projectDir     = useProjectStore(s => s.projectDir);
+  const makeStartScene = useProjectStore(s => s.makeStartScene);
   const variableNodes = useVariableNodes();
 
   // ── Settings tab state ─────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariables } from '../../hooks/useFlatVariables';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT } from '../../i18n';
 import { useConfirm } from '../shared/ConfirmModal';
@@ -84,7 +85,7 @@ function ActionRow({
   const accessorKind = action.accessor?.kind ?? 'whole';
   const availableOps = actionOpsForVar(selVar?.varType, accessorKind);
 
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
 
   return (
     <div className="flex flex-col gap-1 bg-slate-800/60 border border-slate-700 rounded px-2 py-1.5">
@@ -171,7 +172,7 @@ function WatcherCard({
   onDelete: () => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
 
   const patchCondition = (patch: Partial<WatcherCondition>) =>
     onUpdate({ condition: { ...watcher.condition, ...patch } });
@@ -398,9 +399,12 @@ function WatcherCard({
 
 export function WatcherManager() {
   const t = useT();
-  const { project, addWatcher, updateWatcher, deleteWatcher } = useProjectStore();
+  const project        = useProjectStore(s => s.project);
+  const addWatcher     = useProjectStore(s => s.addWatcher);
+  const updateWatcher  = useProjectStore(s => s.updateWatcher);
+  const deleteWatcher  = useProjectStore(s => s.deleteWatcher);
   const watchers = project.watchers ?? [];
-  const vars = flattenVariables(project.variableNodes);
+  const vars = useFlatVariables();
   const scenes = project.scenes;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);

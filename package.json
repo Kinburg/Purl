@@ -69,7 +69,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^1.49.0",
     "@xyflow/react": "^12.10.1",
-    "jszip": "^3.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-resizable-panels": "^4.8.0",

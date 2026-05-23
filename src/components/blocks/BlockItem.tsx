@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { lazy, memo, Suspense } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore } from '../../store/projectStore';
@@ -8,22 +8,23 @@ import { useConfirm } from '../shared/ConfirmModal';
 import { useT, blockTypeLabel } from '../../i18n';
 import type { Block } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
+
+// ── Eager editors ────────────────────────────────────────────────────────────
+// Common, lightweight blocks bundled with the main chunk. Loading them is
+// cheap and they're used in nearly every scene.
 import { TextBlockEditor } from './TextBlockEditor';
 import { DialogueBlockEditor } from './DialogueBlockEditor';
 import { ChoiceBlockEditor } from './ChoiceBlockEditor';
 import { ConditionBlockEditor } from './ConditionBlockEditor';
 import { VariableSetBlockEditor } from './VariableSetBlockEditor';
-import { SetObjectBlockEditor } from './SetObjectBlockEditor';
 import { ForBlockEditor } from './ForBlockEditor';
 import { ImageBlockEditor } from './ImageBlockEditor';
-import { ImageGenBlockEditor } from './ImageGenBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
 import { ButtonBlockEditor } from './ButtonBlockEditor';
 import { LinkBlockEditor } from './LinkBlockEditor';
 import { InputFieldBlockEditor } from './InputFieldBlockEditor';
 import { RawBlockEditor } from './RawBlockEditor';
 import { NoteBlockEditor } from './NoteBlockEditor';
-import { TableBlockEditor } from './TableBlockEditor';
 import { DividerBlockEditor } from './DividerBlockEditor';
 import { IncludeBlockEditor } from './IncludeBlockEditor';
 import { CheckboxBlockEditor } from './CheckboxBlockEditor';
@@ -31,12 +32,66 @@ import { RadioBlockEditor } from './RadioBlockEditor';
 import { FunctionBlockEditor } from './FunctionBlockEditor';
 import { PopupBlockEditor } from './PopupBlockEditor';
 import { AudioBlockEditor } from './AudioBlockEditor';
-import { ContainerBlockEditor } from './ContainerBlockEditor';
 import { TimeManipulationBlockEditor } from './TimeManipulationBlockEditor';
-import { PaperdollBlockEditor } from './PaperdollBlockEditor';
-import { InventoryBlockEditor } from './InventoryBlockEditor';
-import { PluginBlockEditor } from './PluginBlockEditor';
+import { SetObjectBlockEditor } from './SetObjectBlockEditor';
+// TableBlockEditor stays eager — it's also imported by ConditionBlockEditor,
+// DialogueBlockEditor, and ForBlockEditor for inline rendering inside nested
+// blocks. Lazy-loading here wouldn't actually move bytes out of the main chunk.
+import { TableBlockEditor } from './TableBlockEditor';
+
+// ── Lazy editors ─────────────────────────────────────────────────────────────
+// Heavy or rarely-used. Each becomes its own chunk and is only fetched the
+// first time a scene contains one. Named exports → wrapped in default-shim.
+const ImageGenBlockEditor   = lazy(() => import('./ImageGenBlockEditor').then(m => ({ default: m.ImageGenBlockEditor })));
+const ContainerBlockEditor  = lazy(() => import('./ContainerBlockEditor').then(m => ({ default: m.ContainerBlockEditor })));
+const PaperdollBlockEditor  = lazy(() => import('./PaperdollBlockEditor').then(m => ({ default: m.PaperdollBlockEditor })));
+const InventoryBlockEditor  = lazy(() => import('./InventoryBlockEditor').then(m => ({ default: m.InventoryBlockEditor })));
+const PluginBlockEditor     = lazy(() => import('./PluginBlockEditor').then(m => ({ default: m.PluginBlockEditor })));
+
 import { usePluginStore } from '../../store/pluginStore';
+
+// ── Editor registry ──────────────────────────────────────────────────────────
+// `as never` keeps each editor's narrow block-type prop intact at the call
+// site without forcing a discriminated union here.
+type AnyEditor = React.ComponentType<{
+  block: Block;
+  sceneId: string;
+  onUpdate?: (patch: Partial<Block>) => void;
+}>;
+const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
+  'text':              TextBlockEditor             as never,
+  'dialogue':          DialogueBlockEditor         as never,
+  'choice':            ChoiceBlockEditor           as never,
+  'condition':         ConditionBlockEditor        as never,
+  'variable-set':      VariableSetBlockEditor      as never,
+  'set-object':        SetObjectBlockEditor        as never,
+  'for':               ForBlockEditor              as never,
+  'image':             ImageBlockEditor            as never,
+  'image-gen':         ImageGenBlockEditor         as never,
+  'video':             VideoBlockEditor            as never,
+  'button':            ButtonBlockEditor           as never,
+  'link':              LinkBlockEditor             as never,
+  'input-field':       InputFieldBlockEditor       as never,
+  'raw':               RawBlockEditor              as never,
+  'note':              NoteBlockEditor             as never,
+  'table':             TableBlockEditor            as never,
+  'include':           IncludeBlockEditor          as never,
+  'divider':           DividerBlockEditor          as never,
+  'checkbox':          CheckboxBlockEditor         as never,
+  'radio':             RadioBlockEditor            as never,
+  'function':          FunctionBlockEditor         as never,
+  'popup':             PopupBlockEditor            as never,
+  'audio':             AudioBlockEditor            as never,
+  'container':         ContainerBlockEditor        as never,
+  'time-manipulation': TimeManipulationBlockEditor as never,
+  'paperdoll':         PaperdollBlockEditor        as never,
+  'inventory':         InventoryBlockEditor        as never,
+  'plugin':            PluginBlockEditor           as never,
+};
+
+function BlockEditorFallback() {
+  return <div className="text-slate-500 text-xs italic py-2">Loading editor…</div>;
+}
 
 const BLOCK_COLORS: Record<Block['type'], string> = {
   'text':              'bg-slate-700',
@@ -185,34 +240,15 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
 
       {/* Block body */}
       {!collapsed && <div className="block-body p-3">
-        {block.type === 'text'              && <TextBlockEditor             block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'dialogue'          && <DialogueBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'choice'            && <ChoiceBlockEditor           block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'condition'         && <ConditionBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'variable-set'      && <VariableSetBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'set-object'        && <SetObjectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'for'               && <ForBlockEditor              block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'image'             && <ImageBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'image-gen'         && <ImageGenBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'video'             && <VideoBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'button'            && <ButtonBlockEditor           block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'link'              && <LinkBlockEditor             block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'input-field'       && <InputFieldBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'raw'               && <RawBlockEditor              block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'note'              && <NoteBlockEditor             block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'table'             && <TableBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'include'           && <IncludeBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'divider'           && <DividerBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'checkbox'          && <CheckboxBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'radio'             && <RadioBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'function'          && <FunctionBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'popup'             && <PopupBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'audio'             && <AudioBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'container'         && <ContainerBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'time-manipulation' && <TimeManipulationBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'paperdoll'         && <PaperdollBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'inventory'         && <InventoryBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
-        {block.type === 'plugin'            && <PluginBlockEditor            block={block} sceneId={sceneId} onUpdate={onUpdate as never} />}
+        {(() => {
+          const Editor = BLOCK_EDITORS[block.type];
+          if (!Editor) return <div className="text-red-400 text-xs">Unknown block type: {block.type}</div>;
+          return (
+            <Suspense fallback={<BlockEditorFallback />}>
+              <Editor block={block} sceneId={sceneId} onUpdate={onUpdate as never} />
+            </Suspense>
+          );
+        })()}
       </div>}
     </div>
     {confirmModal}

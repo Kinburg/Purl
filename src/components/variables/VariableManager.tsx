@@ -11,7 +11,11 @@ import { TYPE_DEFAULTS, TYPE_COLOR, type TreeActions } from './variableTreeShare
 
 export function VariableManager() {
   const t = useT();
-  const { project, addVariableGroup, addVariable, updateVariable, deleteVariableNode } = useProjectStore();
+  const project            = useProjectStore(s => s.project);
+  const addVariableGroup   = useProjectStore(s => s.addVariableGroup);
+  const addVariable        = useProjectStore(s => s.addVariable);
+  const updateVariable     = useProjectStore(s => s.updateVariable);
+  const deleteVariableNode = useProjectStore(s => s.deleteVariableNode);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
 

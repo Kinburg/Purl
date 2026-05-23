@@ -62,14 +62,16 @@ interface ElectronAPI {
   maximizeWindow(): Promise<void>;
   closeWindow(): Promise<void>;
   isWindowMaximized(): Promise<boolean>;
-  onWindowMaximized(callback: (maximized: boolean) => void): void;
+  /** Subscribe to maximize/unmaximize notifications. Returns an unsubscribe fn. */
+  onWindowMaximized(callback: (maximized: boolean) => void): () => void;
 
   // App config
   getTitleBarStyle(): Promise<'custom' | 'native'>;
   setTitleBarStyle(style: 'custom' | 'native'): Promise<void>;
 
   // Close confirmation
-  onCloseRequested(callback: () => void): void;
+  /** Subscribe to main-process close-requested events. Returns an unsubscribe fn. */
+  onCloseRequested(callback: () => void): () => void;
   confirmClose(): void;
   cancelClose(): void;
 }
@@ -77,3 +79,6 @@ interface ElectronAPI {
 declare interface Window {
   electronAPI?: ElectronAPI;
 }
+
+/** App version injected by Vite `define` at build time. */
+declare const __APP_VERSION__: string;

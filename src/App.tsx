@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from './store/projectStore';
 import { useEditorStore } from './store/editorStore';
 import { useEditorPrefsStore } from './store/editorPrefsStore';
@@ -6,24 +6,47 @@ import { usePluginStore } from './store/pluginStore';
 import { Header } from './components/layout/Header';
 import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
 
-import { ProjectSettingsModal } from './components/project/ProjectSettingsModal';
-import { EditorPrefsModal } from './components/editor/EditorPrefsModal';
-import { AISettingsModal } from './components/editor/LLMSettingsModal';
-import { PluginEditorModal } from './components/plugins/PluginEditorModal';
+// Modals are lazy-loaded: they each pull in their own dependencies (icon
+// generators, prefs UI, plugin builder…) that are useless until the user
+// opens them. Each becomes its own chunk fetched on first open.
+const ProjectSettingsModal = lazy(() => import('./components/project/ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })));
+const EditorPrefsModal     = lazy(() => import('./components/editor/EditorPrefsModal').then(m => ({ default: m.EditorPrefsModal })));
+const AISettingsModal      = lazy(() => import('./components/editor/LLMSettingsModal').then(m => ({ default: m.AISettingsModal })));
+const PluginEditorModal    = lazy(() => import('./components/plugins/PluginEditorModal').then(m => ({ default: m.PluginEditorModal })));
+
 import { useAutosave } from './hooks/useAutosave';
 import { Toaster } from 'sonner';
 import { useT } from './i18n';
 import { fsApi, joinPath, safeName } from './lib/fsApi';
 import { injectPreviewCSS } from './utils/previewCss';
+import { useDebouncedValue } from './utils/useDebouncedValue';
 
 export default function App() {
-  const { fixVariableNames, undo, redo, projectDir, project, setProjectDir } = useProjectStore();
-  const {
-    projectSettingsOpen, setProjectSettingsOpen,
-    editorPrefsOpen, setEditorPrefsOpen,
-    llmSettingsOpen, setLLMSettingsOpen,
-  } = useEditorStore();
-  const { compactMode, saveOnExit } = useEditorPrefsStore();
+  // Use narrow selectors instead of destructuring the whole store — the previous
+  // `const { ... } = useProjectStore()` subscribed to every project change,
+  // which forced the whole shell (Header + WorkspaceLayout) to re-render on
+  // every keystroke. Action references are stable, project is split per-field.
+  const fixVariableNames = useProjectStore(s => s.fixVariableNames);
+  const undo             = useProjectStore(s => s.undo);
+  const redo             = useProjectStore(s => s.redo);
+  const projectDir       = useProjectStore(s => s.projectDir);
+  const project          = useProjectStore(s => s.project);
+  const setProjectDir    = useProjectStore(s => s.setProjectDir);
+
+  const projectSettingsOpen    = useEditorStore(s => s.projectSettingsOpen);
+  const setProjectSettingsOpen = useEditorStore(s => s.setProjectSettingsOpen);
+  const editorPrefsOpen        = useEditorStore(s => s.editorPrefsOpen);
+  const setEditorPrefsOpen     = useEditorStore(s => s.setEditorPrefsOpen);
+  const llmSettingsOpen        = useEditorStore(s => s.llmSettingsOpen);
+  const setLLMSettingsOpen     = useEditorStore(s => s.setLLMSettingsOpen);
+  // PluginEditorModal manages its own visibility via this target — render it
+  // only while target is set so the chunk loads on-demand AND the React tree
+  // unmounts when the editor closes (frees its draft state).
+  const pluginEditorTarget     = useEditorStore(s => s.pluginEditorTarget);
+
+  const compactMode = useEditorPrefsStore(s => s.compactMode);
+  const saveOnExit  = useEditorPrefsStore(s => s.saveOnExit);
+
   const t = useT();
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [savingOnExit, setSavingOnExit]     = useState(false);
@@ -41,9 +64,22 @@ export default function App() {
   // Inject story preview CSS into the editor whenever the relevant project state
   // changes. Covers characters (dialogue cascade), scenes (per-block Std + spot
   // styles), and settings (project-wide Common defaults / bound overrides).
+  //
+  // Debounced: the styleCascade pipeline walks every scene + every block and is
+  // expensive on big projects. Rebuilding on every keystroke (scenes ref changes
+  // when typing into a TextBlock) was visibly laggy. 300ms feels live but cuts
+  // recomputes by ~10×.
+  const cssSnapshot = useMemo(
+    () => ({ characters: project.characters, scenes: project.scenes, settings: project.settings }),
+    [project.characters, project.scenes, project.settings],
+  );
+  const debouncedCssSnapshot = useDebouncedValue(cssSnapshot, 300);
   useEffect(() => {
-    injectPreviewCSS(project);
-  }, [project.characters, project.scenes, project.settings]);
+    injectPreviewCSS({ ...project, ...debouncedCssSnapshot });
+    // project intentionally not in deps — we only react to the debounced parts;
+    // the full project object is only used to merge non-style fields for the call.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedCssSnapshot]);
 
   // Show project settings modal on first launch (no folder selected = brand new session)
   useEffect(() => {
@@ -52,11 +88,14 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Listen for close-requested from Electron
+  // Listen for close-requested from Electron. preload returns an unsubscribe
+  // function — wire it into the effect cleanup so HMR re-runs don't pile up
+  // duplicate listeners (also makes this match standard React effect hygiene).
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.onCloseRequested) return;
-    api.onCloseRequested(() => setCloseModalOpen(true));
+    const unsubscribe = api.onCloseRequested(() => setCloseModalOpen(true));
+    return unsubscribe;
   }, []);
 
   async function handleSaveAndExit() {
@@ -105,19 +144,21 @@ export default function App() {
     <div className={`flex flex-col h-screen overflow-hidden${compactMode ? ' compact' : ''}`}>
       <Header />
       <WorkspaceLayout />
-      {projectSettingsOpen && (
-        <ProjectSettingsModal
-          mode={projectDir ? 'edit' : 'create'}
-          onClose={() => setProjectSettingsOpen(false)}
-        />
-      )}
-      {editorPrefsOpen && (
-        <EditorPrefsModal onClose={() => setEditorPrefsOpen(false)} />
-      )}
-      {llmSettingsOpen && (
-        <AISettingsModal onClose={() => setLLMSettingsOpen(false)} />
-      )}
-      <PluginEditorModal />
+      <Suspense fallback={null}>
+        {projectSettingsOpen && (
+          <ProjectSettingsModal
+            mode={projectDir ? 'edit' : 'create'}
+            onClose={() => setProjectSettingsOpen(false)}
+          />
+        )}
+        {editorPrefsOpen && (
+          <EditorPrefsModal onClose={() => setEditorPrefsOpen(false)} />
+        )}
+        {llmSettingsOpen && (
+          <AISettingsModal onClose={() => setLLMSettingsOpen(false)} />
+        )}
+        {pluginEditorTarget !== null && <PluginEditorModal />}
+      </Suspense>
 
       {/* Close confirmation modal */}
       {closeModalOpen && (

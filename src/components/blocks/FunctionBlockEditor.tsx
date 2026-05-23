@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
-import type { FunctionBlock, ButtonAction, ButtonStyle, VarOperator } from '../../types';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
+import type { FunctionBlock, ButtonAction, ButtonStyle, VarOperator, Variable } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
@@ -159,13 +160,13 @@ function ActionRow({
   action, variables, onChange, onDelete, onFocusValue,
 }: {
   action: ButtonAction;
-  variables: ReturnType<typeof flattenVariables>;
+  variables: Variable[];
   onChange: (patch: Partial<ButtonAction>) => void;
   onDelete: () => void;
   onFocusValue: () => void;
 }) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
@@ -340,13 +341,15 @@ export function FunctionBlockEditor({
   onUpdate?: (patch: Partial<FunctionBlock>) => void;
 }) {
   const t = useT();
-  const { project, updateBlock, saveSnapshot } = useProjectStore();
+  const project      = useProjectStore(s => s.project);
+  const updateBlock  = useProjectStore(s => s.updateBlock);
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
   const update = onUpdate ?? ((p: Partial<FunctionBlock>) => updateBlock(sceneId, block.id, p));
   const labelRef = useRef<HTMLInputElement>(null);
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
 
   // Only func-tagged scenes (exclude current scene)
   const funcScenes = project.scenes.filter(

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { useProjectStore, flattenVariables } from '../../store/projectStore';
-import type { ButtonBlock, ButtonAction, ButtonStyle, VarOperator } from '../../types';
+import { useProjectStore } from '../../store/projectStore';
+import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
+import type { ButtonBlock, ButtonAction, ButtonStyle, VarOperator, Variable } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
@@ -180,7 +181,7 @@ function StyleEditor({ style, onChange, block, settings }: StyleEditorProps) {
 
 interface ActionRowProps {
   action: ButtonAction;
-  variables: ReturnType<typeof flattenVariables>;
+  variables: Variable[];
   onChange: (patch: Partial<ButtonAction>) => void;
   onDelete: () => void;
   onFocusValue: () => void;
@@ -188,7 +189,7 @@ interface ActionRowProps {
 
 function ActionRow({ action, variables, onChange, onDelete, onFocusValue }: ActionRowProps) {
   const t = useT();
-  const { project } = useProjectStore();
+  const project = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const pluginParams = usePluginParams();
   const sceneParams = pluginParams.filter(p => p.kind === 'scene');
@@ -371,10 +372,12 @@ export function ButtonBlockEditor({
   onUpdate?: (patch: Partial<ButtonBlock>) => void;
 }) {
   const t = useT();
-  const { updateBlock, saveSnapshot, project } = useProjectStore();
+  const updateBlock   = useProjectStore(s => s.updateBlock);
+  const saveSnapshot  = useProjectStore(s => s.saveSnapshot);
+  const project       = useProjectStore(s => s.project);
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<ButtonBlock>) => updateBlock(sceneId, block.id, p));
-  const variables = flattenVariables(variableNodes);
+  const variables = useFlatVariablesOf(variableNodes);
   const labelRef = useRef<HTMLInputElement>(null);
 
   // Patch helpers

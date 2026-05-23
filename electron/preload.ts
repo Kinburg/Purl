@@ -87,8 +87,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow:       (): Promise<void>    => ipcRenderer.invoke('window:close'),
   isWindowMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:isMaximized'),
 
-  onWindowMaximized: (callback: (maximized: boolean) => void): void => {
-    ipcRenderer.on('window:maximized', (_e, maximized: boolean) => callback(maximized));
+  onWindowMaximized: (callback: (maximized: boolean) => void): (() => void) => {
+    const handler = (_e: unknown, maximized: boolean) => callback(maximized);
+    ipcRenderer.on('window:maximized', handler);
+    // Returned unsubscribe — caller is expected to invoke this from a React
+    // useEffect cleanup so HMR re-runs don't pile up listeners.
+    return () => { ipcRenderer.removeListener('window:maximized', handler); };
   },
 
   // App config
@@ -99,8 +103,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('config:setTitleBarStyle', style),
 
   // Close confirmation
-  onCloseRequested: (callback: () => void): void => {
+  onCloseRequested: (callback: () => void): (() => void) => {
     ipcRenderer.on('app:close-requested', callback);
+    return () => { ipcRenderer.removeListener('app:close-requested', callback); };
   },
   confirmClose: (): void => { ipcRenderer.send('app:close-confirm'); },
   cancelClose:  (): void => { ipcRenderer.send('app:close-cancel');  },

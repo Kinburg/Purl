@@ -16,7 +16,7 @@ const INPUT_CLS = 'w-16 bg-slate-800 text-slate-200 text-xs rounded px-2 py-0.5 
 
 export function BlockEffectsPanel({ delay, typewriter, onDelayChange, onTypewriterChange }: Props) {
   const t = useT();
-  const { saveSnapshot } = useProjectStore();
+  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
 
   const hasDelay = !!delay;
   const hasAnim  = delay?.animation === true;
