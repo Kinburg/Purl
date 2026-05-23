@@ -2,22 +2,64 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
 
 permissions:
   contents: write
 
 jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      prev_tag: ${{ steps.prev.outputs.prev_tag }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check
+        run: |
+          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find previous tag
+        id: prev
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          PREV=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "prev_tag=$PREV" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
   build:
+    needs: tag
+    if: needs.tag.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-
     steps:
-      - name: Checkout git repo
+      - name: Checkout git repo at tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
 
       - name: Install Node and NPM
         uses: actions/setup-node@v4
@@ -58,18 +100,62 @@ jobs:
             !release/builder-debug.yml
 
   release:
-    needs: build
+    needs: [tag, build]
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout at tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.tag.outputs.tag }}
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
           merge-multiple: true
 
+      - name: Generate release notes from conventional commits
+        env:
+          TAG: ${{ needs.tag.outputs.tag }}
+          PREV_TAG: ${{ needs.tag.outputs.prev_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="$PREV_TAG..$TAG"
+          else
+            RANGE=""
+          fi
+
+          {
+            echo "## What's Changed"
+            echo ""
+
+            FEATURES=$(git log $RANGE --pretty=format:"%s" | grep -E "^feat(\(.+\))?: " | sed -E 's/^feat(\(.+\))?: /- /' || true)
+            if [ -n "$FEATURES" ]; then
+              echo "### Features"
+              echo "$FEATURES"
+              echo ""
+            fi
+
+            FIXES=$(git log $RANGE --pretty=format:"%s" | grep -E "^fix(\(.+\))?: " | sed -E 's/^fix(\(.+\))?: /- /' || true)
+            if [ -n "$FIXES" ]; then
+              echo "### Fixes"
+              echo "$FIXES"
+              echo ""
+            fi
+
+            if [ -n "$PREV_TAG" ]; then
+              echo "**Full Changelog**: https://github.com/$REPO/compare/$PREV_TAG...$TAG"
+            fi
+          } > release_notes.md
+
+          echo "--- Generated notes ---"
+          cat release_notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.tag.outputs.tag }}
           files: release-artifacts/*
-          generate_release_notes: true
+          body_path: release_notes.md

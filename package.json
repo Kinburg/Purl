@@ -3,7 +3,7 @@
   "author": "Dmytro Hrubnyk",
   "description": "No-code APP for creating SugarCube 2 stories",
   "private": true,
-  "version": "1.28.3",
+  "version": "1.28.4",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -13,9 +13,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "version": "node scripts/update-site-version.js && git add docs/index.html",
-    "release:patch": "npm version patch -m \"%s\" && git push && git push --tags",
-    "release:minor": "npm version minor -m \"%s\" && git push && git push --tags",
-    "release:major": "npm version major -m \"%s\" && git push && git push --tags",
     "prepare": "husky"
   },
   "build": {
