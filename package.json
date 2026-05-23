@@ -13,9 +13,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "version": "node scripts/update-site-version.js && git add docs/index.html",
-    "release:patch": "npm version patch -m \"%s\" && git push && git push --tags",
-    "release:minor": "npm version minor -m \"%s\" && git push && git push --tags",
-    "release:major": "npm version major -m \"%s\" && git push && git push --tags",
     "prepare": "husky"
   },
   "build": {
