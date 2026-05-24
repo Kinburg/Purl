@@ -3,7 +3,7 @@ import type {
   SidebarPanel, SidebarRow, SidebarCell, PanelStyle, TableBlock,
   Scene, ButtonStyle, CellProgress, CellButton, BlockDelay, BlockTypewriter, IncludeBlock,
   ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, CellList, CellDateTime, DateTimeDisplayMode,
-  Watcher, WatcherCondition, AudioBlock, ContainerBlock, TimeManipulationBlock,
+  Watcher, WatcherCondition, AudioBlock, AudioGenBlock, ContainerBlock, TimeManipulationBlock,
   VariableTreeNode, VariableGroup, ItemDefinition,
   PluginBlockDef, PluginBlock,
   SceneBackground,
@@ -874,45 +874,15 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     }
 
     case 'audio': {
-      const ab = block as AudioBlock;
-      const trackId = `tga_${ab.id.replace(/-/g, '')}`;
-      const vol = Math.round(ab.volume) / 100;
+      return emitAudioPlayback(block as AudioBlock, indent);
+    }
 
-      const stopAllMacro = ab.stopOthers ? `<<audio ":all" stop>>` : '';
-
-      // No source — only stop others (if requested), nothing to play.
-      if (!ab.src) {
-        return stopAllMacro ? `${indent}${stopAllMacro}` : '';
-      }
-
-      const parts: string[] = [];
-      if (vol !== 1) parts.push(`volume ${vol}`);
-      if (ab.loop) parts.push('loop');
-      parts.push('play');
-      const audioMacro = `<<audio "${trackId}" ${parts.join(' ')}>>`;
-
-      // Trigger
-      if (ab.trigger === 'delay' && ab.triggerDelay && ab.triggerDelay > 0) {
-        // stopOthers fires immediately; the new audio starts after the delay.
-        // Use cancellable setTimeout instead of <<timed>> so navigation away
-        // before the delay fires won't still start the audio on a different scene.
-        const ms = Math.round(ab.triggerDelay * 1000);
-        const chain = [
-          vol !== 1 ? `.volume(${vol})` : '',
-          ab.loop ? '.loop(true)' : '',
-          '.play()',
-        ].join('');
-        const jsPlay = `var _tr=SugarCube.SimpleAudio.tracks.get("${trackId}");if(_tr){_tr${chain};}`;
-        const jsTimer = `(window._tgDA=window._tgDA||[]).push(setTimeout(function(){${jsPlay}},${ms}));`;
-        const timerMacro = `<<script>>${jsTimer}<</script>>`;
-        return stopAllMacro
-          ? `${indent}${stopAllMacro}\n${indent}${timerMacro}`
-          : `${indent}${timerMacro}`;
-      }
-
-      return stopAllMacro
-        ? `${indent}${stopAllMacro}\n${indent}${audioMacro}`
-        : `${indent}${audioMacro}`;
+    case 'audio-gen': {
+      const ab = block as AudioGenBlock;
+      // Draft (history/) takes are editor-only — never exported.
+      // Approved (assets/) files use the same SugarCube playback pipeline as AudioBlock.
+      if (!ab.src.startsWith('assets/')) return '';
+      return emitAudioPlayback(ab, indent);
     }
 
     case 'container': {
@@ -1953,13 +1923,69 @@ export function buildTooltipCSS(): string {
 
 // ─── Audio helpers ──────────────────────────────────────────────────────────────
 
-/** Collect all AudioBlocks from all scenes (including nested inside conditions). */
-function collectAudioBlocks(scenes: Scene[]): { block: AudioBlock; sceneName: string }[] {
-  const result: { block: AudioBlock; sceneName: string }[] = [];
+/** Union of block types that share the AudioBlock playback surface. */
+type AudioLike = AudioBlock | AudioGenBlock;
+
+/**
+ * Emit the SugarCube playback macros for an AudioBlock or AudioGenBlock.
+ * Shared between the two block-type cases so the playback pipeline lives in one
+ * place (cacheaudio + audio play + stopOthers + cancellable delayed-start).
+ */
+function emitAudioPlayback(ab: AudioLike, indent: string): string {
+  const trackId = `tga_${ab.id.replace(/-/g, '')}`;
+  const vol = Math.round(ab.volume) / 100;
+
+  const stopAllMacro = ab.stopOthers ? `<<audio ":all" stop>>` : '';
+
+  // No source — only stop others (if requested), nothing to play.
+  if (!ab.src) {
+    return stopAllMacro ? `${indent}${stopAllMacro}` : '';
+  }
+
+  const parts: string[] = [];
+  if (vol !== 1) parts.push(`volume ${vol}`);
+  if (ab.loop) parts.push('loop');
+  parts.push('play');
+  const audioMacro = `<<audio "${trackId}" ${parts.join(' ')}>>`;
+
+  if (ab.trigger === 'delay' && ab.triggerDelay && ab.triggerDelay > 0) {
+    // stopOthers fires immediately; new audio starts after the delay.
+    // Use cancellable setTimeout instead of <<timed>> so navigation away
+    // before the delay fires won't still start audio on a different scene.
+    const ms = Math.round(ab.triggerDelay * 1000);
+    const chain = [
+      vol !== 1 ? `.volume(${vol})` : '',
+      ab.loop ? '.loop(true)' : '',
+      '.play()',
+    ].join('');
+    const jsPlay = `var _tr=SugarCube.SimpleAudio.tracks.get("${trackId}");if(_tr){_tr${chain};}`;
+    const jsTimer = `(window._tgDA=window._tgDA||[]).push(setTimeout(function(){${jsPlay}},${ms}));`;
+    const timerMacro = `<<script>>${jsTimer}<</script>>`;
+    return stopAllMacro
+      ? `${indent}${stopAllMacro}\n${indent}${timerMacro}`
+      : `${indent}${timerMacro}`;
+  }
+
+  return stopAllMacro
+    ? `${indent}${stopAllMacro}\n${indent}${audioMacro}`
+    : `${indent}${audioMacro}`;
+}
+
+/**
+ * Collect all audio-playing blocks from all scenes (including nested inside conditions).
+ * AudioGenBlock drafts (src not under assets/) are skipped — only approved takes
+ * participate in the SugarCube export.
+ */
+function collectAudioBlocks(scenes: Scene[]): { block: AudioLike; sceneName: string }[] {
+  const result: { block: AudioLike; sceneName: string }[] = [];
   function walk(blocks: Block[], sceneName: string) {
     for (const b of blocks) {
-      if (b.type === 'audio') result.push({ block: b as AudioBlock, sceneName });
-      if (b.type === 'condition') {
+      if (b.type === 'audio') {
+        result.push({ block: b as AudioBlock, sceneName });
+      } else if (b.type === 'audio-gen') {
+        const ag = b as AudioGenBlock;
+        if (ag.src.startsWith('assets/')) result.push({ block: ag, sceneName });
+      } else if (b.type === 'condition') {
         for (const br of b.branches) walk(br.blocks, sceneName);
       }
     }

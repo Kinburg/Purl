@@ -103,6 +103,17 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <path d="M24.5 7 C30 10.5 30 21.5 24.5 25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity=".5"/>
   </>, p),
 
+  'audio-gen': (p) => svg(<>
+    {/* Speaker — slightly smaller, lower-left */}
+    <path d="M4 14 H8 L14 8 V26 L8 20 H4 Z" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity=".18"/>
+    <path d="M16.5 12 C19 14 19 20 16.5 22" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity=".7"/>
+    {/* Generation spark — upper-right corner */}
+    <path d="M24 4 L25.4 7.6 L29 9 L25.4 10.4 L24 14 L22.6 10.4 L19 9 L22.6 7.6 Z" fill="currentColor" opacity=".85"/>
+    {/* Small accent dot */}
+    <circle cx="27" cy="18" r="1.4" fill="currentColor" opacity=".5"/>
+    <circle cx="29.5" cy="22" r="1" fill="currentColor" opacity=".35"/>
+  </>, p),
+
   table: (p) => svg(<>
     <rect x="2" y="3" width="28" height="26" rx="2.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity=".07"/>
     <rect x="2" y="3" width="28" height="7" rx="2.5" fill="currentColor" fillOpacity=".2"/>
