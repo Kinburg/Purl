@@ -68,6 +68,25 @@ export function makeBlock(type: BlockType): Block {
     };
     case 'popup':        return { id, type, targetSceneId: '' };
     case 'audio':        return { id, type, src: '', trigger: 'immediate' as const, loop: false, onLeave: 'stop' as const, stopOthers: false, volume: 100 };
+    case 'audio-gen':    return {
+      id, type,
+      provider: 'comfyui',
+      workflowFile: '',
+      stylePrompt: '',
+      lyrics: '',
+      lyricsMode: 'manual' as const,
+      seedMode: 'random' as const,
+      seed: 0,
+      duration: 60,
+      bpm: 70,
+      src: '',
+      history: [],
+      trigger: 'immediate' as const,
+      loop: false,
+      onLeave: 'stop' as const,
+      stopOthers: false,
+      volume: 100,
+    };
     case 'container':    return { id, type, containerId: '', charId: '' };
     case 'time-manipulation': return { id, type, variableId: '', years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
     case 'paperdoll':    return { id, type, charId: '', showLabels: false };
@@ -88,7 +107,7 @@ type CategoryKey = 'narrative' | 'media' | 'game' | 'interaction' | 'logic' | 's
 
 const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
   { key: 'narrative',   types: ['text', 'dialogue', 'divider'] },
-  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio'] },
+  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen'] },
   { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table'] },
   { key: 'interaction', types: ['choice', 'button', 'link', 'input-field', 'checkbox', 'radio', 'popup'] },
   { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function'] },
@@ -141,6 +160,7 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('image-gen',         t.addBlock.imageGen.label,         t.addBlock.imageGen.desc,         'media'),
     make('video',             t.addBlock.video.label,            t.addBlock.video.desc,            'media'),
     make('audio',             t.addBlock.audio.label,            t.addBlock.audio.desc,            'media'),
+    make('audio-gen',         t.addBlock.audioGen.label,         t.addBlock.audioGen.desc,         'media'),
     make('paperdoll',         t.addBlock.paperdoll.label,        t.addBlock.paperdoll.desc,        'game'),
     make('inventory',         t.addBlock.inventory.label,        t.addBlock.inventory.desc,        'game'),
     make('container',         t.addBlock.container.label,        t.addBlock.container.desc,        'game'),

@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useFlatAssets } from '../../hooks/useFlatVariables';
+import { useAudioBlobUrl } from '../../hooks/useAudioBlobUrl';
 import type { AudioBlock } from '../../types';
-import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import { useT } from '../../i18n';
 import NumericInput from '../shared/NumericInput';
 
@@ -21,13 +21,9 @@ export function AudioBlockEditor({
   const t = useT();
   const allAssets = useFlatAssets();
   const audioAssets = useMemo(() => allAssets.filter(a => a.assetType === 'audio'), [allAssets]);
-
-  function resolvePreviewSrc(src: string): string {
-    if (src.startsWith('assets/') && projectDir) {
-      return toLocalFileUrl(resolveAssetPath(projectDir, src));
-    }
-    return src;
-  }
+  // Read local assets as `blob:` URLs (localfile:// doesn't stream audio).
+  // External http(s):// URLs pass through unchanged.
+  const previewSrc = useAudioBlobUrl(block.src, projectDir);
 
   return (
     <div className="flex flex-col gap-2">
@@ -159,13 +155,12 @@ export function AudioBlockEditor({
       </div>
 
 
-      {/* Preview */}
+      {/* Preview — controls always visible; src fills in once bytes are loaded */}
       {block.src && (
         <audio
-          src={resolvePreviewSrc(block.src)}
+          src={previewSrc ?? undefined}
           controls
           className="w-full"
-          onError={e => { (e.target as HTMLAudioElement).style.display = 'none'; }}
         />
       )}
     </div>

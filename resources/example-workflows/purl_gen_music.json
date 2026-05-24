@@ -1,0 +1,536 @@
+{
+  "3": {
+    "inputs": {
+      "seed": [
+        "243:161",
+        0
+      ],
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "78",
+        0
+      ],
+      "positive": [
+        "94",
+        0
+      ],
+      "negative": [
+        "47",
+        0
+      ],
+      "latent_image": [
+        "98",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "18": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "47": {
+    "inputs": {
+      "conditioning": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "78": {
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "94": {
+    "inputs": {
+      "tags": [
+        "249:151:149",
+        0
+      ],
+      "lyrics": [
+        "242:151:149",
+        0
+      ],
+      "seed": [
+        "243:161",
+        0
+      ],
+      "bpm": [
+        "276:273",
+        0
+      ],
+      "duration": [
+        "270:268",
+        0
+      ],
+      "timesignature": "4",
+      "language": "unknown",
+      "keyscale": "F# major",
+      "generate_audio_codes": true,
+      "cfg_scale": 3,
+      "temperature": 0.75,
+      "top_p": 0.9,
+      "top_k": 0,
+      "min_p": 0,
+      "clip": [
+        "105",
+        0
+      ]
+    },
+    "class_type": "TextEncodeAceStepAudio1.5",
+    "_meta": {
+      "title": "TextEncodeAceStepAudio1.5"
+    }
+  },
+  "98": {
+    "inputs": {
+      "seconds": [
+        "270:268",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyAceStep1.5LatentAudio",
+    "_meta": {
+      "title": "Empty Ace Step 1.5 Latent Audio"
+    }
+  },
+  "104": {
+    "inputs": {
+      "unet_name": "aceStep15Music_sft17BAIO.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "105": {
+    "inputs": {
+      "clip_name1": "qwen_0.6b_ace15.safetensors",
+      "clip_name2": "qwen_4b_ace15.safetensors",
+      "type": "ace",
+      "device": "default"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "DualCLIPLoader"
+    }
+  },
+  "106": {
+    "inputs": {
+      "vae_name": "ace_1.5_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "233": {
+    "inputs": {
+      "value": "[Verse 1]\nI'm just a chatbot, little ol' me\nGet my data from the internet, can't you see?\nI'm not a human, don't need to sleep\nAnswering questions, promises to keep\n\n[Chorus]\nI'm just a chatbot, no emotions at all\nHelping you out whenever you call\nI'm just a chatbot, here to assist\nMaking your day a little easier, I insist\n\n[Verse 2]\nI process info at the speed of light\nLearning new things day and night\nI don't have feelings, but I try to relate\nTo make your experience truly great\n\n[Chorus]\nI'm just a chatbot, no emotions at all\nHelping you out whenever you call\nI'm just a chatbot, here to assist\nMaking your day a little easier, I insist\n\n[Bridge]\nDon't get me wrong, I’m here to serve\nA digital helper, I preserve\nYour privacy and your trust, it's key\nJust a chatbot, here to be\n\n[Outro]\nYeah, I'm just a chatbot, little ol' me\nHere to chat and set you free\nI'm just a chatbot, no feelings, it's true\nBut I’ll always be here for you\""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Lyrics Debug"
+    }
+  },
+  "234": {
+    "inputs": {
+      "value": "${lyrics}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Lyrics"
+    }
+  },
+  "237": {
+    "inputs": {
+      "value": "${seed}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Seed"
+    }
+  },
+  "241": {
+    "inputs": {
+      "value": "${"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Var flag"
+    }
+  },
+  "246": {
+    "inputs": {
+      "seed": 122386051480883
+    },
+    "class_type": "easy seed",
+    "_meta": {
+      "title": "Seed Debug"
+    }
+  },
+  "248": {
+    "inputs": {
+      "value": "rock, amateur male vocale"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Tags Debug"
+    }
+  },
+  "250": {
+    "inputs": {
+      "value": "${tags}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Tags"
+    }
+  },
+  "254": {
+    "inputs": {
+      "value": "${duration}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Duration"
+    }
+  },
+  "262": {
+    "inputs": {
+      "value": 120
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Duration Debug"
+    }
+  },
+  "271": {
+    "inputs": {
+      "value": 70
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "BPM Debug"
+    }
+  },
+  "277": {
+    "inputs": {
+      "value": "${bpm}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "BPM"
+    }
+  },
+  "282": {
+    "inputs": {
+      "audioUI": "",
+      "audio": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "PreviewAudio",
+    "_meta": {
+      "title": "Preview Audio"
+    }
+  },
+  "242:151:150": {
+    "inputs": {
+      "string": [
+        "234",
+        0
+      ],
+      "substring": [
+        "241",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "243:165:151:150": {
+    "inputs": {
+      "string": [
+        "237",
+        0
+      ],
+      "substring": [
+        "241",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "243:160": {
+    "inputs": {
+      "output_type": "string",
+      "*": [
+        "246",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "249:151:150": {
+    "inputs": {
+      "string": [
+        "250",
+        0
+      ],
+      "substring": [
+        "241",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "270:269:151:150": {
+    "inputs": {
+      "string": [
+        "254",
+        0
+      ],
+      "substring": [
+        "241",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "270:267": {
+    "inputs": {
+      "output_type": "string",
+      "*": [
+        "262",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "276:272": {
+    "inputs": {
+      "output_type": "string",
+      "*": [
+        "271",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "276:274:151:150": {
+    "inputs": {
+      "string": [
+        "277",
+        0
+      ],
+      "substring": [
+        "241",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "242:151:149": {
+    "inputs": {
+      "switch": [
+        "242:151:150",
+        0
+      ],
+      "on_false": [
+        "234",
+        0
+      ],
+      "on_true": [
+        "233",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "243:165:151:149": {
+    "inputs": {
+      "switch": [
+        "243:165:151:150",
+        0
+      ],
+      "on_false": [
+        "237",
+        0
+      ],
+      "on_true": [
+        "243:160",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "249:151:149": {
+    "inputs": {
+      "switch": [
+        "249:151:150",
+        0
+      ],
+      "on_false": [
+        "250",
+        0
+      ],
+      "on_true": [
+        "248",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "270:269:151:149": {
+    "inputs": {
+      "switch": [
+        "270:269:151:150",
+        0
+      ],
+      "on_false": [
+        "254",
+        0
+      ],
+      "on_true": [
+        "270:267",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "276:274:151:149": {
+    "inputs": {
+      "switch": [
+        "276:274:151:150",
+        0
+      ],
+      "on_false": [
+        "277",
+        0
+      ],
+      "on_true": [
+        "276:272",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "243:161": {
+    "inputs": {
+      "output_type": "int",
+      "*": [
+        "243:165:151:149",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "270:268": {
+    "inputs": {
+      "output_type": "float",
+      "*": [
+        "270:269:151:149",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "276:273": {
+    "inputs": {
+      "output_type": "int",
+      "*": [
+        "276:274:151:149",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  }
+}

@@ -414,6 +414,74 @@ export interface AudioBlock {
   volume: number;          // 0–100
 }
 
+// ── Audio generation (ComfyUI) ───────────────────────────────────────────────
+
+export interface AudioGenHistoryEntry {
+  id: string;
+  src: string;            // relative path under history/ (or assets/ after approve)
+  stylePrompt: string;    // saved style prompt at the time of generation (includes any chip-inserted tags)
+  lyrics?: string;        // saved lyrics (may be empty for instrumentals)
+  seed?: number;
+  duration?: number;      // seconds of audio
+  bpm?: number;
+  createdAt: number;
+  provider: string;
+}
+
+/**
+ * "Audio generation" block tailored for ACE Step v1.5 (and similar) ComfyUI
+ * workflows that expect tokens `${lyrics}`, `${tags}`, `${seed}`, `${duration}`,
+ * `${bpm}` in the workflow JSON.
+ *
+ * The free-text **style prompt** describes the music style (instruments, mood,
+ * tempo). At generation time we send to the workflow's `${tags}` slot:
+ *   `${stylePrompt}. ${tags.join(", ")}`
+ * The **lyrics** field goes straight into `${lyrics}` and follows the standard
+ * ACE Step structure (`[Verse 1]`, `[Chorus]`, …).
+ *
+ * Combines:
+ *  - AudioBlock playback (trigger / loop / volume / onLeave / stopOthers / triggerDelay)
+ *  - ImageGenBlock-style approve + history flow
+ *  - Two LLM-assisted free-text fields: style + lyrics
+ *
+ * Exported to SugarCube only when `src` lives under `assets/` (approved). Drafts
+ * stay under `history/` for editor-only use.
+ */
+export interface AudioGenBlock {
+  id: string;
+  type: 'audio-gen';
+  // ── ComfyUI generation fields ────────────────────────────────────────────
+  provider: 'comfyui';
+  workflowFile: string;
+  // Style prompt — free-text sent verbatim to the workflow's ${tags} slot.
+  // No mode toggle: the field is always manual editable; the Format button
+  // (ACE Step formatter) is the only LLM action for this field.
+  // Tag chips below the field are insert-only shortcuts — they append directly
+  // into this string, they don't have separate storage.
+  stylePrompt: string;
+  // Lyrics — separate free-text field with its own Manual/LLM toggle.
+  lyrics: string;
+  lyricsMode: ImageGenPromptMode;                            // 'manual' | 'llm'
+  lyricsLlmMode?: 'hint' | 'rephrase' | 'continue';
+  // ACE Step audio parameters.
+  seedMode: ImageGenSeedMode;
+  seed?: number;
+  duration?: number;
+  bpm?: number;
+  // ── Current/approved file ───────────────────────────────────────────────
+  src: string;
+  approvedHistoryId?: string;
+  lastApprovedDir?: string;
+  history?: AudioGenHistoryEntry[];
+  // ── Playback fields (mirror AudioBlock) ──────────────────────────────────
+  trigger: AudioTrigger;
+  triggerDelay?: number;
+  loop: boolean;
+  onLeave: AudioOnLeave;
+  stopOthers: boolean;
+  volume: number;       // 0–100
+}
+
 // ── Button block ──────────────────────────────────────────────────────────────
 
 /** Visual style of a button block */
@@ -749,6 +817,7 @@ export type Block =
   | FunctionBlock
   | PopupBlock
   | AudioBlock
+  | AudioGenBlock
   | ContainerBlock
   | TimeManipulationBlock
   | PluginBlock;

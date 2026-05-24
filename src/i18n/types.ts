@@ -226,6 +226,7 @@ export interface Translations {
     function: string;
     popup: string;
     audio: string;
+    audioGen: string;
     container: string;
     timeManipulation: string;
     paperdoll: string;
@@ -279,6 +280,7 @@ export interface Translations {
     function:    { label: string; desc: string };
     popup:       { label: string; desc: string };
     audio:       { label: string; desc: string };
+    audioGen:    { label: string; desc: string };
     container:   { label: string; desc: string };
     timeManipulation: { label: string; desc: string };
     paperdoll:        { label: string; desc: string };
@@ -1008,6 +1010,90 @@ export interface Translations {
     stopOthers: string;
     stopOthersHint: string;
     volumeLabel: string;
+  };
+
+  audioGenBlock: {
+    workflowLabel: string;
+    workflowRefresh: string;
+    durationLabel: string;
+    durationPlaceholder: string;
+    bpmLabel: string;
+    bpmPlaceholder: string;
+    promptModeManual: string;
+    promptModeLlm: string;
+    stylePromptLabel: string;
+    stylePromptPlaceholder: string;
+    stylePromptHint: string;
+    lyricsModeLabel: string;
+    lyricsLabel: string;
+    lyricsPlaceholder: string;
+    lyricsHint: string;
+    tagsLabel: string;
+    tagsCustomPlaceholder: string;
+    tagsAddBtn: string;
+    tagsCategoryGenre: string;
+    tagsCategoryVocals: string;
+    tagsCategoryInstruments: string;
+    tagsCategoryMoodTempo: string;
+    llmGenerating: string;
+    llmModeContinue: string;
+    llmModeRephrase: string;
+    llmModeHint: string;
+    llmModeFormatAce: string;
+    generateAudio: string;
+    generatingAudio: string;
+    cancelGeneration: string;
+    historyLabel: string;
+    historyEmpty: string;
+    clearHistory: string;
+    clearHistoryConfirm: string;
+    approveAudio: string;
+    approveAudioTitle: string;
+    unapproveAudio: string;
+    unapproveAudioTitle: string;
+    approvedBadge: string;
+    draftBadge: string;
+    approveSaveTitle: string;
+    approveFolderLabel: string;
+    approveFilenameLabel: string;
+    approveSaveButton: string;
+    approveOutsideRelease: string;
+    playbackSection: string;
+    errorApprove: string;
+    errorUnapprove: string;
+    errorNoProjectDir: string;
+    errorNoWorkflow: string;
+    errorNoPrompt: string;
+    errorGenerateFormatStyle: string;
+    errorGenerateLyrics: string;
+    errorGenerateAudio: string;
+    // ── Composed-payload debug preview ────────────────────────────────────
+    composedPreviewLabel: string;
+    composedPreviewEmpty: string;
+    composedPreviewTagsLabel: string;
+    composedPreviewLyricsLabel: string;
+    composedPreviewSeedLabel: string;
+    composedPreviewDurationLabel: string;
+    composedPreviewBpmLabel: string;
+    // ── Error modal ───────────────────────────────────────────────────────
+    errorModalCopyDetails: string;
+    errorModalCopied: string;
+    errorModalClose: string;
+    errorModalTechnicalDetails: string;
+    errorModalHintsHeader: string;
+    errorHintNetwork: string;
+    errorHintWorkflow400: string;
+    errorHintExecution: string;
+    errorHintNoOutput: string;
+    errorHintTimeout: string;
+    errorHintGeneric: string;
+    // Short category labels — appear as a banner above the raw error
+    errorCategoryNetwork: string;
+    errorCategoryWorkflow400: string;
+    errorCategoryExecution: string;
+    errorCategoryNoOutput: string;
+    errorCategoryTimeout: string;
+    errorCategoryGeneric: string;
   };
 
   linkBlock: {

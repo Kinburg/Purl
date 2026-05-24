@@ -43,6 +43,7 @@ import { TableBlockEditor } from './TableBlockEditor';
 // Heavy or rarely-used. Each becomes its own chunk and is only fetched the
 // first time a scene contains one. Named exports → wrapped in default-shim.
 const ImageGenBlockEditor   = lazy(() => import('./ImageGenBlockEditor').then(m => ({ default: m.ImageGenBlockEditor })));
+const AudioGenBlockEditor   = lazy(() => import('./AudioGenBlockEditor').then(m => ({ default: m.AudioGenBlockEditor })));
 const ContainerBlockEditor  = lazy(() => import('./ContainerBlockEditor').then(m => ({ default: m.ContainerBlockEditor })));
 const PaperdollBlockEditor  = lazy(() => import('./PaperdollBlockEditor').then(m => ({ default: m.PaperdollBlockEditor })));
 const InventoryBlockEditor  = lazy(() => import('./InventoryBlockEditor').then(m => ({ default: m.InventoryBlockEditor })));
@@ -82,6 +83,7 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'function':          FunctionBlockEditor         as never,
   'popup':             PopupBlockEditor            as never,
   'audio':             AudioBlockEditor            as never,
+  'audio-gen':         AudioGenBlockEditor         as never,
   'container':         ContainerBlockEditor        as never,
   'time-manipulation': TimeManipulationBlockEditor as never,
   'paperdoll':         PaperdollBlockEditor        as never,
@@ -117,6 +119,7 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'function':          'bg-purple-900/40',
   'popup':             'bg-blue-900/40',
   'audio':             'bg-amber-900/40',
+  'audio-gen':         'bg-amber-800/30',
   'container':         'bg-teal-900/40',
   'time-manipulation': 'bg-indigo-950/50',
   'paperdoll':         'bg-violet-900/40',
