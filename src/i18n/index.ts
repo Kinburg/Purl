@@ -80,6 +80,7 @@ export function blockTypeLabel(t: Translations, type: Block['type']): string {
     'time-manipulation': t.block.timeManipulation,
     'paperdoll':         t.block.paperdoll,
     'inventory':         t.block.inventory,
+    'tabs':              t.block.tabs,
     'plugin':            t.block.plugin,
   };
   return map[type] ?? type;

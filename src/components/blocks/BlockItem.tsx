@@ -48,6 +48,7 @@ const ContainerBlockEditor  = lazy(() => import('./ContainerBlockEditor').then(m
 const PaperdollBlockEditor  = lazy(() => import('./PaperdollBlockEditor').then(m => ({ default: m.PaperdollBlockEditor })));
 const InventoryBlockEditor  = lazy(() => import('./InventoryBlockEditor').then(m => ({ default: m.InventoryBlockEditor })));
 const PluginBlockEditor     = lazy(() => import('./PluginBlockEditor').then(m => ({ default: m.PluginBlockEditor })));
+const TabsBlockEditor       = lazy(() => import('./TabsBlockEditor').then(m => ({ default: m.TabsBlockEditor })));
 
 import { usePluginStore } from '../../store/pluginStore';
 
@@ -88,6 +89,7 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'time-manipulation': TimeManipulationBlockEditor as never,
   'paperdoll':         PaperdollBlockEditor        as never,
   'inventory':         InventoryBlockEditor        as never,
+  'tabs':              TabsBlockEditor             as never,
   'plugin':            PluginBlockEditor           as never,
 };
 
@@ -124,6 +126,7 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'time-manipulation': 'bg-indigo-950/50',
   'paperdoll':         'bg-violet-900/40',
   'inventory':         'bg-teal-900/40',
+  'tabs':              'bg-amber-900/40',
   'plugin':            'bg-indigo-900/40',
 };
 

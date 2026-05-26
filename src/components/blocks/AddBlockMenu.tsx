@@ -91,6 +91,7 @@ export function makeBlock(type: BlockType): Block {
     case 'time-manipulation': return { id, type, variableId: '', years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
     case 'paperdoll':    return { id, type, charId: '', showLabels: false };
     case 'inventory':    return { id, type, charId: '' };
+    case 'tabs':         return { id, type, tabs: [{ id: crypto.randomUUID(), label: 'Tab 1', blocks: [] }] };
     case 'plugin':       return { id, type, pluginId: '', values: {} };
   }
 }
@@ -110,7 +111,7 @@ const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
   { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen'] },
   { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table'] },
   { key: 'interaction', types: ['choice', 'button', 'link', 'input-field', 'checkbox', 'radio', 'popup'] },
-  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function'] },
+  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function', 'tabs'] },
   { key: 'system',      types: ['raw', 'include', 'note'] },
 ];
 
@@ -173,9 +174,12 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('radio',             t.addBlock.radio.label,            t.addBlock.radio.desc,            'interaction'),
     make('popup',             t.addBlock.popup.label,            t.addBlock.popup.desc,            'interaction'),
     make('condition',         t.addBlock.condition.label,        t.addBlock.condition.desc,        'logic'),
+    make('for',               t.addBlock.forLoop.label,          t.addBlock.forLoop.desc,          'logic'),
     make('variable-set',      t.addBlock.variableSet.label,      t.addBlock.variableSet.desc,      'logic'),
+    make('set-object',        t.addBlock.setObject.label,        t.addBlock.setObject.desc,        'logic'),
     make('time-manipulation', t.addBlock.timeManipulation.label, t.addBlock.timeManipulation.desc, 'logic'),
     make('function',          t.addBlock.function.label,         t.addBlock.function.desc,         'logic'),
+    make('tabs',              t.addBlock.tabs.label,             t.addBlock.tabs.desc,             'logic'),
     make('raw',               t.addBlock.raw.label,              t.addBlock.raw.desc,              'system'),
     make('include',           t.addBlock.include.label,          t.addBlock.include.desc,          'system'),
     make('note',              t.addBlock.note.label,             t.addBlock.note.desc,             'system'),

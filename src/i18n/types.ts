@@ -17,7 +17,6 @@ export interface Translations {
     characters: string;
     variables: string;
     assets: string;
-    panel: string;
     watchers: string;
     items: string;
     containers: string;
@@ -59,8 +58,15 @@ export interface Translations {
     groupUngrouped: string;
     makeStart: string;
     startTagHint: string;
+    /** Text BEFORE the inline <code>{canonical}</code> chip */
+    nameLockedPrefix: string;
+    /** Text AFTER the chip, includes the tag — ". Remove the «<tag>» tag below to rename." */
+    nameLockedSuffix: (tag: string) => string;
+    /** Title attr on the locked name input */
+    nameLockedTitle: (canonical: string) => string;
     tabSettings: string;
     tabBackground: string;
+    tabSystem: string;
     bgNone: string;
     bgStatic: string;
     bgBound: string;
@@ -161,6 +167,11 @@ export interface Translations {
       // Popup-specific
       titlebarBg:   string;
       titleColor:   string;
+      // Tabs-specific (active tab variants)
+      activeBgColor:     string;
+      activeTextColor:   string;
+      activeBorderColor: string;
+      activeBold:        string;
     };
     // Enum option labels — keyed by StyleFieldDescriptor.options[i].labelKey
     options: {
@@ -195,10 +206,14 @@ export interface Translations {
       selectorPopupTitle:     string;
       selectorPopupBody:      string;
       selectorPopupClose:     string;
+      // Tabs
+      selectorTabsItem:       string;       // each tab anchor
+      selectorTabsActive:     string;       // active tab anchor
     };
     // Block-specific raw-CSS placeholders (used by StyleRawCssHelp.placeholderKey)
     placeholderChoice?:       string;
     placeholderPopup?:        string;
+    placeholderTabs?:         string;
   };
 
   block: {
@@ -231,6 +246,7 @@ export interface Translations {
     timeManipulation: string;
     paperdoll: string;
     inventory: string;
+    tabs: string;
     plugin: string;
     /** Action tooltips / labels */
     drag: string;
@@ -285,6 +301,66 @@ export interface Translations {
     timeManipulation: { label: string; desc: string };
     paperdoll:        { label: string; desc: string };
     inventory:        { label: string; desc: string };
+    tabs:             { label: string; desc: string };
+  };
+
+  // ─── TabsBlock editor ───────────────────────────────────────────────────────
+  tabsBlock: {
+    addTab: string;          // "+ Tab"
+    moveLeft: string;        // "Move left"
+    moveRight: string;       // "Move right"
+    emptyTab: string;        // "No blocks in this tab."
+    defaultTab: string;      // "Default tab:"
+    bindVariable: string;    // "Bind to variable:"
+    autoVarPlaceholder: string; // "(auto)"
+  };
+
+  // ─── Sidebar (UIBar) systemConfig panel ─────────────────────────────────────
+  sidebarConfig: {
+    sectionTitle: string;
+    sectionNote: string;     // "These settings control the wrapper of ::StoryCaption…"
+    fromVariable: string;    // generic "From variable" pill
+    // Hide
+    hideEntirely: string;
+    visibleDefault: string;
+    hiddenStatic: string;
+    // Width
+    width: string;
+    widthDefault: string;
+    custom: string;
+    // Position
+    position: string;
+    leftDefault: string;
+    right: string;
+    positionVarHint: string;
+    // Start collapsed
+    startCollapsed: string;
+    openDefault: string;
+    startCollapsedHelp: string;
+    // Allow collapse
+    allowCollapse: string;
+    allowDefault: string;
+    hideToggleButton: string;
+    // Background color
+    bgColor: string;
+    themeDefault: string;
+    // History nav + saves
+    historyNav: string;
+    saveLoadMenu: string;
+    onDefault: string;
+    alwaysOff: string;
+    // Picker placeholders
+    selectBoolVar: string;
+    selectNumberVar: string;
+    selectColorVar: string;
+    selectPositionVar: string;
+  };
+
+  // ─── System scene group (SceneList top section) ─────────────────────────────
+  systemGroup: {
+    title: string;            // "System"
+    createSidebar: string;    // "+ Sidebar scene"
+    createSidebarTooltip: string; // hover hint
   };
 
   pluginBlock: {
@@ -732,19 +808,6 @@ export interface Translations {
     betweenCells: string;
     thickness: string;
     borderColor: string;
-  };
-
-  // ─── Panel editor ───────────────────────────────────────────────────────────
-  panel: {
-    title: string;
-    moveLeft: string;
-    moveRight: string;
-    deleteTab: string;
-    confirmDeleteTab: (label: string) => string;
-    tabNamePlaceholder: string;
-    addTab: string;
-    noTabs: string;
-    tabNameLabel: string;
   };
 
   // ─── Block editors ──────────────────────────────────────────────────────────
@@ -1562,10 +1625,6 @@ export interface Translations {
     fieldAuthorPlaceholder: string;
     fieldDescription:       string;
     fieldDescPlaceholder:   string;
-    fieldHeaderImage:       string;
-    headerImageAdd:         string;
-    headerImageChange:      string;
-    headerImageRemove:      string;
     sectionAppearance:      string;
     fieldBgColor:           string;
     fieldSidebarColor:      string;
@@ -1573,8 +1632,6 @@ export interface Translations {
     fieldTitleFont:         string;
     fieldTitleFontPlaceholder: string;
     sectionAdvanced:        string;
-    fieldHistoryControls:   string;
-    fieldSaveLoadMenu:      string;
     fieldAudioUnlockText:      string;
     fieldAudioUnlockTextPlaceholder: string;
     fieldAudioUnlockTextNote:  string;
@@ -1582,30 +1639,22 @@ export interface Translations {
     save:                   string;
     chooseFolder:           string;
     titleEmpty:             string;
-    headerImageNote:        string;
     successSave:            string;
     successCreate:          string;
-    // AI features
+    // AI features (description + lore expansion only; AI image gen was tied to the
+    // legacy sidebar header image and was removed with Phase 9 cleanup).
     aiLlmSettingsBtn:       string;
-    sectionAiImage:         string;
     aiExpandDesc:           string;
     aiExpandDescBusy:       string;
     aiGenerateLore:         string;
     aiGenerateLoreBusy:     string;
-    aiGeneratePrompt:       string;
-    aiGeneratePromptBusy:   string;
-    aiImageReady:           string;
-    aiImageRemove:          string;
     aiLlmDisabledHint:      string;
     aiExpandError:          string;
     aiLoreError:            string;
-    aiImageErrorNoPrompt:   string;
-    aiImageError:           string;
-    // Tabbed layout (merged AI Settings)
+    // Tabbed layout
     tabGeneral:             string;
     tabAppearance:          string;
     tabBlockDefaults:       string;
-    tabAiImage:             string;
     tabAdvanced:            string;
     sectionBlockDefaults:        string;  // legacy single section title
     blockDefaultsDescription:    string;
@@ -1624,6 +1673,7 @@ export interface Translations {
     sectionBlockDefaultsCheckbox:   string;
     sectionBlockDefaultsRadio:      string;
     sectionBlockDefaultsInputField: string;
+    sectionBlockDefaultsTabs:       string;
     blockDefaultsButtonDesc:        string;
     blockDefaultsLinkDesc:          string;
     blockDefaultsFunctionDesc:      string;
@@ -1638,12 +1688,11 @@ export interface Translations {
     blockDefaultsCheckboxDesc:      string;
     blockDefaultsRadioDesc:         string;
     blockDefaultsInputFieldDesc:    string;
+    blockDefaultsTabsDesc:          string;
     sectionColors:          string;
     fieldLore:              string;
     fieldLorePlaceholder:   string;
     fieldLoreNote:          string;
-    headerImageAiHint:      string;
-    currentHeaderImage:     string;
   };
 
   // ─── Scene settings modal ────────────────────────────────────────────────────

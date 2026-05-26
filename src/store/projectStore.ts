@@ -42,15 +42,66 @@ import type {
   Variable, VariableGroup, VariableTreeNode,
   Asset, AssetGroup, AssetTreeNode,
   ChoiceOption, ConditionBranch,
-  SidebarPanel, SidebarTab, SidebarRow, SidebarCell, CellContent, PanelStyle,
+  SidebarCell, PanelStyle,
   AvatarConfig, AvatarMode,
   Watcher,
   ItemDefinition, ItemVarIds, ItemCategory,
   ContainerDefinition, ContainerVarIds, ContainerItemSlot,
   PaperdollSlot, PaperdollConfig,
 } from '../types';
-import { START_TAG } from '../types';
-import { flattenVariables, flattenAssets, hasSiblingNameConflict } from '../utils/treeUtils';
+import { START_TAG, SYSTEM_TAGS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME, type SystemTag } from '../types';
+
+/**
+ * Singleton system tags (e.g. 'sidebar' → ::StoryCaption). A singleton tag must live
+ * on at most one scene at a time, and when it does, the scene's name is force-locked
+ * to the canonical SugarCube passage name. This helper:
+ *   1. Strips the singleton tag from every OTHER scene currently carrying it.
+ *   2. If a stripped scene's name matches the canonical name (about to be claimed by
+ *      the target scene), renames it with a " (former system)" suffix to avoid a
+ *      name collision once the target scene takes the canonical name.
+ */
+function enforceSingletonSystemTags(
+  scenes: Scene[],
+  targetSceneId: string,
+  newTags: string[],
+): Scene[] {
+  const singletons = newTags.filter(
+    t => (SYSTEM_TAGS as readonly string[]).includes(t)
+      && SYSTEM_TAG_KIND[t as SystemTag] === 'singleton'
+  );
+  if (singletons.length === 0) return scenes;
+  const incomingCanonicalNames = singletons
+    .map(t => SINGLETON_TAG_PASSAGE_NAME[t as SystemTag])
+    .filter((n): n is string => !!n);
+  return scenes.map(sc => {
+    if (sc.id === targetSceneId) return sc;
+    const filtered = sc.tags.filter(t => !singletons.includes(t));
+    const tagsChanged = filtered.length !== sc.tags.length;
+    const needsRename = tagsChanged && incomingCanonicalNames.includes(sc.name);
+    if (!tagsChanged && !needsRename) return sc;
+    return {
+      ...sc,
+      tags: filtered,
+      name: needsRename ? `${sc.name} (former system)` : sc.name,
+    };
+  });
+}
+
+/**
+ * If the new tags include a singleton system tag whose canonical name is defined,
+ * return that canonical name (to override whatever name the caller passed).
+ * Otherwise return null.
+ */
+function canonicalNameForTags(tags: string[]): string | null {
+  for (const tag of tags) {
+    if (!(SYSTEM_TAGS as readonly string[]).includes(tag)) continue;
+    if (SYSTEM_TAG_KIND[tag as SystemTag] !== 'singleton') continue;
+    const canon = SINGLETON_TAG_PASSAGE_NAME[tag as SystemTag];
+    if (canon) return canon;
+  }
+  return null;
+}
+import { flattenVariables, flattenAssets, hasSiblingNameConflict, getVariablePath } from '../utils/treeUtils';
 
 export { flattenVariables, flattenAssets };
 
@@ -72,29 +123,92 @@ export const DEFAULT_PANEL_STYLE: PanelStyle = {
   showCellBorders: false,
 };
 
-const DEFAULT_PANEL: SidebarPanel = { tabs: [], liveUpdate: false, style: DEFAULT_PANEL_STYLE };
 
-export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
-  historyControls: true,
-  saveLoadMenu:    true,
-};
+export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {};
 
 function makeDefaultProject(): Project {
+  // Pre-created `sidePanel` variable group — one variable per bindable UIBar
+  // setting, wired into StoryCaption.systemConfig out-of-the-box. Story code can
+  // mutate any of these (`<<set $sidePanel.hidden to true>>` etc.) and the
+  // sidebar reacts at runtime.
+  const sp = makeSidePanelGroup();
+
   return {
     id: uuid(),
     title: 'New Project',
     ifid: generateIfid(),
     settings: { ...DEFAULT_PROJECT_SETTINGS },
-    scenes: [{ id: uuid(), name: 'Start', tags: ['start'], blocks: [] }],
+    scenes: [
+      { id: uuid(), name: 'Start', tags: ['start'], blocks: [] },
+      // StoryCaption — the sidebar scene. Name matches the SugarCube special passage
+      // it maps to on export. The `sidebar` system tag (singleton) is what makes it
+      // route to ::StoryCaption; the name is for editor identification only.
+      // systemConfig binds every UIBar wrapper setting to a $sidePanel.* variable.
+      {
+        id: uuid(),
+        name: 'StoryCaption',
+        tags: ['sidebar'],
+        blocks: [],
+        systemConfig: sp.systemConfig,
+      },
+    ],
     sceneGroups: [],
     characters: [],
     items: [],
     containers: [],
-    variableNodes: [],
+    variableNodes: [sp.group],
     assetNodes: [],
-    sidebarPanel: DEFAULT_PANEL,
     watchers: [],
   };
+}
+
+/**
+ * Build the auto-generated `sidePanel` variable group + the matching
+ * `StoryCaption.systemConfig` that binds every field to one of those variables.
+ * Shared by `makeDefaultProject` and the project-creation flow in ProjectSettingsModal.
+ */
+export function makeSidePanelGroup(): {
+  group: import('../types').VariableGroup;
+  systemConfig: import('../types').SidebarSceneConfig;
+} {
+  const mkVar = (
+    name: string,
+    varType: import('../types').VariableType,
+    defaultValue: string,
+    description: string,
+  ): import('../types').Variable => ({
+    kind: 'variable', id: uuid(), name, varType, defaultValue, description,
+  });
+
+  const hidden             = mkVar('hidden',             'boolean', 'false', 'Hide the UIBar entirely.');
+  const width              = mkVar('width',              'number',  '17.5',  'UIBar width (units configured in scene settings, default em).');
+  const position           = mkVar('position',           'string',  '"left"','UIBar side: "left" or "right".');
+  const initiallyCollapsed = mkVar('initiallyCollapsed', 'boolean', 'false', 'Start with the UIBar collapsed. Read once at startup.');
+  const allowCollapse      = mkVar('allowCollapse',      'boolean', 'true',  'Show the hamburger toggle that lets the player collapse the UIBar.');
+  const bgColor            = mkVar('bgColor',            'string',  '""',    'UIBar background color (CSS string). Empty = inherit theme.');
+  const showHistory        = mkVar('show_history',       'boolean', 'true',  'Show back/forward history navigation buttons in the UIBar.');
+  const showSaves          = mkVar('show_saves',         'boolean', 'true',  'Show save/load menu in the UIBar.');
+
+  const group: import('../types').VariableGroup = {
+    kind: 'group',
+    id: uuid(),
+    name: 'sidePanel',
+    children: [hidden, width, position, initiallyCollapsed, allowCollapse, bgColor, showHistory, showSaves],
+  };
+
+  const systemConfig: import('../types').SidebarSceneConfig = {
+    kind: 'sidebar',
+    hidden:             { variableId: hidden.id },
+    width:              { variableId: width.id },
+    position:           { variableId: position.id },
+    initiallyCollapsed: { variableId: initiallyCollapsed.id },
+    allowCollapse:      { variableId: allowCollapse.id },
+    bgColor:            { variableId: bgColor.id },
+    historyControls:    { variableId: showHistory.id },
+    saveLoadMenu:       { variableId: showSaves.id },
+  };
+
+  return { group, systemConfig };
 }
 
 // ─── Generic tree helpers (shared by variable & asset trees) ──────────────────
@@ -936,6 +1050,10 @@ function migrateSceneLinks(p: Project): Project {
         if (b.passageName) b.passageName = resolve(b.passageName);
       } else if (b.type === 'dialogue' && b.innerBlocks?.length) {
         migrateBlocks(b.innerBlocks);
+      } else if (b.type === 'tabs') {
+        for (const tab of b.tabs ?? []) {
+          migrateBlocks(tab.blocks ?? []);
+        }
       } else if (b.type === 'table') {
         for (const row of b.rows ?? []) {
           for (const cell of row.cells ?? []) {
@@ -951,18 +1069,6 @@ function migrateSceneLinks(p: Project): Project {
 
   for (const scene of p.scenes) {
     migrateBlocks(scene.blocks);
-  }
-
-  // Sidebar panel cells
-  for (const tab of p.sidebarPanel?.tabs ?? []) {
-    for (const row of tab.rows ?? []) {
-      for (const cell of row.cells ?? []) {
-        if (cell.content?.type === 'button') {
-          if ((cell.content as any).actions) migrateActions((cell.content as any).actions);
-          migrateNav((cell.content as any).navigate);
-        }
-      }
-    }
   }
 
   // Watchers
@@ -990,25 +1096,13 @@ function migrateProject(raw: any): Project {
   }
   if (!p.assetNodes) p.assetNodes = [];
 
-  // sidebarPanel
-  if (!p.sidebarPanel) p.sidebarPanel = DEFAULT_PANEL;
-  // Ensure panel has style (added later — backward compat)
-  if (!p.sidebarPanel.style) p.sidebarPanel.style = { ...DEFAULT_PANEL_STYLE };
-  // Migrate cell widths: old flex weights (1–12) → percentages (1–100)
-  // Heuristic: if max cell width in a row is ≤ 12, treat as flex weights
-  for (const tab of p.sidebarPanel.tabs ?? []) {
-    for (const row of tab.rows ?? []) {
-      if (!row.cells?.length) continue;
-      const maxW = Math.max(...row.cells.map((c: any) => c.width ?? 1));
-      if (maxW <= 12) {
-        const total = row.cells.reduce((s: number, c: any) => s + (c.width ?? 1), 0);
-        const converted = row.cells.map((c: any) => ({ ...c, width: Math.round((c.width ?? 1) / total * 100) }));
-        // Fix rounding drift so sum == 100
-        const diff = 100 - converted.reduce((s: number, c: any) => s + c.width, 0);
-        if (diff !== 0) converted[0] = { ...converted[0], width: converted[0].width + diff };
-        row.cells = converted;
-      }
-    }
+  // Legacy `sidebarPanel` field — silently dropped (replaced by sidebar-tagged scene).
+  if ('sidebarPanel' in p) delete p.sidebarPanel;
+  // Legacy `headerImageSrc` / `headerRowId` settings — also dropped (user now puts
+  // ImageBlock directly into the StoryCaption scene).
+  if (p.settings) {
+    delete p.settings.headerImageSrc;
+    delete p.settings.headerRowId;
   }
 
   // Fix Cyrillic variable names created before transliteration was added
@@ -1044,12 +1138,37 @@ function migrateProject(raw: any): Project {
     customProps: item.customProps ?? [],
   }));
   if (!p.settings) p.settings = { ...DEFAULT_PROJECT_SETTINGS };
-  if (p.settings.historyControls === undefined) p.settings.historyControls = DEFAULT_PROJECT_SETTINGS.historyControls;
-  if (p.settings.saveLoadMenu === undefined) p.settings.saveLoadMenu = DEFAULT_PROJECT_SETTINGS.saveLoadMenu;
 
   // Custom CSS / JS preserved from imports (or hand-edited). Empty string when absent.
   if (typeof p.customCss !== 'string') p.customCss = '';
   if (typeof p.customScript !== 'string') p.customScript = '';
+
+  // Migrate `ProjectSettings.historyControls` / `saveLoadMenu` → sidebar scene's systemConfig.
+  // The settings used to be project-wide; they're conceptually UIBar-wrapper settings, so
+  // they belong on the sidebar-tagged scene's systemConfig (per per-scene-config decision).
+  // Defaults `true` → no migration needed (absent on systemConfig means default behavior).
+  if (p.settings && (p.settings.historyControls === false || p.settings.saveLoadMenu === false)) {
+    const sb = p.scenes?.find((s: any) => s.tags?.includes('sidebar'));
+    if (sb) {
+      const sc = sb.systemConfig && sb.systemConfig.kind === 'sidebar'
+        ? sb.systemConfig
+        : { kind: 'sidebar' };
+      if (p.settings.historyControls === false && sc.historyControls === undefined) {
+        sc.historyControls = false;
+      }
+      if (p.settings.saveLoadMenu === false && sc.saveLoadMenu === undefined) {
+        sc.saveLoadMenu = false;
+      }
+      sb.systemConfig = sc;
+    }
+    // Always clear the old fields so they don't drift out of sync
+    delete p.settings.historyControls;
+    delete p.settings.saveLoadMenu;
+  } else if (p.settings) {
+    // Even when both were true (defaults), just drop the now-unused fields
+    delete p.settings.historyControls;
+    delete p.settings.saveLoadMenu;
+  }
 
   // Migrate targetSceneId / navigate.sceneId from scene NAMES → scene IDs
   p = migrateSceneLinks(p as Project);
@@ -1067,7 +1186,7 @@ function findAssetNodeById(nodes: AssetTreeNode[], id: string): AssetTreeNode | 
 
 // ─── Store shape ──────────────────────────────────────────────────────────────
 
-type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'panel' | 'watchers' | 'items' | 'containers' | 'plugins';
+type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins';
 
 interface ProjectState {
   project: Project;
@@ -1078,7 +1197,7 @@ interface ProjectState {
 
   setProjectDir: (dir: string | null) => void;
   setProjectTitle: (title: string) => void;
-  updateProjectMeta: (patch: Partial<Pick<Project, 'title' | 'author' | 'description' | 'lore' | 'settings' | 'sidebarPanel'>>) => void;
+  updateProjectMeta: (patch: Partial<Pick<Project, 'title' | 'author' | 'description' | 'lore' | 'settings'>>) => void;
   loadProject: (project: Project, dir?: string) => void;
   resetProject: () => void;
   setSidebarTab: (tab: SidebarTabId) => void;
@@ -1105,7 +1224,9 @@ interface ProjectState {
   updateSceneNote: (id: string, notes: string | undefined) => void;
   updateSceneGraphPosition: (id: string, x: number, y: number) => void;
   updateSceneTags: (id: string, tags: string[]) => void;
-  updateSceneSettings: (id: string, data: { name: string; tags: string[]; notes?: string; background?: import('../types').SceneBackground }) => void;
+  updateSceneSettings: (id: string, data: { name: string; tags: string[]; notes?: string; background?: import('../types').SceneBackground; systemConfig?: import('../types').SystemSceneConfig }) => void;
+  /** Patch `systemConfig` of a scene with a singleton system tag (e.g. sidebar settings). */
+  updateSceneSystemConfig: (id: string, patch: Partial<import('../types').SystemSceneConfig>) => void;
   reorderScenes: (scenes: Scene[]) => void;
   duplicateScene: (sceneId: string) => void;
   makeStartScene: (sceneId: string) => void;
@@ -1142,6 +1263,18 @@ interface ProjectState {
   updateDialogueInnerBlock: (sceneId: string, dialogueBlockId: string, innerBlockId: string, patch: Partial<Block>) => void;
   deleteDialogueInnerBlock: (sceneId: string, dialogueBlockId: string, innerBlockId: string) => void;
   reorderDialogueInnerBlocks: (sceneId: string, dialogueBlockId: string, blocks: Block[]) => void;
+
+  // TabsBlock — tab CRUD
+  addTab: (sceneId: string, tabsBlockId: string, label: string) => void;
+  removeTab: (sceneId: string, tabsBlockId: string, tabId: string) => void;
+  renameTab: (sceneId: string, tabsBlockId: string, tabId: string, label: string) => void;
+  reorderTabs: (sceneId: string, tabsBlockId: string, tabs: { id: string; label: string; blocks: Block[] }[]) => void;
+  // TabsBlock — nested block CRUD (inside a tab)
+  addBlockToTab: (sceneId: string, tabsBlockId: string, tabId: string, block: Block) => void;
+  updateBlockInTab: (sceneId: string, tabsBlockId: string, tabId: string, blockId: string, patch: Partial<Block>) => void;
+  deleteBlockFromTab: (sceneId: string, tabsBlockId: string, tabId: string, blockId: string) => void;
+  reorderBlocksInTab: (sceneId: string, tabsBlockId: string, tabId: string, blocks: Block[]) => void;
+  duplicateBlockInTab: (sceneId: string, tabsBlockId: string, tabId: string, blockId: string) => void;
 
   // Choice options
   addChoiceOption: (sceneId: string, blockId: string) => void;
@@ -1193,20 +1326,6 @@ interface ProjectState {
   /** Replace assetNodes wholesale (used by filesystem sync, no undo snapshot) */
   syncAssets: (nodes: AssetTreeNode[]) => void;
 
-  // Sidebar panel
-  setPanelLiveUpdate: (v: boolean) => void;
-  updatePanelStyle: (patch: Partial<PanelStyle>) => void;
-  addPanelTab: (label: string) => void;
-  updatePanelTab: (tabId: string, patch: Partial<Omit<SidebarTab, 'id' | 'rows'>>) => void;
-  deletePanelTab: (tabId: string) => void;
-  reorderPanelTabs: (tabs: SidebarTab[]) => void;
-  addPanelRow: (tabId: string) => void;
-  updatePanelRow: (tabId: string, rowId: string, patch: Partial<Omit<SidebarRow, 'id' | 'cells'>>) => void;
-  deletePanelRow: (tabId: string, rowId: string) => void;
-  addPanelCell: (tabId: string, rowId: string) => void;
-  updatePanelCell: (tabId: string, rowId: string, cellId: string, patch: Partial<Omit<SidebarCell, 'id'>>) => void;
-  deletePanelCell: (tabId: string, rowId: string, cellId: string) => void;
-  updateCellContent: (tabId: string, rowId: string, cellId: string, content: CellContent) => void;
 }
 
 // ─── Panel helpers ────────────────────────────────────────────────────────────
@@ -1231,22 +1350,6 @@ function updateScene(project: Project, sceneId: string, updater: (s: Scene) => S
 
 function updateBlockInScene(scene: Scene, blockId: string, updater: (b: Block) => Block): Scene {
   return { ...scene, blocks: scene.blocks.map(b => b.id === blockId ? updater(b) : b) };
-}
-
-function updatePanel(project: Project, updater: (p: SidebarPanel) => SidebarPanel): Project {
-  return { ...project, sidebarPanel: updater(project.sidebarPanel) };
-}
-
-function updateTab(panel: SidebarPanel, tabId: string, updater: (t: SidebarTab) => SidebarTab): SidebarPanel {
-  return { ...panel, tabs: panel.tabs.map(t => t.id === tabId ? updater(t) : t) };
-}
-
-function updateRow(tab: SidebarTab, rowId: string, updater: (r: SidebarRow) => SidebarRow): SidebarTab {
-  return { ...tab, rows: tab.rows.map(r => r.id === rowId ? updater(r) : r) };
-}
-
-function updateCell(row: SidebarRow, cellId: string, updater: (c: SidebarCell) => SidebarCell): SidebarRow {
-  return { ...row, cells: row.cells.map(c => c.id === cellId ? updater(c) : c) };
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -1368,11 +1471,50 @@ export const useProjectStore = create<ProjectState>()(
         addSceneWithData: ({ name, tags, notes }) => {
           get().saveSnapshot();
           const id = uuid();
-          const scene: Scene = { id, name, tags, blocks: [], notes: notes || undefined };
-          set(s => ({
-            project: { ...s.project, scenes: [...s.project.scenes, scene] },
-            activeSceneId: id,
-          }));
+          set(s => {
+            // Singleton system tag handling: force-rename to canonical name and
+            // strip the tag from any other scene that had it (mirrors updateSceneSettings).
+            const forcedName = canonicalNameForTags(tags);
+            const finalName = forcedName ?? name;
+            const scene: Scene = { id, name: finalName, tags, blocks: [], notes: notes || undefined };
+            // Initialize systemConfig for sidebar tag so the new scene's UIBar
+            // settings are wired to the existing $sidePanel.* variables (if any).
+            if (tags.includes('sidebar')) {
+              const vars = flattenVariables(s.project.variableNodes);
+              const findVar = (leafName: string) => vars.find(v =>
+                getVariablePath(v.id, s.project.variableNodes) === `sidePanel.${leafName}`
+              );
+              const ids = {
+                hidden:             findVar('hidden')?.id,
+                width:              findVar('width')?.id,
+                position:           findVar('position')?.id,
+                initiallyCollapsed: findVar('initiallyCollapsed')?.id,
+                allowCollapse:      findVar('allowCollapse')?.id,
+                bgColor:            findVar('bgColor')?.id,
+                show_history:       findVar('show_history')?.id,
+                show_saves:         findVar('show_saves')?.id,
+              };
+              const allFound = Object.values(ids).every(v => v != null);
+              if (allFound) {
+                scene.systemConfig = {
+                  kind: 'sidebar',
+                  hidden:             { variableId: ids.hidden! },
+                  width:              { variableId: ids.width! },
+                  position:           { variableId: ids.position! },
+                  initiallyCollapsed: { variableId: ids.initiallyCollapsed! },
+                  allowCollapse:      { variableId: ids.allowCollapse! },
+                  bgColor:            { variableId: ids.bgColor! },
+                  historyControls:    { variableId: ids.show_history! },
+                  saveLoadMenu:       { variableId: ids.show_saves! },
+                };
+              }
+            }
+            const enforcedScenes = enforceSingletonSystemTags(s.project.scenes, id, tags);
+            return {
+              project: { ...s.project, scenes: [...enforcedScenes, scene] },
+              activeSceneId: id,
+            };
+          });
         },
 
         findOrCreateInventoryPopup: (charId) => {
@@ -1438,11 +1580,16 @@ export const useProjectStore = create<ProjectState>()(
             const safeTags = hadStart
               ? (tags.includes(START_TAG) ? tags : [START_TAG, ...tags])
               : tags.filter(t => t !== START_TAG);
-            return { project: updateScene(s.project, id, sc => ({ ...sc, tags: safeTags })) };
+            const enforcedScenes = enforceSingletonSystemTags(s.project.scenes, id, safeTags);
+            const forcedName = canonicalNameForTags(safeTags);  // force-rename if singleton system tag claims a canonical name
+            const finalScenes = enforcedScenes.map(sc =>
+              sc.id === id ? { ...sc, tags: safeTags, name: forcedName ?? sc.name } : sc
+            );
+            return { project: { ...s.project, scenes: finalScenes } };
           });
         },
 
-        updateSceneSettings: (id, { name, tags, notes, background }) => {
+        updateSceneSettings: (id, { name, tags, notes, background, systemConfig }) => {
           get().saveSnapshot();
           // Protect start tag: preserve it if scene had it, strip it if scene didn't
           set(s => {
@@ -1452,8 +1599,39 @@ export const useProjectStore = create<ProjectState>()(
             const safeTags = hadStart
               ? (tags.includes(START_TAG) ? tags : [START_TAG, ...tags])
               : tags.filter(t => t !== START_TAG);
-            return { project: updateScene(s.project, id, sc => ({ ...sc, name, tags: safeTags, notes: notes || undefined, background: background || undefined })) };
+            const enforcedScenes = enforceSingletonSystemTags(s.project.scenes, id, safeTags);
+            const forcedName = canonicalNameForTags(safeTags);  // override caller-provided name when singleton system tag claims a canonical name
+            const finalScenes = enforcedScenes.map(sc =>
+              sc.id === id ? {
+                ...sc,
+                name: forcedName ?? name,
+                tags: safeTags,
+                notes: notes || undefined,
+                background: background || undefined,
+                // Only carry systemConfig if scene has a singleton system tag — otherwise clear it
+                systemConfig: safeTags.some(t => (SYSTEM_TAGS as readonly string[]).includes(t) && SYSTEM_TAG_KIND[t as SystemTag] === 'singleton')
+                  ? (systemConfig ?? sc.systemConfig)
+                  : undefined,
+              } : sc
+            );
+            return { project: { ...s.project, scenes: finalScenes } };
           });
+        },
+
+        updateSceneSystemConfig: (id, patch) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, id, sc => {
+              if (!sc.systemConfig) {
+                // First write — require kind to be inferable from tags (sidebar tag → kind 'sidebar')
+                if (sc.tags.includes('sidebar')) {
+                  return { ...sc, systemConfig: { kind: 'sidebar', ...patch } as import('../types').SystemSceneConfig };
+                }
+                return sc;
+              }
+              return { ...sc, systemConfig: { ...sc.systemConfig, ...patch } as import('../types').SystemSceneConfig };
+            }),
+          }));
         },
 
         reorderScenes: (scenes) => {
@@ -1843,6 +2021,146 @@ export const useProjectStore = create<ProjectState>()(
               updateBlockInScene(sc, dialogueBlockId, b => {
                 if (b.type !== 'dialogue') return b;
                 return { ...b, innerBlocks: blocks };
+              })
+            ),
+          }));
+        },
+
+        // ── TabsBlock: tab CRUD ──────────────────────────────────────────────
+
+        addTab: (sceneId, tabsBlockId, label) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return { ...b, tabs: [...b.tabs, { id: uuid(), label, blocks: [] }] };
+              })
+            ),
+          }));
+        },
+
+        removeTab: (sceneId, tabsBlockId, tabId) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return { ...b, tabs: b.tabs.filter(t => t.id !== tabId) };
+              })
+            ),
+          }));
+        },
+
+        renameTab: (sceneId, tabsBlockId, tabId, label) =>
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return { ...b, tabs: b.tabs.map(t => t.id === tabId ? { ...t, label } : t) };
+              })
+            ),
+          })),
+
+        reorderTabs: (sceneId, tabsBlockId, tabs) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return { ...b, tabs };
+              })
+            ),
+          }));
+        },
+
+        // ── TabsBlock: nested block CRUD (inside a specific tab) ─────────────
+
+        addBlockToTab: (sceneId, tabsBlockId, tabId, block) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return {
+                  ...b,
+                  tabs: b.tabs.map(t =>
+                    t.id === tabId ? { ...t, blocks: [...t.blocks, block] } : t
+                  ),
+                };
+              })
+            ),
+          }));
+        },
+
+        updateBlockInTab: (sceneId, tabsBlockId, tabId, blockId, patch) =>
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return {
+                  ...b,
+                  tabs: b.tabs.map(t =>
+                    t.id === tabId
+                      ? { ...t, blocks: t.blocks.map(nb => nb.id === blockId ? { ...nb, ...patch } as Block : nb) }
+                      : t
+                  ),
+                };
+              })
+            ),
+          })),
+
+        deleteBlockFromTab: (sceneId, tabsBlockId, tabId, blockId) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return {
+                  ...b,
+                  tabs: b.tabs.map(t =>
+                    t.id === tabId
+                      ? { ...t, blocks: t.blocks.filter(nb => nb.id !== blockId) }
+                      : t
+                  ),
+                };
+              })
+            ),
+          }));
+        },
+
+        reorderBlocksInTab: (sceneId, tabsBlockId, tabId, blocks) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return {
+                  ...b,
+                  tabs: b.tabs.map(t => t.id === tabId ? { ...t, blocks } : t),
+                };
+              })
+            ),
+          }));
+        },
+
+        duplicateBlockInTab: (sceneId, tabsBlockId, tabId, blockId) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: updateScene(s.project, sceneId, sc =>
+              updateBlockInScene(sc, tabsBlockId, b => {
+                if (b.type !== 'tabs') return b;
+                return {
+                  ...b,
+                  tabs: b.tabs.map(t => {
+                    if (t.id !== tabId) return t;
+                    const idx = t.blocks.findIndex(nb => nb.id === blockId);
+                    if (idx === -1) return t;
+                    const blocks = [...t.blocks];
+                    blocks.splice(idx + 1, 0, deepCloneBlock(t.blocks[idx]));
+                    return { ...t, blocks };
+                  }),
+                };
               })
             ),
           }));
@@ -2530,110 +2848,6 @@ export const useProjectStore = create<ProjectState>()(
         syncAssets: (nodes) =>
           set(s => ({ project: { ...s.project, assetNodes: nodes } })),
 
-        // ── Sidebar panel ──────────────────────────────────────────────────────
-
-        setPanelLiveUpdate: (v) =>
-          set(s => ({
-            project: { ...s.project, sidebarPanel: { ...s.project.sidebarPanel, liveUpdate: v } },
-          })),
-
-        updatePanelStyle: (patch) =>
-          set(s => ({
-            project: updatePanel(s.project, p => ({
-              ...p,
-              style: { ...(p.style ?? DEFAULT_PANEL_STYLE), ...patch },
-            })),
-          })),
-
-        addPanelTab: (label) => {
-          get().saveSnapshot();
-          const tab: SidebarTab = { id: uuid(), label, rows: [] };
-          set(s => ({
-            project: updatePanel(s.project, p => ({ ...p, tabs: [...p.tabs, tab] })),
-          }));
-        },
-
-        updatePanelTab: (tabId, patch) =>
-          set(s => ({
-            project: updatePanel(s.project, p => updateTab(p, tabId, t => ({ ...t, ...patch }))),
-          })),
-
-        deletePanelTab: (tabId) => {
-          get().saveSnapshot();
-          set(s => ({
-            project: updatePanel(s.project, p => ({ ...p, tabs: p.tabs.filter(t => t.id !== tabId) })),
-          }));
-        },
-
-        reorderPanelTabs: (tabs) => {
-          get().saveSnapshot();
-          set(s => ({
-            project: updatePanel(s.project, p => ({ ...p, tabs })),
-          }));
-        },
-
-        addPanelRow: (tabId) => {
-          get().saveSnapshot();
-          const row: SidebarRow = { id: uuid(), height: 15, cells: [] };
-          set(s => ({
-            project: updatePanel(s.project, p => updateTab(p, tabId, t => ({ ...t, rows: [...t.rows, row] }))),
-          }));
-        },
-
-        updatePanelRow: (tabId, rowId, patch) =>
-          set(s => ({
-            project: updatePanel(s.project, p => updateTab(p, tabId, t => updateRow(t, rowId, r => ({ ...r, ...patch })))),
-          })),
-
-        deletePanelRow: (tabId, rowId) => {
-          get().saveSnapshot();
-          set(s => ({
-            project: updatePanel(s.project, p =>
-              updateTab(p, tabId, t => ({ ...t, rows: t.rows.filter(r => r.id !== rowId) }))
-            ),
-          }));
-        },
-
-        addPanelCell: (tabId, rowId) => {
-          get().saveSnapshot();
-          set(s => ({
-            project: updatePanel(s.project, p =>
-              updateTab(p, tabId, t => updateRow(t, rowId, r => {
-                const newCell: SidebarCell = { id: uuid(), width: 0, content: { type: 'text', value: '' } };
-                const cells = [...r.cells, newCell];
-                return { ...r, cells: redistributeWidths(cells) };
-              }))
-            ),
-          }));
-        },
-
-        updatePanelCell: (tabId, rowId, cellId, patch) =>
-          set(s => ({
-            project: updatePanel(s.project, p =>
-              updateTab(p, tabId, t => updateRow(t, rowId, r => updateCell(r, cellId, c => ({ ...c, ...patch }))))
-            ),
-          })),
-
-        deletePanelCell: (tabId, rowId, cellId) => {
-          get().saveSnapshot();
-          set(s => ({
-            project: updatePanel(s.project, p =>
-              updateTab(p, tabId, t =>
-                updateRow(t, rowId, r => {
-                  const cells = r.cells.filter(c => c.id !== cellId);
-                  return { ...r, cells: cells.length > 0 ? redistributeWidths(cells) : cells };
-                })
-              )
-            ),
-          }));
-        },
-
-        updateCellContent: (tabId, rowId, cellId, content) =>
-          set(s => ({
-            project: updatePanel(s.project, p =>
-              updateTab(p, tabId, t => updateRow(t, rowId, r => updateCell(r, cellId, c => ({ ...c, content }))))
-            ),
-          })),
       };
     },
     {
@@ -2649,6 +2863,10 @@ export const useProjectStore = create<ProjectState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.project) {
           state.project = migrateProject(state.project);
+        }
+        // Migrate retired sidebar tabs (the 🗂️ panel tab was removed when sidebar-as-scene shipped)
+        if (state && (state.activeSidebarTab as string) === 'panel') {
+          state.activeSidebarTab = 'scenes';
         }
       },
     }

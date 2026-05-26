@@ -1,6 +1,6 @@
 import type {
   Project, Block, Character, Variable, ConditionBranch, ChoiceOption,
-  SidebarPanel, SidebarRow, SidebarCell, PanelStyle, TableBlock,
+  SidebarCell, TableBlock,
   Scene, ButtonStyle, CellProgress, CellButton, BlockDelay, BlockTypewriter, IncludeBlock,
   ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, CellList, CellDateTime, DateTimeDisplayMode,
   Watcher, WatcherCondition, AudioBlock, AudioGenBlock, ContainerBlock, TimeManipulationBlock,
@@ -9,7 +9,6 @@ import type {
   SceneBackground,
 } from '../types';
 import { START_TAG } from '../types';
-import { DEFAULT_PANEL_STYLE } from '../store/projectStore';
 import { flattenVariables, getVariablePath, hasLeafVariables } from './treeUtils';
 import { collectPluginIds, expandPluginDeps, pluginValueLiteral } from './pluginUtils';
 import { paramsToVirtualNodes, rewriteParamRefs } from './pluginParamScope';
@@ -912,6 +911,52 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return `${indent}<<run tgAddTime("${path}", ${JSON.stringify(delta)})>>`;
     }
 
+    case 'tabs': {
+      if (block.tabs.length === 0) return '';
+      // Control variable: user-bound number var, or auto-generated `$__tabs_<id>`.
+      // Also compute the path WITHOUT the `$` prefix — runtime JS uses it via
+      // `State.variables[<path>]` to read the value (handles nested dots).
+      const ctrlInfo = (() => {
+        const blockShortId = block.id.replace(/-/g, '');
+        if (block.controlVariableId) {
+          const v = vars.find(x => x.id === block.controlVariableId);
+          if (v) {
+            const p = varPath(v, nodes);
+            return { ref: `$${p}`, path: p };
+          }
+        }
+        const auto = `__tabs_${blockShortId}`;
+        return { ref: `$${auto}`, path: auto };
+      })();
+      const ctrlVar = ctrlInfo.ref;
+      const defaultIdx = block.defaultTabIndex ?? 0;
+      // Cascade scope class — for the per-instance `<style>` block + class on the wrapper.
+      const settings = project?.settings;
+      const cascadeExtra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const spotStyle   = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix  = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const barClass    = ['tg-tabs-block', ...cascadeExtra].join(' ');
+      // Tab buttons — each rendered as `<span data-idx="N"><<link ...>></span>` so the
+      // runtime active-class JS can find them. Click sets ctrl var + Engine.show()
+      // (re-renders main passage and triggers UIBar.update() automatically).
+      const buttons = block.tabs.map((tab, i) =>
+        `<span data-idx="${i}"><<link "${tab.label.replace(/"/g, '\\"')}">><<set ${ctrlVar} to ${i}>><<run Engine.show()>><</link>></span>`
+      ).join('');
+      const tabBar = `${indent}<div class="${barClass}" data-ctrl="${ctrlInfo.path}">${buttons}</div>`;
+      // Lazy init: if ctrl var is undefined when first rendered, set it to defaultIdx.
+      const init = `${indent}<<if ndef ${ctrlVar}>><<set ${ctrlVar} to ${defaultIdx}>><</if>>`;
+      // Body: <<if>>/<<elseif>> chain rendering active tab's blocks.
+      const bodies = block.tabs.map((tab, i) => {
+        const kw = i === 0 ? '<<if' : '<<elseif';
+        const inner = tab.blocks
+          .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
+          .filter(Boolean)
+          .join('\n');
+        return `${indent}${kw} ${ctrlVar} eq ${i}>>\n${inner}`;
+      }).join('\n');
+      return `${spotPrefix}${init}\n${tabBar}\n${bodies}\n${indent}<</if>>`;
+    }
+
     case 'plugin': {
       const pb = block as PluginBlock;
       const def = getPluginDef(pb.pluginId);
@@ -1398,170 +1443,215 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
   return `${indent}<div class="tg-table" style="${outerStyles.join(';')}">${rowsHTML}</div>`;
 }
 
-// ─── Panel → StoryCaption markup ──────────────────────────────────────────────
+// ─── Recursive walker: detect TableBlock with audio-volume / image cells ──────
 
-function cellToSC(cell: SidebarCell, vars: Variable[], nodes: VariableTreeNode[], idToName?: Map<string, string>, characters?: Character[], items?: ItemDefinition[]): string {
-  const c = cell.content;
-  // Use flex: N (proportional) so CSS gap is respected without overflow.
-  // cell.width is a percentage (e.g. 40), flex: 40 gives the same 40:60 ratio.
-  const flex = `flex: ${cell.width}; min-width: 0; overflow: hidden;`;
-  let inner = '';
-
-  switch (c.type) {
-    case 'text':
-      inner = c.value;
-      break;
-
-    case 'variable': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      inner = `${c.prefix}<<print ${vname}>>${c.suffix}`;
-      break;
+/** True when any descendant block is a TableBlock containing at least one
+ *  `audio-volume` cell. Used to decide whether to emit master-volume init. */
+export function hasAudioVolumeCell(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'table') {
+      return b.rows.some(r => r.cells.some(c => c.content.type === 'audio-volume'));
     }
-
-    case 'progress':
-      inner = buildProgressBarSC(c, vars, nodes, false);
-      break;
-
-    case 'image-static':
-      inner = `<img class="tg-cell-img tg-lb" src="${c.src}" style="object-fit: ${c.objectFit};" onclick="tgOpenLightbox(this.src)" />`;
-      break;
-
-    case 'image-gen':
-      inner = `<img class="tg-cell-img tg-lb" src="${c.src}" style="object-fit: cover;" onclick="tgOpenLightbox(this.src)" />`;
-      break;
-
-    case 'image-from-var': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      inner = `<<if ${vname}>><img class="tg-cell-img tg-lb" @src="${vname}" style="object-fit: ${c.objectFit};" onclick="tgOpenLightbox(this.src)" /><</if>>`;
-      break;
-    }
-
-    case 'raw':
-      inner = c.code;
-      break;
-
-    case 'include':
-      inner = c.passageName ? `<<include "${c.passageName}">>` : '';
-      break;
-
-    case 'image-bound': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      const imgTag = (src: string) =>
-        `<img class="tg-cell-img tg-lb" src="${src}" style="object-fit: ${c.objectFit};" onclick="tgOpenLightbox(this.src)" />`;
-      const cases = c.mapping.map((m, i) => {
-        const kw = i === 0 ? '<<if' : '<<elseif';
-        let cond: string;
-        const mt = m.matchType ?? 'exact';
-        if (mt === 'range') {
-          const lo = m.rangeMin ?? '0';
-          const hi = m.rangeMax ?? '0';
-          cond = `${vname} >= ${lo} && ${vname} <= ${hi}`;
-        } else {
-          // exact — quote only string variables
-          const val = (v?.varType === 'string') ? `"${m.value}"` : m.value;
-          cond = `${vname} eq ${val}`;
-        }
-        return `${kw} ${cond}>>${imgTag(m.src)}`;
-      });
-      if (c.defaultSrc) cases.push(`<<else>>${imgTag(c.defaultSrc)}`);
-      if (cases.length > 0) cases.push('<</if>>');
-      inner = cases.join('');
-      break;
-    }
-
-    case 'button': {
-      const wrapFlex = c.style.fullWidth
-        ? `${flex};display:flex;align-items:center`
-        : flex;
-      return `<span class="tg-cell" style="${wrapFlex}">${buildCellButtonSC(c, cell.id, vars, nodes, idToName)}</span>`;
-    }
-
-    case 'list':
-      inner = buildCellListSC(c as CellList, vars, nodes);
-      break;
-
-    case 'audio-volume': {
-      // Static HTML + <<script>> with setTimeout(0) to set values after DOM render.
-      // This avoids quote conflicts inside <<print>>.
-      const slider = '<input id="tg-vol" type="range" min="0" max="100" value="100" style="width:100%" oninput="var _v=this.value/100;SugarCube.SimpleAudio.volume(_v);SugarCube.State.variables.__tgMasterVol=_v;document.querySelectorAll(\'video\').forEach(function(el){el.volume=_v;})" />';
-      const mute = c.showMuteButton
-        ? '<button id="tg-mute" onclick="var S=SugarCube.SimpleAudio;S.mute(!S.mute());this.textContent=S.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A);document.querySelectorAll(\'video\').forEach(function(el){el.muted=S.mute();})" style="border:none;background:none;cursor:pointer;font-size:1.2em">&#x1F50A;</button>'
-        : '';
-      const initScript = [
-        '<<script>>',
-        'setTimeout(function(){',
-        '  var v=State.variables.__tgMasterVol;',
-        '  var s=document.getElementById("tg-vol");',
-        '  if(s&&v!=null){s.value=Math.round(v*100);document.querySelectorAll("video").forEach(function(el){el.volume=v;});}',
-        c.showMuteButton ? '  var m=document.getElementById("tg-mute");if(m)m.textContent=SugarCube.SimpleAudio.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A);' : '',
-        '},0);',
-        '<</script>>',
-      ].filter(Boolean).join('');
-      inner = `<span style="display:flex;align-items:center;gap:4px;width:100%">${mute}${slider}</span>${initScript}`;
-      break;
-    }
-
-    case 'date-time': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      inner = buildDateTimeCellSC(c as CellDateTime, vname);
-      break;
-    }
-
-    case 'paperdoll': {
-      const char = characters?.find(ch => ch.id === c.charId);
-      if (!char?.paperdoll || !char.varName) { inner = ''; break; }
-      inner = buildPaperdollCellSC(char.varName, char.paperdoll, c.showLabels, vars, nodes, items);
-      break;
-    }
-  }
-
-  return `<span class="tg-cell" style="${flex}">${inner}</span>`;
-}
-
-function rowToSC(row: SidebarRow, vars: Variable[], nodes: VariableTreeNode[], style: PanelStyle, idToName?: Map<string, string>, characters?: Character[], items?: ItemDefinition[]): string {
-  if (row.cells.length === 0) return '';
-  const cells = row.cells.map(c => cellToSC(c, vars, nodes, idToName, characters, items)).join('');
-  const borderStyle = style.showCellBorders
-    ? ` border: ${style.borderWidth}px solid ${style.borderColor};`
-    : '';
-  return `<div class="tg-row" style="height: ${row.height}px;${borderStyle}">${cells}</div>`;
-}
-
-export function buildStoryCaptionSC(panel: SidebarPanel, vars: Variable[], nodes: VariableTreeNode[], idToName?: Map<string, string>, characters?: Character[], items?: ItemDefinition[]): string {
-  if (panel.tabs.length === 0) return '';
-
-  const style: PanelStyle = panel.style ?? DEFAULT_PANEL_STYLE;
-  const lines: string[] = [];
-  lines.push('<<if ndef $__tgTab>><<set $__tgTab to 0>><</if>>');
-
-  if (panel.tabs.length > 1) {
-    lines.push('<div class="tg-tabs">');
-    panel.tabs.forEach((tab, i) => {
-      lines.push(`<<link "${tab.label}">><<set $__tgTab to ${i}>><<run UIBar.update()>><</link>>`);
-    });
-    lines.push('</div>');
-  }
-
-  const outerOpen = style.showOuterBorder
-    ? `<div class="tg-panel" style="border: ${style.borderWidth}px solid ${style.borderColor}; padding: 2px;">`
-    : '<div class="tg-panel">';
-
-  panel.tabs.forEach((tab, i) => {
-    const kw = i === 0 ? '<<if' : '<<elseif';
-    lines.push(`${kw} $__tgTab eq ${i}>>`);
-    // Concatenate rows WITHOUT \n between them — SugarCube's wiki parser converts
-    // \n between block-level elements into <p></p> tags (adding 1em vertical space).
-    const rowsHTML = tab.rows.map(r => rowToSC(r, vars, nodes, style, idToName, characters, items)).filter(Boolean).join('');
-    lines.push(outerOpen + rowsHTML + '</div>');
+    if (b.type === 'condition') return b.branches.some(br => hasAudioVolumeCell(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasAudioVolumeCell(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasAudioVolumeCell(tab.blocks));
+    return false;
   });
+}
 
-  if (panel.tabs.length > 0) lines.push('<</if>>');
+/** True when any descendant block is a TableBlock containing at least one image-type cell.
+ *  Used to gate emission of lightbox CSS + tgOpenLightbox global. */
+function hasImageCell(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'table') {
+      return b.rows.some(r => r.cells.some(c =>
+        c.content.type === 'image-static' || c.content.type === 'image-bound' ||
+        c.content.type === 'image-gen'    || c.content.type === 'image-from-var'
+      ));
+    }
+    if (b.type === 'condition') return b.branches.some(br => hasImageCell(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasImageCell(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasImageCell(tab.blocks));
+    return false;
+  });
+}
 
-  return lines.join('\n');
+
+/**
+ * Build CSS + JS overrides from a sidebar-scene's `systemConfig`.
+ * Returns empty strings when scene is null or has no relevant config.
+ * Used by both `.twee` and HTML export.
+ */
+export function buildSidebarSystemConfigOutput(
+  sidebarScene: Scene | undefined,
+  vars?: Variable[],
+  nodes?: VariableTreeNode[],
+): { css: string; script: string } {
+  const cfg = (sidebarScene?.systemConfig && sidebarScene.systemConfig.kind === 'sidebar')
+    ? sidebarScene.systemConfig
+    : null;
+  if (!cfg) return { css: '', script: '' };
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  // A value is "bound" when it's an object `{ variableId }`. Otherwise it's
+  // static (or undefined for default behavior).
+  const isBound = (v: unknown): v is { variableId: string } =>
+    typeof v === 'object' && v !== null && 'variableId' in (v as Record<string, unknown>);
+  const jsVarAccess = (id: string): string | null => {
+    if (!vars || !nodes) return null;
+    const v = vars.find(x => x.id === id);
+    if (!v) return null;
+    return `State.variables.${varPath(v, nodes)}`;  // e.g. State.variables.chars.hero.canSave
+  };
+  const boundAccess = (val: unknown): string | null => {
+    if (!isBound(val)) return null;
+    return jsVarAccess(val.variableId);
+  };
+
+  const rules: string[] = [];           // static CSS
+  const syncBody: string[] = [];        // body of _tgSyncSidebar() — runtime updates
+  const initLines: string[] = [];       // run-once startup (Config.ui.*, Config.saves.*)
+
+  // ── hidden — static or bound bool ────────────────────────────────────────
+  if (cfg.hidden === true) {
+    rules.push('#ui-bar { display: none !important; }');
+    rules.push('#story { margin-left: 0 !important; margin-right: 0 !important; }');
+  } else if (isBound(cfg.hidden)) {
+    const access = boundAccess(cfg.hidden);
+    if (access) {
+      rules.push('body.tg-sidebar-hidden #ui-bar { display: none !important; }');
+      rules.push('body.tg-sidebar-hidden #story  { margin-left: 0 !important; margin-right: 0 !important; }');
+      syncBody.push(`document.body.classList.toggle('tg-sidebar-hidden', !!${access});`);
+    }
+  }
+
+  // ── width + position — static rules unless either is bound ──────────────
+  const widthStatic    = (typeof cfg.width === 'number' && cfg.width > 0) ? cfg.width : null;
+  const widthBound     = isBound(cfg.width) ? boundAccess(cfg.width) : null;
+  const widthUnit      = cfg.widthUnit ?? 'em';
+  const positionStatic = (cfg.position === 'left' || cfg.position === 'right') ? cfg.position : null;
+  const positionBound  = isBound(cfg.position) ? boundAccess(cfg.position) : null;
+
+  if (widthStatic != null && !widthBound) {
+    const w = `${widthStatic}${widthUnit}`;
+    const sideMargin = positionStatic === 'right' ? 'margin-right' : 'margin-left';
+    rules.push(`#ui-bar { width: ${w}; }`);
+    rules.push(`#story { ${sideMargin}: ${w}; }`);
+  }
+  if (positionStatic === 'right' && !positionBound) {
+    rules.push('#ui-bar { left: auto; right: 0; }');
+    if (widthStatic == null) {
+      rules.push('#story { margin-left: 0; margin-right: 17.5em; }');
+    } else {
+      rules.push('#story { margin-left: 0; }');
+    }
+  }
+  if (widthBound || positionBound) {
+    // Dynamic width/position — read both at runtime and apply combined inline styles
+    const wExpr = widthBound ?? (widthStatic != null ? String(widthStatic) : 'null');
+    const pExpr = positionBound ?? (positionStatic ? `"${positionStatic}"` : '"left"');
+    syncBody.push(
+      `(function() { var w = ${wExpr}, p = ${pExpr};` +
+      ` var bar = document.getElementById('ui-bar');` +
+      ` var story = document.getElementById('story');` +
+      ` if (!bar || !story) return;` +
+      ` var wStr = (typeof w === 'number' && w > 0) ? (w + '${widthUnit}') : '';` +
+      ` var right = (p === 'right');` +
+      ` bar.style.width = wStr;` +
+      ` bar.style.left  = right ? 'auto' : '';` +
+      ` bar.style.right = right ? '0'    : '';` +
+      ` story.style.marginLeft  = right ? '0' : (wStr || '');` +
+      ` story.style.marginRight = right ? (wStr || '17.5em') : '';` +
+      ` })();`
+    );
+  }
+
+  // ── bgColor ─────────────────────────────────────────────────────────────
+  if (typeof cfg.bgColor === 'string' && cfg.bgColor) {
+    rules.push(`#ui-bar { background: ${cfg.bgColor}; }`);
+  } else if (isBound(cfg.bgColor)) {
+    const access = boundAccess(cfg.bgColor);
+    if (access) {
+      syncBody.push(
+        `(function() { var c = ${access}; var bar = document.getElementById('ui-bar');` +
+        ` if (bar) bar.style.background = (typeof c === 'string' ? c : ''); })();`
+      );
+    }
+  }
+
+  // ── allowCollapse ───────────────────────────────────────────────────────
+  if (cfg.allowCollapse === false) {
+    rules.push('#ui-bar-toggle { display: none !important; }');
+  } else if (isBound(cfg.allowCollapse)) {
+    const access = boundAccess(cfg.allowCollapse);
+    if (access) {
+      rules.push('body.tg-no-collapse #ui-bar-toggle { display: none !important; }');
+      syncBody.push(`document.body.classList.toggle('tg-no-collapse', !${access});`);
+    }
+  }
+
+  // ── initiallyCollapsed — startup only (Config.ui is not reactive) ───────
+  // For STATIC `true`: emit `Config.ui.stowBarInitially = true` at script load
+  //   — SugarCube reads it during UIBar construction.
+  // For BOUND: cannot read State.variables at script load (StoryInit hasn't
+  //   run yet → `State.variables.sidePanel` is undefined and access throws).
+  //   Defer to `:storyready` and call `UIBar.stow()` if the variable is truthy.
+  if (cfg.initiallyCollapsed === true) {
+    initLines.push('Config.ui.stowBarInitially = true;');
+  } else if (isBound(cfg.initiallyCollapsed)) {
+    const access = boundAccess(cfg.initiallyCollapsed);
+    if (access) {
+      initLines.push(`$(document).one(':storyready', function() { if (${access}) UIBar.stow(); });`);
+    }
+  }
+
+  // ── historyControls ─────────────────────────────────────────────────────
+  const historySelectors = '#history-jumpto, #history-backward, #history-forward';
+  if (cfg.historyControls === false) {
+    initLines.push('Config.history.controls = false;');
+    rules.push(`${historySelectors} { display: none !important; }`);
+  } else if (isBound(cfg.historyControls)) {
+    const access = boundAccess(cfg.historyControls);
+    if (access) {
+      rules.push(`body.tg-no-history ${historySelectors} { display: none !important; }`);
+      syncBody.push(`document.body.classList.toggle('tg-no-history', !${access});`);
+    }
+  }
+
+  // ── saveLoadMenu ────────────────────────────────────────────────────────
+  const savesSelectors = '#menu-item-saves';
+  if (cfg.saveLoadMenu === false) {
+    initLines.push('Config.saves.isAllowed = function() { return false; };');
+    rules.push(`${savesSelectors} { display: none !important; }`);
+  } else if (isBound(cfg.saveLoadMenu)) {
+    const access = boundAccess(cfg.saveLoadMenu);
+    if (access) {
+      // SugarCube calls Config.saves.isAllowed dynamically at save-time → bind directly
+      initLines.push(`Config.saves.isAllowed = function() { return !!${access}; };`);
+      rules.push(`body.tg-no-saves ${savesSelectors} { display: none !important; }`);
+      syncBody.push(`document.body.classList.toggle('tg-no-saves', !${access});`);
+    }
+  }
+
+  // ── Compose output ──────────────────────────────────────────────────────
+  const scriptParts: string[] = [];
+  if (initLines.length > 0) {
+    scriptParts.push('// Sidebar systemConfig — startup');
+    scriptParts.push(initLines.join('\n'));
+  }
+  if (syncBody.length > 0) {
+    scriptParts.push(
+      '// Sidebar systemConfig — runtime sync (re-runs on every passage render)',
+      'window._tgSyncSidebar = function() {',
+      ...syncBody.map(l => '  ' + l),
+      '};',
+      "$(document).on(':storyready :passagedisplay', window._tgSyncSidebar);",
+    );
+  }
+
+  const css    = rules.length > 0 ? `/* Sidebar systemConfig */\n${rules.join('\n')}` : '';
+  const script = scriptParts.length > 0 ? scriptParts.join('\n') : '';
+  return { css, script };
 }
 
 export function buildPurlSignatureScript(): string {
@@ -1576,66 +1666,107 @@ export function buildPurlSignatureScript(): string {
   ].join('\n');
 }
 
-export function buildPanelCSS(panel: SidebarPanel): string {
-  if (panel.tabs.length === 0) return '';
-  const s: PanelStyle = panel.style ?? DEFAULT_PANEL_STYLE;
-  const bw = s.borderWidth;
-  const bc = s.borderColor;
+/**
+ * CSS for cell-level utilities shared between TableBlock and (former) panel:
+ * progress bars (.tg-progress / .tg-bar), cell images (.tg-cell-img), and the
+ * lightbox overlay (.tg-lb / #tg-lb-ov). Emitted only when needed.
+ */
+export function buildCellSharedCSS(scenes: Scene[]): string {
+  const anyImage = scenes.some(s => hasImageCell(s.blocks));
+  const anyTable = scenes.some(s => hasNestedTable(s.blocks));
+  if (!anyTable && !anyImage) return '';
 
-  // Cell borders: left border on every cell except first (acts as column divider)
-  const cellBorder = s.showCellBorders
-    ? `.tg-row .tg-cell + .tg-cell { border-left: ${bw}px solid ${bc}; }`
-    : '';
-  // Row borders: top border on every row except first
-  const rowBorder = s.showRowBorders
-    ? `.tg-panel .tg-row + .tg-row { border-top: ${bw}px solid ${bc}; }`
-    : '';
-
-  return [
-    '.tg-tabs { display: flex; gap: 2px; margin-bottom: 4px; }',
-    '.tg-tabs a { flex: 1; padding: 2px 4px; text-align: center; font-size: 0.8em; border: 1px solid #555; border-radius: 2px; cursor: pointer; text-decoration: none; color: inherit; }',
-    '.tg-tabs a:hover { background: rgba(255,255,255,0.15); }',
-    `.tg-panel { display: flex; flex-direction: column; gap: ${s.rowGap}px; margin: 0; padding: 0; }`,
-    `.tg-row { display: flex; overflow: hidden; align-items: stretch; margin: 0; }`,
-    '.tg-cell { display: flex; align-items: center; overflow: hidden; font-size: 0.85em; min-width: 0; box-sizing: border-box; }',
+  const lines: string[] = [
     '.tg-progress { width: 100%; height: 100%; background: var(--tg-bar-empty, #333); border-radius: 2px; overflow: hidden; display: flex; align-items: center; }',
     '.tg-progress-vert { flex-direction: column-reverse; align-items: stretch; }',
     '.tg-bar { height: 100%; background: var(--tg-bar-fill, #4a90d9); transition: width 0.3s, height 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--tg-bar-text, inherit); }',
     '.tg-cell-img { width: 100%; height: 100%; display: block; }',
-    cellBorder,
-    rowBorder,
-    '/* lightbox */',
-    '.tg-lb { cursor: pointer !important; }',
-    '#tg-lb-ov { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); align-items: center; justify-content: center; cursor: zoom-out; }',
-    '#tg-lb-ov.on { display: flex; }',
-    '#tg-lb-ov img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 6px; box-shadow: 0 8px 48px rgba(0,0,0,.8); cursor: default; }',
-    '#tg-lb-x { position: absolute; top: 12px; right: 18px; color: #fff; font-size: 2em; line-height: 1; cursor: pointer; opacity: .7; user-select: none; transition: opacity .15s; }',
-    '#tg-lb-x:hover { opacity: 1; }',
-  ].filter(Boolean).join('\n');
+  ];
+  if (anyImage) {
+    lines.push(
+      '/* lightbox */',
+      '.tg-lb { cursor: pointer !important; }',
+      '#tg-lb-ov { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); align-items: center; justify-content: center; cursor: zoom-out; }',
+      '#tg-lb-ov.on { display: flex; }',
+      '#tg-lb-ov img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 6px; box-shadow: 0 8px 48px rgba(0,0,0,.8); cursor: default; }',
+      '#tg-lb-x { position: absolute; top: 12px; right: 18px; color: #fff; font-size: 2em; line-height: 1; cursor: pointer; opacity: .7; user-select: none; transition: opacity .15s; }',
+      '#tg-lb-x:hover { opacity: 1; }',
+    );
+  }
+  return lines.join('\n');
 }
 
-// ─── Panel script (lightbox) ──────────────────────────────────────────────────
+/** Base CSS for the TabsBlock tab bar (`.tg-tabs-block`). Emitted whenever any
+ *  scene contains a TabsBlock (top-level or nested). Per-instance overrides come
+ *  from the cascade system (`defaultBlockStyles.tabs` + `block.customStyle`). */
+export function buildTabsBlockCSS(scenes: Scene[]): string {
+  if (!scenes.some(s => hasNestedTabs(s.blocks))) return '';
+  return [
+    '.tg-tabs-block { display: flex; gap: 2px; margin-bottom: 6px; flex-wrap: wrap; }',
+    '.tg-tabs-block > span { display: inline-flex; }',
+    '.tg-tabs-block a { flex: 0 0 auto; padding: 3px 10px; border: 1px solid #555; border-radius: 3px; cursor: pointer; text-decoration: none; color: inherit; font-size: 0.85em; transition: background 0.15s; }',
+    '.tg-tabs-block a:hover { background: rgba(255,255,255,0.1); }',
+    '.tg-tabs-block a.tg-tabs-active { background: rgba(99,102,241,0.25); border-color: #818cf8; }',
+  ].join('\n');
+}
 
-export function buildPanelScript(panel: SidebarPanel): string {
-  const hasImg = panel.tabs.some(t =>
-    t.rows.some(r =>
-      r.cells.some(c =>
-        c.content.type === 'image-static' || c.content.type === 'image-bound' ||
-        c.content.type === 'image-gen' || c.content.type === 'image-from-var'
-      )
-    )
-  );
-  if (!hasImg) return '';
+/** Runtime script: marks the active tab anchor in every tab bar by reading the
+ *  control variable referenced by `data-ctrl`. Fires on `:storyready` and after
+ *  every passage render. Emits empty string when there are no TabsBlocks. */
+export function buildTabsBlockScript(scenes: Scene[]): string {
+  if (!scenes.some(s => hasNestedTabs(s.blocks))) return '';
+  return [
+    '// Tabs — mark active anchor based on State.variables[data-ctrl]',
+    'function _tgUpdateTabs() {',
+    "  document.querySelectorAll('.tg-tabs-block[data-ctrl]').forEach(function(bar) {",
+    "    var ctrl = bar.getAttribute('data-ctrl');",
+    '    if (!ctrl) return;',
+    "    var val = ctrl.split('.').reduce(function(o, k) { return o && o[k]; }, State.variables);",
+    "    bar.querySelectorAll('[data-idx]').forEach(function(span) {",
+    "      var a = span.querySelector('a');",
+    "      if (a) a.classList.toggle('tg-tabs-active', Number(span.getAttribute('data-idx')) === val);",
+    '    });',
+    '  });',
+    '}',
+    "$(document).on(':storyready :passagedisplay', _tgUpdateTabs);",
+  ].join('\n');
+}
 
-  // Generates a self-contained global tgOpenLightbox function.
-  // The overlay is created lazily on first call and reused afterwards.
+/** Recursive: does any descendant block contain a TabsBlock? */
+function hasNestedTabs(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'tabs') return true;  // includes nested tabs — no need to recurse deeper here
+    if (b.type === 'condition') return b.branches.some(br => hasNestedTabs(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasNestedTabs(b.innerBlocks);
+    return false;
+  });
+}
+
+/** Recursive: does any descendant block of the given list contain a TableBlock? */
+function hasNestedTable(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'table') return true;
+    if (b.type === 'condition') return b.branches.some(br => hasNestedTable(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasNestedTable(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasNestedTable(tab.blocks));
+    return false;
+  });
+}
+
+// ─── Lightbox script (tgOpenLightbox global) ─────────────────────────────────
+
+export function buildLightboxScript(scenes: Scene[]): string {
+  if (!scenes.some(s => hasImageCell(s.blocks))) return '';
+
+  // Self-contained global `tgOpenLightbox` — the overlay is created lazily on
+  // first call and reused afterwards.
   return [
     'window.tgOpenLightbox = function(src) {',
     "  var o = document.getElementById('tg-lb-ov');",
     '  if (!o) {',
     "    o = document.createElement('div');",
     "    o.id = 'tg-lb-ov';",
-    "    o.innerHTML = '<span id=\"tg-lb-x\">\u2715</span><img id=\"tg-lb-img\">';",
+    "    o.innerHTML = '<span id=\"tg-lb-x\">✕</span><img id=\"tg-lb-img\">';",
     '    document.body.appendChild(o);',
     "    var cl = function() { o.classList.remove('on'); };",
     "    o.addEventListener('click', function(e) {",
@@ -1651,8 +1782,6 @@ export function buildPanelScript(panel: SidebarPanel): string {
   ].join('\n');
 }
 
-// ─── Input-field script (sidebar auto-refresh) ───────────────────────────────
-
 // ─── Live-block helpers ───────────────────────────────────────────────────────
 
 function hasLiveBlocks(blocks: Block[]): boolean {
@@ -1660,6 +1789,7 @@ function hasLiveBlocks(blocks: Block[]): boolean {
     if ('live' in b && (b as { live?: boolean }).live) return true;
     if (b.type === 'condition') return b.branches.some(br => hasLiveBlocks(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasLiveBlocks(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasLiveBlocks(tab.blocks));
     return false;
   });
 }
@@ -1865,6 +1995,8 @@ export function buildInputScript(scenes: Scene[]): string {
     return blocks.some(b => {
       if (b.type === 'input-field') return true;
       if (b.type === 'condition') return b.branches.some(br => hasInput(br.blocks));
+      if (b.type === 'dialogue' && b.innerBlocks) return hasInput(b.innerBlocks);
+      if (b.type === 'tabs') return b.tabs.some(tab => hasInput(tab.blocks));
       return false;
     });
   }
@@ -1987,6 +2119,10 @@ function collectAudioBlocks(scenes: Scene[]): { block: AudioLike; sceneName: str
         if (ag.src.startsWith('assets/')) result.push({ block: ag, sceneName });
       } else if (b.type === 'condition') {
         for (const br of b.branches) walk(br.blocks, sceneName);
+      } else if (b.type === 'dialogue' && b.innerBlocks) {
+        walk(b.innerBlocks, sceneName);
+      } else if (b.type === 'tabs') {
+        for (const tab of b.tabs) walk(tab.blocks, sceneName);
       }
     }
   }
@@ -2138,6 +2274,10 @@ function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): s
       }
     } else if (b.type === 'dialogue' && b.innerBlocks?.length) {
       targets.push(...collectSceneTargets(b.innerBlocks, idToName));
+    } else if (b.type === 'tabs') {
+      for (const tab of b.tabs) {
+        targets.push(...collectSceneTargets(tab.blocks, idToName));
+      }
     } else if (b.type === 'plugin') {
       // Dive into plugin body so the Twine graph sees nav targets nested in plugins.
       const def = getPluginDef(b.pluginId);
@@ -2154,9 +2294,13 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   setPluginRegistry(plugins);
   const variableNodes = project.variableNodes;
   const variables = flattenVariables(variableNodes);
-  const { title, ifid, scenes, characters, sidebarPanel } = project;
+  const { title, ifid, scenes, characters } = project;
   const idToName = new Map(scenes.map(s => [s.id, s.name]));
   const startScene = scenes.find(s => s.tags.includes(START_TAG))?.name ?? scenes[0]?.name ?? 'Start';
+  // Sidebar-as-scene: a scene tagged `sidebar` (singleton) becomes ::StoryCaption.
+  // The scene is NOT emitted as a regular ::SceneName passage (its name is
+  // editor-only — the SugarCube engine reads from `::StoryCaption` directly).
+  const sidebarScene = scenes.find(s => s.tags.includes('sidebar'));
   const parts: string[] = [];
 
   // StoryTitle
@@ -2181,14 +2325,13 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
       inits.push(`<<set $${n.name} = ${buildObjectLiteral(n, variableNodes)}>>`);
     }
   }
-  if (sidebarPanel.tabs.length > 0) inits.push('<<set $__tgTab to 0>>');
   // Audio: <<cacheaudio>> lines + <<waitforaudio>> to block start until loaded
   const audioCacheLines = buildAudioCacheLines(scenes);
   inits.push(...audioCacheLines);
   if (audioCacheLines.length > 0) inits.push('<<waitforaudio>>');
-  // Audio volume: init master volume variable
-  const hasAudioVolume = sidebarPanel.tabs.some(tab =>
-    tab.rows.some(r => r.cells.some(c => c.content.type === 'audio-volume')));
+  // Audio volume: init master volume variable when any TableBlock contains an
+  // audio-volume cell (recursive scan — table can live in any nested container).
+  const hasAudioVolume = scenes.some(s => hasAudioVolumeCell(s.blocks));
   if (hasAudioVolume) inits.push('<<set $__tgMasterVol to 1>>');
   // Initial inventory: push starting items for each character
   for (const char of characters) {
@@ -2218,9 +2361,15 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     parts.push(`::StoryInit\n${inits.join('\n')}\n`);
   }
 
+  // Sidebar systemConfig — width / position / hidden / collapse / bgColor.
+  // Reads `sidebarScene.systemConfig` (kind 'sidebar') and emits both CSS and a
+  // Config.ui.stowBarInitially line if needed.
+  const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
+
   // StoryStylesheet
   const charCSS      = buildAllDialogueCss(characters);
-  const panelCSS     = buildPanelCSS(sidebarPanel);
+  const cellCSS      = buildCellSharedCSS(scenes);  // progress bars, cell images, lightbox
+  const tabsCSS      = buildTabsBlockCSS(scenes);    // TabsBlock tab bar
   const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
   const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
   const animCSS      = buildAnimationCSS(scenes);
@@ -2228,7 +2377,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const generatedCSS = [charCSS, panelCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, cellCSS, tabsCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS].filter(Boolean).join('\n\n');
   const userCSS      = (project.customCss ?? '').trim();
   const allCSS       = userCSS
     ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
@@ -2237,7 +2386,9 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
 
   // StoryScript (lightbox + input debounce) — single passage
   const storyScript = [
-    buildPanelScript(sidebarPanel),
+    sidebarCfgScript,
+    buildLightboxScript(scenes),
+    buildTabsBlockScript(scenes),
     buildInputScript(scenes),
     buildLiveScript(scenes),
     buildWatcherScript(project.watchers ?? [], variables, variableNodes, idToName),
@@ -2263,12 +2414,18 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     : storyScript;
   if (fullScript) parts.push(`::StoryScript [script]\n${fullScript}\n`);
 
-  // StoryCaption
-  const captionSC = buildStoryCaptionSC(sidebarPanel, variables, variableNodes, idToName, characters, project.items);
+  // StoryCaption — emit only when a sidebar-tagged scene exists.
+  const captionSC = sidebarScene
+    ? sidebarScene.blocks
+        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
+        .filter(Boolean)
+        .join('\n')
+    : '';
   if (captionSC) parts.push(`::StoryCaption\n${captionSC}\n`);
 
   // Scene passages
   for (const scene of scenes) {
+    if (sidebarScene && scene.id === sidebarScene.id) continue; // sidebar scene → StoryCaption only
     const exportTags = scene.tags.filter(t => t !== START_TAG);
     const tags = exportTags.length > 0 ? ` [${exportTags.join(' ')}]` : '';
 

@@ -50,6 +50,14 @@ function collectEdges(
         result.push(...collectEdges(sourceId, branch.blocks));
       }
     }
+    if (block.type === 'dialogue' && block.innerBlocks) {
+      result.push(...collectEdges(sourceId, block.innerBlocks));
+    }
+    if (block.type === 'tabs') {
+      for (const tab of block.tabs) {
+        result.push(...collectEdges(sourceId, tab.blocks));
+      }
+    }
   }
   return result;
 }

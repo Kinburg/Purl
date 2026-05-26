@@ -33,6 +33,7 @@ import type {
   ProjectSettings,
   RadioBlock,
   Scene,
+  TabsBlock,
   TextBlock,
   VideoBlock,
 } from '../types';
@@ -188,6 +189,46 @@ export const POPUP_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
   { key: 'borderRadius', type: 'number',  labelKey: 'borderRadius', min: 0, max: 50,   suffix: 'px' },
   { key: 'maxWidth',     type: 'number',  labelKey: 'maxWidth',     min: 0, max: 2000, suffix: 'px' },
 ];
+
+/**
+ * Tabs schema — bar layout + per-tab styling (the rendered <a> inside each tab
+ * <span>), with separate `active*` fields applied to the currently selected tab.
+ * Default fields target inactive tabs; active fields are overlay rules.
+ */
+export const TABS_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  // Bar layout
+  { key: 'gap',          type: 'number',  labelKey: 'gap',          min: 0, max: 40,  suffix: 'px' },
+  // Per-tab (inactive) styling
+  { key: 'bgColor',      type: 'color',   labelKey: 'bgColor' },
+  { key: 'textColor',    type: 'color',   labelKey: 'textColor' },
+  { key: 'borderColor',  type: 'color',   labelKey: 'borderColor' },
+  { key: 'borderWidth',  type: 'number',  labelKey: 'borderWidth',  min: 0, max: 20,  suffix: 'px' },
+  { key: 'borderRadius', type: 'number',  labelKey: 'borderRadius', min: 0, max: 50,  suffix: 'px' },
+  { key: 'paddingV',     type: 'number',  labelKey: 'paddingV',     min: 0, max: 40,  suffix: 'px' },
+  { key: 'paddingH',     type: 'number',  labelKey: 'paddingH',     min: 0, max: 80,  suffix: 'px' },
+  { key: 'fontSize',     type: 'number',  labelKey: 'fontSize',     min: 6, max: 30,  suffix: '×0.1em' },
+  { key: 'bold',         type: 'boolean', labelKey: 'bold' },
+  // Active-tab overrides
+  { key: 'activeBgColor',     type: 'color',   labelKey: 'activeBgColor' },
+  { key: 'activeTextColor',   type: 'color',   labelKey: 'activeTextColor' },
+  { key: 'activeBorderColor', type: 'color',   labelKey: 'activeBorderColor' },
+  { key: 'activeBold',        type: 'boolean', labelKey: 'activeBold' },
+];
+
+export const TABS_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)',      descKey: 'selectorBlockSelf' },
+    { name: 'a',                  descKey: 'selectorTabsItem' },
+    { name: 'a:hover',            descKey: 'selectorButtonAHover' },
+    { name: 'a.tg-tabs-active',   descKey: 'selectorTabsActive' },
+  ],
+  exampleCode:
+`/* tab bar */
+{ border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+/* hover */
+a:hover { background: rgba(99,102,241,0.15); }`,
+  placeholderKey: 'placeholderTabs',
+};
 
 export const POPUP_RAW_CSS_HELP: StyleRawCssHelp = {
   selectors: [
@@ -710,6 +751,12 @@ export function collectButtonFamilyBlocks(blocks: Block[]): ButtonFamilyBlock[] 
     if (b.type === 'condition') {
       for (const br of b.branches) result.push(...collectButtonFamilyBlocks(br.blocks));
     }
+    if (b.type === 'dialogue' && b.innerBlocks) {
+      result.push(...collectButtonFamilyBlocks(b.innerBlocks));
+    }
+    if (b.type === 'tabs') {
+      for (const tab of b.tabs) result.push(...collectButtonFamilyBlocks(tab.blocks));
+    }
   }
   return result;
 }
@@ -852,11 +899,11 @@ export function buildBlockTypesCSS(): string {
 
 export type SimpleBlockType =
   | 'text' | 'image' | 'image-gen' | 'video' | 'include' | 'divider'
-  | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup';
+  | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup' | 'tabs';
 
 type SimpleBlockBlock =
   | TextBlock | ImageBlock | ImageGenBlock | VideoBlock | IncludeBlock | DividerBlock
-  | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock;
+  | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock | TabsBlock;
 
 interface SimpleBlockConfig {
   /** The structural base class already emitted by the export. */
@@ -1079,6 +1126,72 @@ function buildChoiceBlockRules(): SimpleBlockConfig['buildRules'] {
  * Only title / header / frame are styled here — body bg / text come from the
  * popup-scene's own blocks.
  */
+/**
+ * Tabs block rule builder. Generates three sets of selectors per scope:
+ *   - `.scope`                — bar layout (gap + flex)
+ *   - `.scope a`              — per-tab anchor styling (applies to all tabs)
+ *   - `.scope a.tg-tabs-active` — overrides for the currently-active tab
+ * The active class is added at runtime by `buildTabsBlockScript`.
+ */
+function buildTabsBlockRules(): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const wrap: string[] = [];
+    const a: string[] = [];
+    const aActive: string[] = [];
+
+    // ── Bar layout (always flex; gap configurable) ───────────────────────────
+    if (fields.gap !== undefined && fields.gap !== '') {
+      wrap.push('display: flex');
+      wrap.push(`gap: ${fields.gap}px`);
+    }
+
+    // ── Per-tab styling (inactive) ───────────────────────────────────────────
+    if (fields.bgColor   !== undefined && fields.bgColor   !== '') a.push(`background: ${fields.bgColor}`);
+    if (fields.textColor !== undefined && fields.textColor !== '') a.push(`color: ${fields.textColor}`);
+
+    const bw = fields.borderWidth;
+    const bc = fields.borderColor;
+    const hasBW = bw !== undefined && bw !== '';
+    const hasBC = bc !== undefined && bc !== '';
+    if (hasBW && hasBC) a.push(`border: ${bw}px solid ${bc}`);
+    else if (hasBW)     a.push(`border: ${bw}px solid currentColor`);
+    else if (hasBC)     a.push(`border: 1px solid ${bc}`);
+
+    if (fields.borderRadius !== undefined && fields.borderRadius !== '') a.push(`border-radius: ${fields.borderRadius}px`);
+
+    const pvSet = fields.paddingV !== undefined && fields.paddingV !== '';
+    const phSet = fields.paddingH !== undefined && fields.paddingH !== '';
+    if (pvSet && phSet) a.push(`padding: ${fields.paddingV}px ${fields.paddingH}px`);
+    else if (pvSet)     a.push(`padding-top: ${fields.paddingV}px; padding-bottom: ${fields.paddingV}px`);
+    else if (phSet)     a.push(`padding-left: ${fields.paddingH}px; padding-right: ${fields.paddingH}px`);
+
+    if (fields.fontSize !== undefined && fields.fontSize !== '') {
+      const n = Number(fields.fontSize);
+      if (Number.isFinite(n)) a.push(`font-size: ${(n / 10).toFixed(1)}em`);
+    }
+    if (fields.bold === true)  a.push(`font-weight: bold`);
+    if (fields.bold === false) a.push(`font-weight: normal`);
+
+    // ── Active-tab overrides ─────────────────────────────────────────────────
+    if (fields.activeBgColor     !== undefined && fields.activeBgColor     !== '') aActive.push(`background: ${fields.activeBgColor}`);
+    if (fields.activeTextColor   !== undefined && fields.activeTextColor   !== '') aActive.push(`color: ${fields.activeTextColor}`);
+    if (fields.activeBorderColor !== undefined && fields.activeBorderColor !== '') {
+      // If a border was set above, only override the color; else add a 1px border
+      if (hasBW)      aActive.push(`border-color: ${fields.activeBorderColor}`);
+      else            aActive.push(`border: 1px solid ${fields.activeBorderColor}`);
+    }
+    if (fields.activeBold === true)  aActive.push(`font-weight: bold`);
+    if (fields.activeBold === false) aActive.push(`font-weight: normal`);
+
+    const parts: string[] = [];
+    if (wrap.length)    parts.push(`.${scopeClass} { ${wrap.join('; ')}; }`);
+    if (a.length)       parts.push(`.${scopeClass} a { ${a.join('; ')}; }`);
+    if (aActive.length) parts.push(`.${scopeClass} a.tg-tabs-active { ${aActive.join('; ')}; }`);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(`.${scopeClass}`, rawCss));
+    return parts.join('\n');
+  };
+}
+
 function buildPopupBlockRules(): SimpleBlockConfig['buildRules'] {
   return (scopeClass, fields, rawCss) => {
     const frame: string[] = [];
@@ -1146,6 +1259,9 @@ export function buildPopupClassSyncScript(scenes: Scene[]): string {
       if (b.type === 'dialogue' && b.innerBlocks) {
         if (hasPopupAnywhere(b.innerBlocks)) return true;
       }
+      if (b.type === 'tabs') {
+        for (const tab of b.tabs) if (hasPopupAnywhere(tab.blocks)) return true;
+      }
     }
     return false;
   }
@@ -1182,6 +1298,8 @@ const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
   choice:        { baseClass: 'tg-choice',       buildRules: buildChoiceBlockRules(),                              schema: CHOICE_FIELD_SCHEMA },
   // Popup — cascade classes go onto SugarCube's #ui-dialog via Dialog.setup; rules are scoped to that element.
   popup:         { baseClass: 'tg-popup',        buildRules: buildPopupBlockRules(),                               schema: POPUP_FIELD_SCHEMA },
+  // Tabs — wrapping <div class="tg-tabs-block"> around per-tab spans containing <<link>>s.
+  tabs:          { baseClass: 'tg-tabs-block',   buildRules: buildTabsBlockRules(),                                schema: TABS_FIELD_SCHEMA },
 };
 
 /** Returns the structural base class for a simple block type. */
@@ -1213,7 +1331,7 @@ export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
     if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video'
         || b.type === 'include' || b.type === 'divider'
         || b.type === 'checkbox' || b.type === 'radio' || b.type === 'input-field'
-        || b.type === 'choice' || b.type === 'popup') {
+        || b.type === 'choice' || b.type === 'popup' || b.type === 'tabs') {
       result.push(b as SimpleBlockBlock);
     }
     if (b.type === 'condition') {
@@ -1221,6 +1339,9 @@ export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
     }
     if (b.type === 'dialogue') {
       result.push(...collectSimpleBlocks(b.innerBlocks ?? []));
+    }
+    if (b.type === 'tabs') {
+      for (const tab of b.tabs) result.push(...collectSimpleBlocks(tab.blocks));
     }
   }
   return result;
@@ -1325,6 +1446,9 @@ export function buildAllSpotStyleRules(scenes: Scene[]): string {
       }
       if (b.type === 'dialogue' && b.innerBlocks) {
         walk(b.innerBlocks);
+      }
+      if (b.type === 'tabs') {
+        for (const tab of b.tabs) walk(tab.blocks);
       }
     }
   }

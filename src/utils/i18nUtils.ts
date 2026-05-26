@@ -33,28 +33,8 @@ export function extractProjectStrings(project: Project): TranslationMap {
     extractBlocksStrings(scene.blocks, map);
   }
 
-  // 4. Sidebar Panel
-  if (project.sidebarPanel) {
-    for (const tab of project.sidebarPanel.tabs) {
-      map[`${tab.id}.label`] = tab.label;
-      for (const row of tab.rows) {
-        for (const cell of row.cells) {
-          const c = cell.content;
-          if (c.type === 'text') map[`${cell.id}.value`] = c.value;
-          if (c.type === 'variable') {
-            map[`${cell.id}.prefix`] = c.prefix;
-            map[`${cell.id}.suffix`] = c.suffix;
-          }
-          if (c.type === 'button') map[`${cell.id}.label`] = c.label;
-          if (c.type === 'list') {
-            map[`${cell.id}.emptyText`] = c.emptyText;
-            map[`${cell.id}.prefix`] = c.prefix;
-            map[`${cell.id}.suffix`] = c.suffix;
-          }
-        }
-      }
-    }
-  }
+  // Sidebar content moved into a regular scene (tagged `sidebar`) — its blocks
+  // are already covered by the recursive walker in step 3, no extra pass needed.
 
   return map;
 }
@@ -73,6 +53,12 @@ function extractBlocksStrings(blocks: Block[], map: TranslationMap) {
         break;
       case 'condition':
         for (const branch of block.branches) if (branch.blocks) extractBlocksStrings(branch.blocks, map);
+        break;
+      case 'tabs':
+        for (const tab of block.tabs) {
+          map[`${tab.id}.label`] = tab.label;
+          if (tab.blocks) extractBlocksStrings(tab.blocks, map);
+        }
         break;
       case 'button':
       case 'link':
@@ -120,28 +106,7 @@ export function applyTranslations(project: Project, map: TranslationMap): Projec
     applyBlocksTranslations(scene.blocks, map);
   }
 
-  // 4. Panel
-  if (p.sidebarPanel) {
-    for (const tab of p.sidebarPanel.tabs) {
-      tab.label = t(tab.id, 'label', tab.label);
-      for (const row of tab.rows) {
-        for (const cell of row.cells) {
-          const c = cell.content;
-          if (c.type === 'text') c.value = t(cell.id, 'value', c.value);
-          if (c.type === 'variable') {
-            c.prefix = t(cell.id, 'prefix', c.prefix);
-            c.suffix = t(cell.id, 'suffix', c.suffix);
-          }
-          if (c.type === 'button') c.label = t(cell.id, 'label', c.label);
-          if (c.type === 'list') {
-            c.emptyText = t(cell.id, 'emptyText', c.emptyText);
-            c.prefix = t(cell.id, 'prefix', c.prefix);
-            c.suffix = t(cell.id, 'suffix', c.suffix);
-          }
-        }
-      }
-    }
-  }
+  // Sidebar content now lives in a normal scene; no separate panel pass needed.
 
   return p;
 }
@@ -164,6 +129,12 @@ function applyBlocksTranslations(blocks: Block[], map: TranslationMap) {
         break;
       case 'condition':
         for (const branch of block.branches) if (branch.blocks) applyBlocksTranslations(branch.blocks, map);
+        break;
+      case 'tabs':
+        for (const tab of block.tabs) {
+          tab.label = t(tab.id, 'label', tab.label);
+          if (tab.blocks) applyBlocksTranslations(tab.blocks, map);
+        }
         break;
       case 'button':
       case 'link':
