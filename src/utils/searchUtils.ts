@@ -52,6 +52,12 @@ export function blockSearchText(block: Block, vars: Variable[]): string {
           ...(branch.blocks ?? []).map(nb => blockSearchText(nb, vars)),
         ].filter(Boolean).join(' ')).join(' ');
 
+      case 'tabs':
+        return (block.tabs ?? []).map(tab => [
+          tab.label,
+          ...(tab.blocks ?? []).map(nb => blockSearchText(nb, vars)),
+        ].filter(Boolean).join(' ')).join(' ');
+
       case 'image':
         return [
           block.alt ?? '',

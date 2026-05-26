@@ -250,4 +250,12 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="24" y="16" width="6" height="4" rx="1" fill="currentColor" fillOpacity=".4" stroke="currentColor" strokeWidth="1.3"/>
     <circle cx="16" cy="19" r="2.5" fill="currentColor" opacity=".65"/>
   </>, p),
+
+  tabs: (p) => svg(<>
+    {/* Two tab pills sitting on top of a body rectangle */}
+    <path d="M3 10 H12 L13 7 H19 L20 10 H29 V27 H3 Z" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".12" strokeLinejoin="round"/>
+    <rect x="6" y="15" width="20" height="2" rx="1" fill="currentColor" opacity=".7"/>
+    <rect x="6" y="19" width="14" height="2" rx="1" fill="currentColor" opacity=".5"/>
+    <rect x="6" y="23" width="17" height="2" rx="1" fill="currentColor" opacity=".4"/>
+  </>, p),
 };

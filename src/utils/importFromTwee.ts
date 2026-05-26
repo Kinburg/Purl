@@ -1,4 +1,4 @@
-import type { Project, Scene, SidebarPanel, VariableTreeNode } from '../types';
+import type { Project, Scene, VariableTreeNode } from '../types';
 import { parseStoryInit } from './twee/storyInitParser';
 import { createBuildContext, passageBodyToBlocks } from './twee/blockBuilder';
 
@@ -185,35 +185,17 @@ export function importFromTweeSource(text: string): ImportResult {
   const cssChunks: string[] = [];
   const jsChunks:  string[] = [];
 
-  // ── StoryCaption → dedicated Scene + SidebarPanel with one CellInclude ───
-  // The original caption body becomes a regular scene (typed blocks via the
-  // block builder), and the sidebar references it via `<<include "...">>`.
-  // This way the user edits panel content in the normal scene editor.
-  let sidebarPanel: SidebarPanel = { tabs: [], liveUpdate: false };
+  // ── StoryCaption → dedicated Scene tagged `sidebar` ──────────────────────
+  // The original `::StoryCaption` passage body becomes a scene with the
+  // `sidebar` system tag. On export the scene's blocks are routed back to
+  // ::StoryCaption — the round trip is preserved.
+  //
+  // For safety with foreign SugarCube markup we wrap the body in a single
+  // RawBlock by default (the block-recognizer can later split it into typed
+  // blocks via passageBodyToBlocks if the markup parses cleanly).
   const captionPassage = passages.find(p => p.name === 'StoryCaption');
-  const captionSceneName = 'SidebarPanel';   // distinct from system `StoryCaption`
-  let captionSceneId: string | null = null;
-  if (captionPassage && captionPassage.body.trim()) {
-    sidebarPanel = {
-      tabs: [{
-        id: uid(),
-        label: 'Sidebar',
-        rows: [{
-          id: uid(),
-          height: 80,
-          cells: [{
-            id: uid(),
-            width: 100,
-            content: { type: 'include', passageName: captionSceneName },
-          }],
-        }],
-      }],
-      liveUpdate: false,
-    };
-    // The scene itself is built inside the main passage loop below (we mark
-    // its id here so we can rename / locate it).
-    captionSceneId = uid();
-  }
+  const captionSceneName = 'StoryCaption';
+  const captionSceneId: string | null = captionPassage && captionPassage.body.trim() ? uid() : null;
 
   // ── Scenes (Phase 2: token-driven block recognition) ──────────────────────
   const SYSTEM_NAMES = new Set([
@@ -241,15 +223,17 @@ export function importFromTweeSource(text: string): ImportResult {
       continue;
     }
 
-    // StoryCaption → process body as a normal scene but rename it so the
-    // exporter doesn't conflict with the auto-generated `::StoryCaption`.
+    // StoryCaption → keep the same name, add the `sidebar` system tag so the
+    // exporter routes it back to ::StoryCaption.
     const isCaption = p.name === 'StoryCaption';
     const sceneName = isCaption ? captionSceneName : p.name;
     const sceneId = isCaption && captionSceneId ? captionSceneId : uid();
     const blocks = passageBodyToBlocks(p.body, ctx);
 
     // Preserve foreign tags except the system names we already consumed.
+    // Add `sidebar` for the caption scene so it routes back to ::StoryCaption on export.
     const tags = p.tags.filter(t => !SYSTEM_NAMES.has(t));
+    if (isCaption) tags.push('sidebar');
 
     const scene: Scene = { id: sceneId, name: sceneName, tags, blocks };
 
@@ -310,7 +294,7 @@ export function importFromTweeSource(text: string): ImportResult {
     id: uid(),
     title,
     ifid: ifid ?? uid().toUpperCase(),
-    settings: { historyControls: true, saveLoadMenu: true },
+    settings: {},
     scenes,
     sceneGroups: [],
     characters: [],
@@ -318,7 +302,6 @@ export function importFromTweeSource(text: string): ImportResult {
     containers: [],
     variableNodes,
     assetNodes: [],
-    sidebarPanel,
     watchers: [],
     customCss,
     customScript,

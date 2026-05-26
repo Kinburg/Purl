@@ -20,8 +20,28 @@ import { useEditorStore } from '../../store/editorStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { sceneMatchesQuery } from '../../utils/searchUtils';
 import { useT } from '../../i18n';
-import { SYSTEM_TAGS, SYSTEM_TAG_COLORS, START_TAG, START_TAG_COLOR } from '../../types';
+import { SYSTEM_TAGS, SYSTEM_TAG_COLORS, SYSTEM_TAG_KIND, START_TAG, START_TAG_COLOR } from '../../types';
 import type { Scene, SceneGroup, SystemTag } from '../../types';
+
+/** A "system scene" is one with a special editor-wide role:
+ *   - `start` (story entry point — Twine's `StoryData.start` field)
+ *   - any singleton system tag (`sidebar` → ::StoryCaption; future: title, menu, …)
+ *  These are pulled into a pinned virtual "System" group at the top of the
+ *  SceneList instead of mixing with the user's regular story scenes. */
+function isSystemScene(scene: Scene): boolean {
+  if (scene.tags.includes(START_TAG)) return true;
+  return scene.tags.some(t =>
+    (SYSTEM_TAGS as readonly string[]).includes(t)
+    && SYSTEM_TAG_KIND[t as SystemTag] === 'singleton'
+  );
+}
+
+/** Display order within the System group: start first, then sidebar, future tags later. */
+function systemSceneOrder(s: Scene): number {
+  if (s.tags.includes(START_TAG)) return 0;
+  if (s.tags.includes('sidebar')) return 1;
+  return 99;
+}
 import { useConfirm } from '../shared/ConfirmModal';
 import { SceneModal } from './SceneModal';
 import { SceneGroupModal } from './SceneGroupModal';
@@ -368,9 +388,13 @@ export function SceneList() {
     return name;
   };
 
-  // Scenes grouped by groupId
-  const ungroupedScenes = project.scenes.filter(s => !s.groupId);
-  const scenesInGroup = (groupId: string) => project.scenes.filter(s => s.groupId === groupId);
+  // Scenes grouped by groupId. System scenes (start, sidebar, etc.) are pulled
+  // into a pinned virtual "System" group at the top — they don't show up here.
+  const systemScenes    = project.scenes.filter(isSystemScene)
+    .sort((a, b) => systemSceneOrder(a) - systemSceneOrder(b));
+  const ungroupedScenes = project.scenes.filter(s => !s.groupId && !isSystemScene(s));
+  const scenesInGroup   = (groupId: string) => project.scenes.filter(s => s.groupId === groupId && !isSystemScene(s));
+  const hasSidebarScene = systemScenes.some(s => s.tags.includes('sidebar'));
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -472,6 +496,33 @@ export function SceneList() {
         /* ── Normal grouped view with DnD ── */
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
 
+          {/* Pinned System group — sidebar / future title / menu scenes.
+              Always rendered (even when empty) so users can discover and create them.
+              Not part of DnD: system scenes can't be moved to/from user groups. */}
+          <div className="mb-1">
+            <div className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] uppercase tracking-wider text-slate-500 select-none">
+              <EmojiIcon name="cog" size={14} />
+              <span className="flex-1">{t.systemGroup.title}</span>
+              <span className="text-slate-600">{systemScenes.length}</span>
+            </div>
+            <div className="flex flex-col gap-0.5 pl-3">
+              {systemScenes.map(scene => (
+                <PlainSceneItem key={scene.id} scene={scene} {...itemCallbacks(scene)} />
+              ))}
+              {!hasSidebarScene && (
+                <button
+                  className="text-[11px] text-slate-500 hover:text-teal-400 text-left px-2 py-1 rounded border border-dashed border-slate-700 hover:border-teal-600 transition-colors cursor-pointer"
+                  onClick={() => {
+                    addSceneWithData({ name: 'StoryCaption', tags: ['sidebar'], notes: undefined });
+                  }}
+                  title={t.systemGroup.createSidebarTooltip}
+                >
+                  {t.systemGroup.createSidebar}
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Ungrouped scenes */}
           {ungroupedScenes.length > 0 && (
             <SortableContext
@@ -546,7 +597,7 @@ export function SceneList() {
           mode={sceneModal.mode}
           initial={sceneModal.mode === 'create'
             ? { name: defaultSceneName(), tags: [], notes: undefined }
-            : { name: sceneModal.scene.name, tags: sceneModal.scene.tags, notes: sceneModal.scene.notes, background: sceneModal.scene.background }
+            : { name: sceneModal.scene.name, tags: sceneModal.scene.tags, notes: sceneModal.scene.notes, background: sceneModal.scene.background, systemConfig: sceneModal.scene.systemConfig }
           }
           takenNames={sceneModal.mode === 'create'
             ? takenSceneNames()

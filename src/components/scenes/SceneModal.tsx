@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useT } from '../../i18n';
 import {
-  SYSTEM_TAGS, SYSTEM_TAG_COLORS, START_TAG, START_TAG_COLOR,
+  SYSTEM_TAGS, SYSTEM_TAG_COLORS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME,
+  START_TAG, START_TAG_COLOR,
 } from '../../types';
-import type { SystemTag, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
+import type { SystemTag, SystemSceneConfig, SidebarSceneConfig, BoundBool, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
 import {
   ModalShell, ColorSwatchInput, INPUT_CLS,
 } from '../shared/ModalShell';
@@ -21,6 +22,9 @@ export interface SceneData {
   tags: string[];
   notes?: string;
   background?: SceneBackground;
+  /** Config for the SugarCube special passage this scene maps to — only relevant
+   *  when scene has a singleton system tag. */
+  systemConfig?: SystemSceneConfig;
 }
 
 interface Props {
@@ -33,7 +37,7 @@ interface Props {
   sceneId?: string;
 }
 
-type TabId = 'settings' | 'background';
+type TabId = 'settings' | 'background' | 'system';
 type BgType = SceneBgImageType;
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -87,8 +91,23 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
   const [bg, setBg]           = useState<SceneBackground | null>(initial.background ?? null);
   const [genModalOpen, setGenModalOpen] = useState(false);
 
+  // ── System tab state ───────────────────────────────────────────────────────
+  const [sysCfg, setSysCfg] = useState<SystemSceneConfig | null>(initial.systemConfig ?? null);
+
   // ── Tab state ──────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<TabId>('settings');
+
+  // Fallback to settings if user is on the System tab and removes the singleton tag.
+  useEffect(() => {
+    if (tab === 'system') {
+      const stillLocked = tags.some(t =>
+        (SYSTEM_TAGS as readonly string[]).includes(t)
+        && SYSTEM_TAG_KIND[t as SystemTag] === 'singleton'
+        && !!SINGLETON_TAG_PASSAGE_NAME[t as SystemTag]
+      );
+      if (!stillLocked) setTab('settings');
+    }
+  }, [tab, tags]);
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const trimmedName = name.trim();
@@ -102,7 +121,13 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
 
   const handleSave = () => {
     if (nameError) return;
-    onSave({ name: trimmedName, tags, notes: notes.trim() || undefined, background: bg ?? undefined });
+    onSave({
+      name: trimmedName,
+      tags,
+      notes: notes.trim() || undefined,
+      background: bg ?? undefined,
+      systemConfig: lockedSystemTag ? (sysCfg ?? undefined) : undefined,
+    });
     onClose();
   };
 
@@ -110,8 +135,24 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
 
   const toggleTag = (tag: string) => {
     if (tag === START_TAG) return;
+    const isAdding = !tags.includes(tag);
     setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+    // Auto-rename to canonical SugarCube passage name when a singleton system tag is added.
+    // (e.g. tagging 'sidebar' forces name = 'StoryCaption'). The data layer also enforces
+    // this in projectStore — UI-level set is for immediate visual feedback in the modal.
+    if (isAdding && (SYSTEM_TAGS as readonly string[]).includes(tag) && SYSTEM_TAG_KIND[tag as SystemTag] === 'singleton') {
+      const canon = SINGLETON_TAG_PASSAGE_NAME[tag as SystemTag];
+      if (canon) setName(canon);
+    }
   };
+
+  // Singleton system tag currently active on this scene (in local state) — drives name lock UI
+  const lockedSystemTag = tags.find(t =>
+    (SYSTEM_TAGS as readonly string[]).includes(t)
+    && SYSTEM_TAG_KIND[t as SystemTag] === 'singleton'
+    && !!SINGLETON_TAG_PASSAGE_NAME[t as SystemTag]
+  ) as SystemTag | undefined;
+  const lockedCanonicalName = lockedSystemTag ? SINGLETON_TAG_PASSAGE_NAME[lockedSystemTag] : undefined;
 
   const addCustomTag = () => {
     const tag = newTagInput.trim().toLowerCase().replace(/\s+/g, '-');
@@ -204,6 +245,7 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'settings',   label: t.scene.tabSettings,   icon: <IconSettings /> },
     { id: 'background', label: t.scene.tabBackground, icon: <IconImage /> },
+    ...(lockedSystemTag ? [{ id: 'system' as TabId, label: t.scene.tabSystem, icon: <IconSettings /> }] : []),
   ];
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -260,12 +302,19 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
               {/* Name */}
               <Section title={t.scene.fieldName}>
                 <input
-                  autoFocus
-                  className={`${INPUT_CLS} ${nameError ? '!border-red-500' : ''}`}
+                  autoFocus={!lockedSystemTag}
+                  readOnly={!!lockedSystemTag}
+                  className={`${INPUT_CLS} ${nameError ? '!border-red-500' : ''} ${lockedSystemTag ? 'opacity-70 cursor-not-allowed' : ''}`}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                  title={lockedSystemTag && lockedCanonicalName ? t.scene.nameLockedTitle(lockedCanonicalName) : undefined}
                 />
+                {lockedSystemTag && lockedCanonicalName && (
+                  <p className="text-xs text-slate-500 mt-1.5">
+                    {t.scene.nameLockedPrefix}<code className="text-slate-400 bg-slate-800 px-1 rounded">{lockedCanonicalName}</code>{t.scene.nameLockedSuffix(lockedSystemTag)}
+                  </p>
+                )}
               </Section>
 
               {/* Tags */}
@@ -481,6 +530,17 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
                 </Section>
               )}
             </>
+          )}
+
+          {/* ══ System tab — only visible when scene has a singleton system tag ══ */}
+          {tab === 'system' && lockedSystemTag === 'sidebar' && (
+            <SidebarConfigPanel
+              cfg={(sysCfg && sysCfg.kind === 'sidebar' ? sysCfg : null)}
+              onChange={patch => setSysCfg(prev => {
+                const base: SidebarSceneConfig = (prev && prev.kind === 'sidebar') ? prev : { kind: 'sidebar' };
+                return { ...base, ...patch };
+              })}
+            />
           )}
         </div>
 
@@ -703,5 +763,392 @@ function BgSlider({
       />
       <span className="text-[10px] text-slate-300 w-8 text-right shrink-0">{value}{unit}</span>
     </div>
+  );
+}
+
+// ─── Sidebar system config panel ──────────────────────────────────────────────
+
+function SidebarConfigPanel({
+  cfg, onChange,
+}: {
+  cfg: SidebarSceneConfig | null;
+  onChange: (patch: Partial<SidebarSceneConfig>) => void;
+}) {
+  const t = useT();
+  const sc = t.sidebarConfig;
+  const project = useProjectStore(s => s.project);
+
+  return (
+    <Section title={sc.sectionTitle}>
+      <p className="text-[10px] text-slate-500 -mt-1">
+        {sc.sectionNote}
+      </p>
+
+      {/* ── Visibility & collapse ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <BoundBoolRow
+          label={sc.hideEntirely}
+          value={cfg?.hidden}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ hidden: v })}
+          defaultLabel={sc.visibleDefault}
+          oppositeLabel={sc.hiddenStatic}
+          oppositeValue={true}
+        />
+        <BoundBoolRow
+          label={sc.allowCollapse}
+          value={cfg?.allowCollapse}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ allowCollapse: v })}
+          defaultLabel={sc.allowDefault}
+          oppositeLabel={sc.hideToggleButton}
+          oppositeValue={false}
+        />
+        <BoundBoolRow
+          label={sc.startCollapsed}
+          value={cfg?.initiallyCollapsed}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ initiallyCollapsed: v })}
+          defaultLabel={sc.openDefault}
+          oppositeLabel={sc.startCollapsed}
+          oppositeValue={true}
+          help={sc.startCollapsedHelp}
+        />
+      </div>
+
+      <div className="border-t border-slate-700/40" />
+
+      {/* ── Layout ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <BoundNumberRow
+          label={sc.width}
+          value={cfg?.width}
+          unit={cfg?.widthUnit ?? 'em'}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ width: v })}
+          onUnitChange={u => onChange({ widthUnit: u })}
+        />
+        <BoundPositionRow
+          label={sc.position}
+          value={cfg?.position}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ position: v })}
+        />
+      </div>
+
+      <div className="border-t border-slate-700/40" />
+
+      {/* ── Appearance ────────────────────────────────────────────────────── */}
+      <BoundColorRow
+        label={sc.bgColor}
+        value={cfg?.bgColor}
+        variableNodes={project.variableNodes}
+        onChange={v => onChange({ bgColor: v })}
+      />
+
+      <div className="border-t border-slate-700/40" />
+
+      {/* ── Built-in UIBar menus ──────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <BoundBoolRow
+          label={sc.historyNav}
+          value={cfg?.historyControls}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ historyControls: v })}
+          defaultLabel={sc.onDefault}
+          oppositeLabel={sc.alwaysOff}
+          oppositeValue={false}
+        />
+        <BoundBoolRow
+          label={sc.saveLoadMenu}
+          value={cfg?.saveLoadMenu}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ saveLoadMenu: v })}
+          defaultLabel={sc.onDefault}
+          oppositeLabel={sc.alwaysOff}
+          oppositeValue={false}
+        />
+      </div>
+    </Section>
+  );
+}
+
+// ─── Shared row primitives ────────────────────────────────────────────────────
+// Every bound-value row in the System tab follows the same three-line rhythm:
+//   1. Label + mode pills + (optional) inline picker
+//   2. Value control on its own indented row (visible only when relevant)
+//   3. Help text on its own indented row (visible only when set)
+// Indent matches the label column width so sub-rows align under the pills.
+
+const ROW_INDENT = 'pl-[136px]';  // label w-32 (8rem) + gap-2 (0.5rem) = 8.5rem ≈ 136px
+
+function ModePills<M extends string>({
+  mode, options, onSelect,
+}: {
+  mode: M;
+  options: readonly (readonly [M, string])[];
+  onSelect: (m: M) => void;
+}) {
+  return (
+    <div className="flex gap-0.5">
+      {options.map(([m, lbl]) => (
+        <button
+          key={m}
+          onClick={() => onSelect(m)}
+          className={`text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors ${
+            mode === m
+              ? 'bg-indigo-600 border-indigo-500 text-white'
+              : 'bg-slate-700 border-slate-600 text-slate-300 hover:border-slate-500'
+          }`}
+        >{lbl}</button>
+      ))}
+    </div>
+  );
+}
+
+function RowShell({
+  label, pills, valueControl, help,
+}: {
+  label: string;
+  pills: React.ReactNode;
+  valueControl?: React.ReactNode;
+  help?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-400 w-32 shrink-0">{label}</span>
+        {pills}
+      </div>
+      {valueControl && <div className={`${ROW_INDENT}`}>{valueControl}</div>}
+      {help && <div className={`${ROW_INDENT} text-[10px] text-slate-500`}>{help}</div>}
+    </div>
+  );
+}
+
+const PICKER_CLS = 'flex-1 min-w-0 bg-slate-800 text-xs text-white rounded px-1.5 py-0.5 outline-none border border-slate-600 cursor-pointer text-left truncate';
+
+// ─── Bound-bool tri-state row (Default / Static / Bound) ──────────────────────
+
+function BoundBoolRow({
+  label, value, variableNodes, onChange,
+  defaultLabel, oppositeLabel, oppositeValue, help,
+}: {
+  label: string;
+  value: BoundBool | undefined;
+  variableNodes: import('../../types').VariableTreeNode[];
+  onChange: (v: BoundBool | undefined) => void;
+  defaultLabel: string;
+  oppositeLabel: string;
+  oppositeValue: boolean;
+  help?: string;
+}) {
+  const sc = useT().sidebarConfig;
+  const mode: 'default' | 'static' | 'bound' =
+    value === undefined ? 'default'
+    : typeof value === 'object' ? 'bound'
+    : value === oppositeValue ? 'static'
+    : 'default';
+
+  const options = [
+    ['default', defaultLabel],
+    ['static',  oppositeLabel],
+    ['bound',   sc.fromVariable],
+  ] as const;
+
+  return (
+    <RowShell
+      label={label}
+      pills={<ModePills mode={mode} options={options} onSelect={m => {
+        if (m === 'default') onChange(undefined);
+        else if (m === 'static') onChange(oppositeValue);
+        else onChange({ variableId: '' });
+      }} />}
+      valueControl={mode === 'bound' ? (
+        <VariablePicker
+          value={typeof value === 'object' ? value.variableId : ''}
+          onChange={id => onChange({ variableId: id })}
+          nodes={variableNodes}
+          filterType="boolean"
+          placeholder={sc.selectBoolVar}
+          className={PICKER_CLS}
+        />
+      ) : undefined}
+      help={help}
+    />
+  );
+}
+
+// ─── Bound-number row (Default / Static / From variable) ──────────────────────
+
+function BoundNumberRow({
+  label, value, unit, variableNodes, onChange, onUnitChange,
+}: {
+  label: string;
+  value: import('../../types').BoundNumber | undefined;
+  unit: 'em' | 'px';
+  variableNodes: import('../../types').VariableTreeNode[];
+  onChange: (v: import('../../types').BoundNumber | undefined) => void;
+  onUnitChange: (u: 'em' | 'px') => void;
+}) {
+  const mode: 'default' | 'static' | 'bound' =
+    value === undefined ? 'default'
+    : typeof value === 'object' ? 'bound'
+    : 'static';
+  const staticVal = typeof value === 'number' ? value : 17.5;
+
+  const sc = useT().sidebarConfig;
+  const options = [
+    ['default', sc.widthDefault],
+    ['static',  sc.custom],
+    ['bound',   sc.fromVariable],
+  ] as const;
+
+  const unitSelect = (
+    <select
+      // `!w-16` overrides the `w-full` baked into INPUT_CLS
+      className={`${INPUT_CLS} !w-16 shrink-0`}
+      value={unit}
+      onChange={e => onUnitChange(e.target.value as 'em' | 'px')}
+    >
+      <option value="em">em</option>
+      <option value="px">px</option>
+    </select>
+  );
+
+  return (
+    <RowShell
+      label={label}
+      pills={<ModePills mode={mode} options={options} onSelect={m => {
+        if (m === 'default') onChange(undefined);
+        else if (m === 'static') onChange(staticVal);
+        else onChange({ variableId: '' });
+      }} />}
+      valueControl={
+        mode === 'static' ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              // `!w-24` overrides the `w-full` baked into INPUT_CLS
+              className={`${INPUT_CLS} !w-24 shrink-0`}
+              value={typeof value === 'number' ? value : ''}
+              onChange={e => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+            {unitSelect}
+          </div>
+        ) : mode === 'bound' ? (
+          <div className="flex items-center gap-1.5">
+            <VariablePicker
+              value={typeof value === 'object' ? value.variableId : ''}
+              onChange={id => onChange({ variableId: id })}
+              nodes={variableNodes}
+              filterType="number"
+              placeholder={sc.selectNumberVar}
+              className={PICKER_CLS}
+            />
+            {unitSelect}
+          </div>
+        ) : undefined
+      }
+    />
+  );
+}
+
+// ─── Bound-color row (Default / Static / From variable) ───────────────────────
+
+function BoundColorRow({
+  label, value, variableNodes, onChange,
+}: {
+  label: string;
+  value: import('../../types').BoundString | undefined;
+  variableNodes: import('../../types').VariableTreeNode[];
+  onChange: (v: import('../../types').BoundString | undefined) => void;
+}) {
+  const sc = useT().sidebarConfig;
+  const mode: 'default' | 'static' | 'bound' =
+    value === undefined || value === '' ? 'default'
+    : typeof value === 'object' ? 'bound'
+    : 'static';
+
+  const options = [
+    ['default', sc.themeDefault],
+    ['static',  sc.custom],
+    ['bound',   sc.fromVariable],
+  ] as const;
+
+  return (
+    <RowShell
+      label={label}
+      pills={<ModePills mode={mode} options={options} onSelect={m => {
+        if (m === 'default') onChange(undefined);
+        else if (m === 'static') onChange('#1e1e2e');
+        else onChange({ variableId: '' });
+      }} />}
+      valueControl={
+        mode === 'static' ? (
+          <ColorSwatchInput
+            value={typeof value === 'string' ? value : ''}
+            onChange={v => onChange(v || undefined)}
+          />
+        ) : mode === 'bound' ? (
+          <VariablePicker
+            value={typeof value === 'object' ? value.variableId : ''}
+            onChange={id => onChange({ variableId: id })}
+            nodes={variableNodes}
+            filterType="string"
+            placeholder={sc.selectColorVar}
+            className={PICKER_CLS}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+// ─── Bound-position row (Left / Right / From variable) ────────────────────────
+
+function BoundPositionRow({
+  label, value, variableNodes, onChange,
+}: {
+  label: string;
+  value: import('../../types').BoundString | undefined;
+  variableNodes: import('../../types').VariableTreeNode[];
+  onChange: (v: import('../../types').BoundString | undefined) => void;
+}) {
+  const sc = useT().sidebarConfig;
+  const mode: 'default' | 'static' | 'bound' =
+    value === undefined ? 'default'
+    : typeof value === 'object' ? 'bound'
+    : value === 'right' ? 'static'
+    : 'default';
+
+  const options = [
+    ['default', sc.leftDefault],
+    ['static',  sc.right],
+    ['bound',   sc.fromVariable],
+  ] as const;
+
+  return (
+    <RowShell
+      label={label}
+      pills={<ModePills mode={mode} options={options} onSelect={m => {
+        if (m === 'default') onChange(undefined);
+        else if (m === 'static') onChange('right');
+        else onChange({ variableId: '' });
+      }} />}
+      valueControl={mode === 'bound' ? (
+        <VariablePicker
+          value={typeof value === 'object' ? value.variableId : ''}
+          onChange={id => onChange({ variableId: id })}
+          nodes={variableNodes}
+          filterType="string"
+          placeholder={sc.selectPositionVar}
+          className={PICKER_CLS}
+        />
+      ) : undefined}
+      help={mode === 'bound' ? sc.positionVarHint : undefined}
+    />
   );
 }

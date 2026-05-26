@@ -1,7 +1,7 @@
 import type { Project, ProjectSettings, PluginBlockDef } from '../types';
 import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
-import { blockToSC, buildStoryCaptionSC, buildPanelCSS, buildTooltipCSS, buildPanelScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg } from './exportToTwee';
+import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, hasAudioVolumeCell } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
 import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
@@ -46,17 +46,11 @@ function buildGlobalCSS(settings?: ProjectSettings): string {
   return rules.join('\n');
 }
 
-function buildSettingsScript(settings?: ProjectSettings): string {
-  if (!settings) return '';
-  const lines: string[] = [];
-
-  if (!settings.historyControls)
-    lines.push('Config.history.controls = false;');
-
-  if (!settings.saveLoadMenu)
-    lines.push('if (window.UIBar) UIBar.stow(); Config.saves.isAllowed = () => false;');
-
-  return lines.join('\n');
+function buildSettingsScript(_settings?: ProjectSettings): string {
+  // historyControls + saveLoadMenu moved to SidebarSceneConfig.systemConfig — see
+  // `buildSidebarSystemConfigOutput` in exportToTwee. This function is kept as
+  // a stub for future project-level settings that don't fit per-scene config.
+  return '';
 }
 
 // ─── Block type CSS hooks ─────────────────────────────────────────────────────
@@ -83,8 +77,10 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   setPluginRegistry(plugins);
   const pluginById = new Map(plugins.map((p) => [p.id, p]));
   const variables = flattenVariables(project.variableNodes);
-  const { scenes, characters, sidebarPanel } = project;
+  const { scenes, characters } = project;
   const idToName = new Map(scenes.map(s => [s.id, s.name]));
+  // Sidebar-as-scene: see exportToTwee for the same logic
+  const sidebarScene = scenes.find(s => s.tags.includes('sidebar'));
   let pid = 1;
   const passages: PassageEntry[] = [];
   const colW = 180, rowH = 120;
@@ -106,14 +102,12 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
       inits.push(`<<set $${n.name} = ${buildObjectLiteral(n, variableNodes)}>>`);
     }
   }
-  if (sidebarPanel.tabs.length > 0) inits.push('<<set $__tgTab to 0>>');
   // Audio: <<cacheaudio>> lines + <<waitforaudio>> to block start until loaded
   const audioCacheLines = buildAudioCacheLines(scenes);
   inits.push(...audioCacheLines);
   if (audioCacheLines.length > 0) inits.push('<<waitforaudio>>');
-  // Audio volume: init master volume variable
-  const hasAudioVolume = sidebarPanel.tabs.some(tab =>
-    tab.rows.some(r => r.cells.some(c => c.content.type === 'audio-volume')));
+  // Audio volume: init master volume variable when any TableBlock has audio-volume cell
+  const hasAudioVolume = scenes.some(s => hasAudioVolumeCell(s.blocks));
   if (hasAudioVolume) inits.push('<<set $__tgMasterVol to 1>>');
   // Initial inventory: push starting items for each character
   for (const char of project.characters) {
@@ -142,8 +136,13 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     });
   }
 
-  // StoryCaption (sidebar panel)
-  const captionSC = buildStoryCaptionSC(sidebarPanel, variables, variableNodes, idToName, project.characters, project.items);
+  // StoryCaption — emit only when a sidebar-tagged scene exists
+  const captionSC = sidebarScene
+    ? sidebarScene.blocks
+        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
+        .filter(Boolean)
+        .join('\n')
+    : '';
   if (captionSC) {
     passages.push({
       pid: pid++, name: 'StoryCaption', tags: '',
@@ -155,6 +154,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   let startPid = pid; // fallback to first scene
 
   scenes.forEach((scene, idx) => {
+    if (sidebarScene && scene.id === sidebarScene.id) return; // sidebar scene → StoryCaption only
     const bgMarkup = scene.background
       ? exportSceneBg(scene.background, variables, variableNodes)
       : '';
@@ -199,8 +199,12 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     }
   }
 
+  const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
+  const sidebarCfgCSSSection = withSection('Sidebar systemConfig', sidebarCfgCSS);
+
   const charCSS      = withSection('Dialogue',      buildAllDialogueCss(characters));
-  const panelCSS     = withSection('Sidebar Panel', buildPanelCSS(sidebarPanel));
+  const cellCSS      = withSection('Cell utilities (lightbox / progress)', buildCellSharedCSS(scenes));
+  const tabsCSS      = withSection('TabsBlock', buildTabsBlockCSS(scenes));
   const buttonCSS    = withSection('Buttons',       buildButtonsCascadeCss(scenes, project.settings));
   const simpleCSS    = withSection('Block overrides', buildSimpleBlocksCascadeCss(scenes, project.settings));
   const tipCSS       = withSection('Tooltips',      buildTooltipCSS());
@@ -211,13 +215,15 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
   const userCSSRaw    = (project.customCss ?? '').trim();
   const userCSS       = userCSSRaw ? `/* ─── User CSS ─── */\n${userCSSRaw}` : '';
-  const combinedCSS   = [globalCSS, charCSS, panelCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, userCSS].filter(Boolean).join('\n\n');
+  const combinedCSS   = [globalCSS, charCSS, cellCSS, tabsCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, sidebarCfgCSSSection, userCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
     settingsScript,
+    sidebarCfgScript,
     buildDateTimeScript(),
-    buildPanelScript(sidebarPanel),
+    buildLightboxScript(scenes),
+    buildTabsBlockScript(scenes),
     buildInputScript(scenes),
     buildLiveScript(scenes),
     buildWatcherScript(project.watchers ?? [], variables, variableNodes, idToName),

@@ -9,7 +9,6 @@ const CharacterManager = lazy(() => import('../characters/CharacterManager').the
 const VariableManager  = lazy(() => import('../variables/VariableManager').then(m => ({ default: m.VariableManager })));
 const AssetManager     = lazy(() => import('../assets/AssetManager').then(m => ({ default: m.AssetManager })));
 const WatcherManager   = lazy(() => import('../watchers/WatcherManager').then(m => ({ default: m.WatcherManager })));
-const PanelEditor      = lazy(() => import('../panel/PanelEditor').then(m => ({ default: m.PanelEditor })));
 const ItemManager      = lazy(() => import('../items/ItemManager').then(m => ({ default: m.ItemManager })));
 const ContainerManager = lazy(() => import('../containers/ContainerManager').then(m => ({ default: m.ContainerManager })));
 const PluginManager    = lazy(() => import('../plugins/PluginManager').then(m => ({ default: m.PluginManager })));
@@ -19,7 +18,7 @@ function TabFallback() {
   return <div className="px-3 py-4 text-slate-500 text-xs italic">Loading…</div>;
 }
 
-type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'panel' | 'watchers' | 'items' | 'containers' | 'plugins';
+type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins';
 
 export function Sidebar() {
   const activeSidebarTab = useProjectStore(s => s.activeSidebarTab);
@@ -35,7 +34,6 @@ export function Sidebar() {
     { id: 'plugins',    label: t.sidebar.plugins },
     { id: 'variables',  label: t.sidebar.variables },
     { id: 'assets',     label: t.sidebar.assets },
-    { id: 'panel',      label: t.sidebar.panel },
     { id: 'watchers',   label: t.sidebar.watchers },
   ], [t]);
 
@@ -79,7 +77,6 @@ export function Sidebar() {
           {activeSidebarTab === 'plugins'     && <PluginManager />}
           {activeSidebarTab === 'variables'   && <VariableManager />}
           {activeSidebarTab === 'assets'      && <AssetManager />}
-          {activeSidebarTab === 'panel'       && <PanelEditor />}
           {activeSidebarTab === 'watchers'    && <WatcherManager />}
         </Suspense>
       </div>

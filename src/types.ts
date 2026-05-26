@@ -720,13 +720,38 @@ export interface RadioBlock {
 // ─── System tags ──────────────────────────────────────────────────────────────
 
 /** Predefined tags with special editor behavior (filtered from navigation dropdowns, distinct visual in graph). */
-export const SYSTEM_TAGS = ['func', 'popup'] as const;
+export const SYSTEM_TAGS = ['func', 'popup', 'sidebar'] as const;
 export type SystemTag = typeof SYSTEM_TAGS[number];
+
+/**
+ * 'multi' — any number of scenes may carry the tag (e.g. many functions, many popups).
+ * 'singleton' — at most ONE scene may carry the tag at a time, because it maps to a
+ *   specific named SugarCube passage (e.g. `sidebar` → `::StoryCaption`). Setting a
+ *   singleton tag on a scene must strip it from any other scene that had it (radio semantics).
+ */
+export type SystemTagKind = 'multi' | 'singleton';
+export const SYSTEM_TAG_KIND: Record<SystemTag, SystemTagKind> = {
+  func:    'multi',
+  popup:   'multi',
+  sidebar: 'singleton',
+};
 
 /** Accent colors for system tag chips and graph nodes. */
 export const SYSTEM_TAG_COLORS: Record<SystemTag, string> = {
-  func:  '#a855f7',  // violet
-  popup: '#3b82f6',  // blue
+  func:    '#a855f7',  // violet
+  popup:   '#3b82f6',  // blue
+  sidebar: '#14b8a6',  // teal
+};
+
+/**
+ * Canonical SugarCube passage name a singleton system tag maps to.
+ * When a scene carries the tag, its name is force-locked to this value (in editor +
+ * data layer), so the mapping `editor-scene ↔ SugarCube special passage` is unambiguous.
+ * Multi-kind system tags (func, popup) are absent — they use user-chosen names.
+ */
+export const SINGLETON_TAG_PASSAGE_NAME: Partial<Record<SystemTag, string>> = {
+  sidebar: 'StoryCaption',
+  // future: title: 'StoryTitle', menu: 'StoryMenu', etc.
 };
 
 /** Editor-only tag that marks the starting scene. Not exported to Twee/HTML. */
@@ -791,6 +816,39 @@ export interface TimeManipulationBlock {
   delay?: BlockDelay;
 }
 
+/** One tab in a TabsBlock — a labeled container holding a nested block list. */
+export interface TabsTab {
+  id: string;
+  label: string;
+  blocks: Block[];
+}
+
+/**
+ * Renders a tabbed container — a row of clickable tab labels above a switchable body.
+ * The active tab is persisted in a SugarCube variable so tab state survives navigation
+ * and is part of saves. Body is re-rendered on tab switch via `Engine.show()`.
+ *
+ * Storage of the active tab:
+ *   - If `controlVariableId` is set → bind to that user-defined number variable.
+ *   - Otherwise → auto-generated `$__tabs_<blockId>` (managed by the export pipeline).
+ *
+ * Nesting is allowed (a TabsBlock can contain another TabsBlock). Recursive walkers
+ * (export, search, navigation collection) must traverse `tabs[].blocks` like they
+ * already traverse `ConditionBranch.blocks` and `DialogueBlock.innerBlocks`.
+ */
+export interface TabsBlock {
+  id: string;
+  type: 'tabs';
+  tabs: TabsTab[];
+  /** Index of the tab that is active on first render (default 0). */
+  defaultTabIndex?: number;
+  /** Optional user-defined number variable that controls the active tab (overrides auto-gen). */
+  controlVariableId?: string;
+  delay?: BlockDelay;
+  /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles.tabs). */
+  customStyle?: BlockStyleOverride;
+}
+
 export type Block =
   | TextBlock
   | DialogueBlock
@@ -820,6 +878,7 @@ export type Block =
   | AudioGenBlock
   | ContainerBlock
   | TimeManipulationBlock
+  | TabsBlock
   | PluginBlock;
 
 export type BlockType = Block['type'];
@@ -902,6 +961,56 @@ export interface SceneBackground {
   overlayOpacity?: number;
 }
 
+// ─── System scene config ────────────────────────────────────────────────────
+//
+// When a scene carries a singleton system tag (e.g. 'sidebar'), it represents a
+// specific SugarCube special passage. Config that applies to the WRAPPER of that
+// passage (not its body) lives here as a discriminated union — e.g. for
+// 'sidebar' that's the UIBar's width/position/visibility. The exporter reads
+// this and injects the corresponding CSS / Config.ui.stowBarInitially.
+
+/**
+ * A setting that can be either a static value or bound to a story variable
+ * (read at runtime, reactive when the variable changes). `undefined` = caller's
+ * default behavior. The export pipeline emits JS that re-reads the variable on
+ * `:storyready` and `:passagedisplay` so changes during play take effect.
+ */
+export type BoundBool   = boolean | { variableId: string };
+export type BoundNumber = number  | { variableId: string };
+export type BoundString = string  | { variableId: string };
+
+/** Configuration for the sidebar scene (mapped to UIBar via ::StoryCaption). */
+export interface SidebarSceneConfig {
+  kind: 'sidebar';
+  /** Override UIBar width. Default 17.5em when omitted. */
+  width?: BoundNumber;
+  /** Unit for width — em or px. Default 'em'. Static (no binding). */
+  widthUnit?: 'em' | 'px';
+  /** Render the UIBar on the right instead of the default left. Bound variable
+   *  should hold the literal string `"right"` or `"left"`. */
+  position?: BoundString;
+  /** Start with the UIBar collapsed (maps to Config.ui.stowBarInitially).
+   *  Binding reads the variable at startup only — Config.ui is not reactive
+   *  after first render. */
+  initiallyCollapsed?: BoundBool;
+  /** When false, the hamburger toggle button is hidden — UIBar can't be collapsed. */
+  allowCollapse?: BoundBool;
+  /** When true, the UIBar is hidden entirely (#ui-bar { display: none }). */
+  hidden?: BoundBool;
+  /** Background color of the UIBar wrapper. CSS color string. */
+  bgColor?: BoundString;
+  /** Show back/forward history navigation buttons. undefined = true (default). */
+  historyControls?: BoundBool;
+  /** Show SugarCube save/load menu in UIBar. undefined = true (default). */
+  saveLoadMenu?: BoundBool;
+}
+
+/** Discriminated union — extend with new kinds as more system tags are added. */
+export type SystemSceneConfig = SidebarSceneConfig;
+// Future:
+//   | { kind: 'title';   textColor?: string; font?: string }
+//   | { kind: 'menu';    /* TBD */ };
+
 export interface Scene {
   id: string;
   name: string;
@@ -915,6 +1024,12 @@ export interface Scene {
   graphPosition?: { x: number; y: number };
   /** Optional background image configuration */
   background?: SceneBackground;
+  /**
+   * Configuration for the SugarCube special passage this scene maps to
+   * (only relevant when scene has a singleton system tag, e.g. 'sidebar').
+   * The `kind` field must match the active system tag.
+   */
+  systemConfig?: SystemSceneConfig;
 }
 
 // ─── Character ──────────────────────────────────────────────────────────────
@@ -1431,13 +1546,8 @@ export interface SidebarRow {
   cells: SidebarCell[];
 }
 
-export interface SidebarTab {
-  id: string;
-  label: string;
-  rows: SidebarRow[];
-}
-
-/** Visual style settings for the sidebar panel table. */
+/** Visual style for the TableBlock (rows, borders, gaps). Used by TableBlock — the
+ *  legacy `SidebarPanel` that originally owned this type is gone. */
 export interface PanelStyle {
   rowGap:          number;   // px gap between rows
   borderWidth:     number;   // px, line thickness
@@ -1447,26 +1557,13 @@ export interface PanelStyle {
   showCellBorders: boolean;  // vertical dividers between cells
 }
 
-export interface SidebarPanel {
-  tabs: SidebarTab[];
-  liveUpdate: boolean;  // wrap StoryCaption in <<live 200>>
-  /** Visual style; undefined = use defaults (backward compat). */
-  style?: PanelStyle;
-}
-
 // ─── Project ─────────────────────────────────────────────────────────────────
 
 export interface ProjectSettings {
-  historyControls: boolean;  // show browser back/forward buttons
-  saveLoadMenu:    boolean;  // show SugarCube save/load menu
   bgColor?:        string;   // story background color
   sidebarColor?:   string;   // sidebar/StoryCaption background color
   titleColor?:     string;   // StoryTitle text color
   titleFont?:      string;   // StoryTitle font-family
-  /** Relative path (within assets/) of the sidebar header image, if set */
-  headerImageSrc?: string;
-  /** ID of the sidebarPanel row that holds the header image */
-  headerRowId?:    string;
   /** Text shown on the click-to-begin overlay when audio autoplay is blocked */
   audioUnlockText?: string;
   /**
@@ -1495,7 +1592,6 @@ export interface Project {
   containers: ContainerDefinition[];
   variableNodes: VariableTreeNode[];
   assetNodes: AssetTreeNode[];
-  sidebarPanel: SidebarPanel;
   watchers: Watcher[];
   /** Raw user CSS appended to the generated StoryStylesheet (preserved from imports / hand-edited). */
   customCss?: string;

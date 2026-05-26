@@ -108,6 +108,8 @@ export function collectPluginIds(blocks: Block[], out: Set<string> = new Set()):
       for (const branch of b.branches) collectPluginIds(branch.blocks, out);
     } else if (b.type === 'dialogue' && b.innerBlocks?.length) {
       collectPluginIds(b.innerBlocks, out);
+    } else if (b.type === 'tabs') {
+      for (const tab of b.tabs) collectPluginIds(tab.blocks, out);
     }
   }
   return out;
