@@ -171,10 +171,12 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
   </>, p),
 
   // Chain-link glyph — a bare hyperlink (no button chrome), as used in menus.
+  // Two symmetric half-circle "C" loops joined by a central bar (Lucide "link-2"
+  // geometry scaled to the 32×32 viewBox), centered at (16,16).
   'menu-link': (p) => svg(<>
-    <path d="M13 19 L19 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M11.5 14.5 L8.5 17.5 a4 4 0 0 1 -5.7 -5.7 L6 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    <path d="M20.5 17.5 L23.5 14.5 a4 4 0 0 0 -5.7 -5.7 L14.5 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M14 22.7 H10.7 A6.7 6.7 0 0 1 10.7 9.3 H14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M18 9.3 H21.3 A6.7 6.7 0 0 1 21.3 22.7 H18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M11 16 H21" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
   </>, p),
 
   'input-field': (p) => svg(<>
