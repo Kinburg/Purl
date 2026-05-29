@@ -14,8 +14,7 @@ import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor } from '../shared/ImageMappingEditor';
 import NumericInput from '../shared/NumericInput';
-import { CellImageBoundGenPanel } from '../shared/CellImageBoundGenModal';
-import type { CellImageBound } from '../../types';
+import { ImageBoundGenPanel, type ImageBoundGenInput } from '../shared/ImageBoundGenPanel';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import {
   MEDIA_BLOCK_FIELD_SCHEMA,
@@ -778,15 +777,13 @@ export function ImageGenBlockEditor({
 
           {block.variableId && (
             <div className="rounded border border-slate-700/60 bg-slate-900/30">
-              <CellImageBoundGenPanel
+              <ImageBoundGenPanel
                 cell={{
-                  type: 'image-bound',
                   variableId: block.variableId,
                   mapping,
                   defaultSrc: block.defaultSrc ?? '',
-                  objectFit: 'cover',
                   genSettings: block.genSettings,
-                } satisfies CellImageBound}
+                } satisfies ImageBoundGenInput}
                 cellId={block.id}
                 variableId={block.variableId}
                 sceneId={sceneId}

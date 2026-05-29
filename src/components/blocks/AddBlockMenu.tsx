@@ -54,8 +54,10 @@ export function makeBlock(type: BlockType): Block {
       style: { bgColor: '#059669', textColor: '#ffffff', borderColor: '#047857', borderRadius: 4, paddingV: 6, paddingH: 14, fontSize: 10, bold: false, fullWidth: false },
       actions: [],
     };
+    case 'menu-link':    return { id, type, label: '', target: 'scene' as const, actions: [] };
     case 'raw':          return { id, type, code: '' };
     case 'note':         return { id, type, text: '' };
+    case 'spacer':       return { id, type, size: 16 };
     case 'table':        return { id, type, rows: [], style: { ...DEFAULT_PANEL_STYLE } };
     case 'include':      return { id, type, passageName: '' };
     case 'divider':      return { id, type };
@@ -92,6 +94,14 @@ export function makeBlock(type: BlockType): Block {
     case 'paperdoll':    return { id, type, charId: '', showLabels: false };
     case 'inventory':    return { id, type, charId: '' };
     case 'tabs':         return { id, type, tabs: [{ id: crypto.randomUUID(), label: 'Tab 1', blocks: [] }] };
+    case 'section':      return { id, type, title: '', blocks: [] };
+    case 'progress':     return { id, type, variableId: '', maxValue: 100, color: '#4ade80', emptyColor: '#333333', textColor: '', colorRange: null, showText: false, height: 16 };
+    case 'audio-volume': return { id, type, showMuteButton: true };
+    case 'date-time':    return { id, type, variableId: '', format: 'DD.MM.YYYY HH:mm', prefix: '', suffix: '' };
+    case 'callout':      return { id, type, variant: 'info' as const, title: '', content: '' };
+    case 'select':       return { id, type, variableId: '', options: [] };
+    case 'slider':       return { id, type, variableId: '', min: 0, max: 100, step: 1, showValue: true };
+    case 'display-object': return { id, type, source: 'group' as const, fields: [], layout: 'list' as const, live: true, autoSync: true };
     case 'plugin':       return { id, type, pluginId: '', values: {} };
   }
 }
@@ -107,11 +117,11 @@ export function makePluginBlock(def: PluginBlockDef): PluginBlock {
 type CategoryKey = 'narrative' | 'media' | 'game' | 'interaction' | 'logic' | 'system';
 
 const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
-  { key: 'narrative',   types: ['text', 'dialogue', 'divider'] },
-  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen'] },
-  { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table'] },
-  { key: 'interaction', types: ['choice', 'button', 'link', 'input-field', 'checkbox', 'radio', 'popup'] },
-  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function', 'tabs'] },
+  { key: 'narrative',   types: ['text', 'dialogue', 'divider', 'spacer', 'callout'] },
+  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen', 'audio-volume'] },
+  { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table', 'progress', 'date-time', 'display-object'] },
+  { key: 'interaction', types: ['choice', 'button', 'link', 'menu-link', 'input-field', 'checkbox', 'radio', 'select', 'slider', 'popup'] },
+  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function', 'tabs', 'section'] },
   { key: 'system',      types: ['raw', 'include', 'note'] },
 ];
 
@@ -157,21 +167,30 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('text',              t.addBlock.text.label,             t.addBlock.text.desc,             'narrative'),
     make('dialogue',          t.addBlock.dialogue.label,         t.addBlock.dialogue.desc,         'narrative'),
     make('divider',           t.addBlock.divider.label,          t.addBlock.divider.desc,          'narrative'),
+    make('spacer',            t.addBlock.spacer.label,           t.addBlock.spacer.desc,           'narrative'),
+    make('callout',           t.addBlock.callout.label,          t.addBlock.callout.desc,          'narrative'),
     make('image',             t.addBlock.image.label,            t.addBlock.image.desc,            'media'),
     make('image-gen',         t.addBlock.imageGen.label,         t.addBlock.imageGen.desc,         'media'),
     make('video',             t.addBlock.video.label,            t.addBlock.video.desc,            'media'),
     make('audio',             t.addBlock.audio.label,            t.addBlock.audio.desc,            'media'),
     make('audio-gen',         t.addBlock.audioGen.label,         t.addBlock.audioGen.desc,         'media'),
+    make('audio-volume',      t.addBlock.audioVolume.label,      t.addBlock.audioVolume.desc,      'media'),
     make('paperdoll',         t.addBlock.paperdoll.label,        t.addBlock.paperdoll.desc,        'game'),
     make('inventory',         t.addBlock.inventory.label,        t.addBlock.inventory.desc,        'game'),
     make('container',         t.addBlock.container.label,        t.addBlock.container.desc,        'game'),
     make('table',             t.addBlock.table.label,            t.addBlock.table.desc,            'game'),
+    make('progress',          t.addBlock.progress.label,         t.addBlock.progress.desc,         'game'),
+    make('date-time',         t.addBlock.dateTime.label,         t.addBlock.dateTime.desc,         'game'),
+    make('display-object',    t.addBlock.displayObject.label,    t.addBlock.displayObject.desc,    'game'),
     make('choice',            t.addBlock.choice.label,           t.addBlock.choice.desc,           'interaction'),
     make('button',            t.addBlock.button.label,           t.addBlock.button.desc,           'interaction'),
     make('link',              t.addBlock.link.label,             t.addBlock.link.desc,             'interaction'),
+    make('menu-link',         t.addBlock.menuLink.label,         t.addBlock.menuLink.desc,         'interaction'),
     make('input-field',       t.addBlock.inputField.label,       t.addBlock.inputField.desc,       'interaction'),
     make('checkbox',          t.addBlock.checkbox.label,         t.addBlock.checkbox.desc,         'interaction'),
     make('radio',             t.addBlock.radio.label,            t.addBlock.radio.desc,            'interaction'),
+    make('select',            t.addBlock.select.label,           t.addBlock.select.desc,           'interaction'),
+    make('slider',            t.addBlock.slider.label,           t.addBlock.slider.desc,           'interaction'),
     make('popup',             t.addBlock.popup.label,            t.addBlock.popup.desc,            'interaction'),
     make('condition',         t.addBlock.condition.label,        t.addBlock.condition.desc,        'logic'),
     make('for',               t.addBlock.forLoop.label,          t.addBlock.forLoop.desc,          'logic'),
@@ -180,6 +199,7 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('time-manipulation', t.addBlock.timeManipulation.label, t.addBlock.timeManipulation.desc, 'logic'),
     make('function',          t.addBlock.function.label,         t.addBlock.function.desc,         'logic'),
     make('tabs',              t.addBlock.tabs.label,             t.addBlock.tabs.desc,             'logic'),
+    make('section',           t.addBlock.section.label,          t.addBlock.section.desc,          'logic'),
     make('raw',               t.addBlock.raw.label,              t.addBlock.raw.desc,              'system'),
     make('include',           t.addBlock.include.label,          t.addBlock.include.desc,          'system'),
     make('note',              t.addBlock.note.label,             t.addBlock.note.desc,             'system'),

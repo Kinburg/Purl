@@ -58,6 +58,16 @@ function collectEdges(
         result.push(...collectEdges(sourceId, tab.blocks));
       }
     }
+    if (block.type === 'section') {
+      result.push(...collectEdges(sourceId, block.blocks));
+    }
+    if (block.type === 'table') {
+      for (const row of block.rows) {
+        for (const cell of row.cells) {
+          result.push(...collectEdges(sourceId, cell.blocks));
+        }
+      }
+    }
   }
   return result;
 }

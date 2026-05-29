@@ -36,10 +36,14 @@ function isSystemScene(scene: Scene): boolean {
   );
 }
 
-/** Display order within the System group: start first, then sidebar, future tags later. */
+/** Display order within the System group: start first, then sidebar, title, menu, header, footer. */
 function systemSceneOrder(s: Scene): number {
-  if (s.tags.includes(START_TAG)) return 0;
-  if (s.tags.includes('sidebar')) return 1;
+  if (s.tags.includes(START_TAG))          return 0;
+  if (s.tags.includes('sidebar'))          return 1;
+  if (s.tags.includes('title'))            return 2;
+  if (s.tags.includes('menu'))             return 3;
+  if (s.tags.includes('passage-header'))   return 4;
+  if (s.tags.includes('passage-footer'))   return 5;
   return 99;
 }
 import { useConfirm } from '../shared/ConfirmModal';
@@ -394,7 +398,11 @@ export function SceneList() {
     .sort((a, b) => systemSceneOrder(a) - systemSceneOrder(b));
   const ungroupedScenes = project.scenes.filter(s => !s.groupId && !isSystemScene(s));
   const scenesInGroup   = (groupId: string) => project.scenes.filter(s => s.groupId === groupId && !isSystemScene(s));
-  const hasSidebarScene = systemScenes.some(s => s.tags.includes('sidebar'));
+  const hasSidebarScene       = systemScenes.some(s => s.tags.includes('sidebar'));
+  const hasTitleScene         = systemScenes.some(s => s.tags.includes('title'));
+  const hasMenuScene          = systemScenes.some(s => s.tags.includes('menu'));
+  const hasPassageHeaderScene = systemScenes.some(s => s.tags.includes('passage-header'));
+  const hasPassageFooterScene = systemScenes.some(s => s.tags.includes('passage-footer'));
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -518,6 +526,50 @@ export function SceneList() {
                   title={t.systemGroup.createSidebarTooltip}
                 >
                   {t.systemGroup.createSidebar}
+                </button>
+              )}
+              {!hasTitleScene && (
+                <button
+                  className="text-[11px] text-slate-500 hover:text-amber-400 text-left px-2 py-1 rounded border border-dashed border-slate-700 hover:border-amber-600 transition-colors cursor-pointer"
+                  onClick={() => {
+                    addSceneWithData({ name: 'StoryDisplayTitle', tags: ['title'], notes: undefined });
+                  }}
+                  title={t.systemGroup.createTitleTooltip}
+                >
+                  {t.systemGroup.createTitle}
+                </button>
+              )}
+              {!hasMenuScene && (
+                <button
+                  className="text-[11px] text-slate-500 hover:text-pink-400 text-left px-2 py-1 rounded border border-dashed border-slate-700 hover:border-pink-600 transition-colors cursor-pointer"
+                  onClick={() => {
+                    addSceneWithData({ name: 'StoryMenu', tags: ['menu'], notes: undefined });
+                  }}
+                  title={t.systemGroup.createMenuTooltip}
+                >
+                  {t.systemGroup.createMenu}
+                </button>
+              )}
+              {!hasPassageHeaderScene && (
+                <button
+                  className="text-[11px] text-slate-500 hover:text-emerald-400 text-left px-2 py-1 rounded border border-dashed border-slate-700 hover:border-emerald-600 transition-colors cursor-pointer"
+                  onClick={() => {
+                    addSceneWithData({ name: 'PassageHeader', tags: ['passage-header'], notes: undefined });
+                  }}
+                  title={t.systemGroup.createPassageHeaderTooltip}
+                >
+                  {t.systemGroup.createPassageHeader}
+                </button>
+              )}
+              {!hasPassageFooterScene && (
+                <button
+                  className="text-[11px] text-slate-500 hover:text-lime-400 text-left px-2 py-1 rounded border border-dashed border-slate-700 hover:border-lime-600 transition-colors cursor-pointer"
+                  onClick={() => {
+                    addSceneWithData({ name: 'PassageFooter', tags: ['passage-footer'], notes: undefined });
+                  }}
+                  title={t.systemGroup.createPassageFooterTooltip}
+                >
+                  {t.systemGroup.createPassageFooter}
                 </button>
               )}
             </div>

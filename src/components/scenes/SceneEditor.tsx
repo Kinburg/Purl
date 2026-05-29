@@ -146,6 +146,14 @@ export function SceneEditor() {
         </div>
       </div>
 
+      {/* System-passage hint — these SugarCube passages render only specific content. */}
+      {(scene.tags.includes('menu') || scene.tags.includes('title')) && (
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[11px] text-amber-200/90 flex items-start gap-2 shrink-0">
+          <span className="shrink-0 mt-px">ⓘ</span>
+          <span>{scene.tags.includes('menu') ? t.scene.menuSceneHint : t.scene.titleSceneHint}</span>
+        </div>
+      )}
+
       {/* Blocks */}
       <div className="flex-1 relative" style={{ minHeight: 0 }}>
         <div className="absolute inset-0 overflow-y-auto">

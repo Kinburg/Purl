@@ -110,6 +110,10 @@ export function collectPluginIds(blocks: Block[], out: Set<string> = new Set()):
       collectPluginIds(b.innerBlocks, out);
     } else if (b.type === 'tabs') {
       for (const tab of b.tabs) collectPluginIds(tab.blocks, out);
+    } else if (b.type === 'section') {
+      collectPluginIds(b.blocks, out);
+    } else if (b.type === 'table') {
+      for (const row of b.rows) for (const cell of row.cells) collectPluginIds(cell.blocks, out);
     }
   }
   return out;

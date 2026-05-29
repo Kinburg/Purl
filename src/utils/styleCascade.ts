@@ -21,6 +21,7 @@ import type {
   CheckboxBlock,
   ChoiceBlock,
   DialogueBlock,
+  DisplayObjectBlock,
   DividerBlock,
   FunctionBlock,
   ImageBlock,
@@ -315,6 +316,48 @@ export const CONTENT_BLOCK_RAW_CSS_HELP: StyleRawCssHelp = {
 img { object-fit: cover; }
 input:focus { outline: 2px solid #6366f1; }`,
   placeholderKey: 'placeholderContent',
+};
+
+/**
+ * DisplayObject schema — container fields (bg/border/padding/font/gap) plus
+ * sub-element colors (`labelColor` / `valueColor` / `barColor` / `barEmptyColor`)
+ * which the rule builder maps to `.tg-do-label / .tg-do-value / .tg-do-bar-fill`.
+ */
+export const DISPLAY_OBJECT_FIELD_SCHEMA: ReadonlyArray<StyleFieldDescriptor> = [
+  { key: 'bgColor',       type: 'color',  labelKey: 'bgColor' },
+  { key: 'textColor',     type: 'color',  labelKey: 'textColor' },
+  { key: 'labelColor',    type: 'color',  labelKey: 'labelColor' },
+  { key: 'valueColor',    type: 'color',  labelKey: 'valueColor' },
+  { key: 'borderColor',   type: 'color',  labelKey: 'borderColor' },
+  { key: 'borderWidth',   type: 'number', labelKey: 'borderWidth',  min: 0, max: 20,  suffix: 'px' },
+  { key: 'borderRadius',  type: 'number', labelKey: 'borderRadius', min: 0, max: 100, suffix: 'px' },
+  { key: 'paddingV',      type: 'number', labelKey: 'paddingV',     min: 0, max: 80,  suffix: 'px' },
+  { key: 'paddingH',      type: 'number', labelKey: 'paddingH',     min: 0, max: 80,  suffix: 'px' },
+  { key: 'gap',           type: 'number', labelKey: 'gap',          min: 0, max: 40,  suffix: 'px' },
+  { key: 'fontSize',      type: 'number', labelKey: 'fontSize',     min: 6, max: 40,  suffix: '×0.1em' },
+  { key: 'barColor',      type: 'color',  labelKey: 'barColor' },
+  { key: 'barEmptyColor', type: 'color',  labelKey: 'barEmptyColor' },
+];
+
+export const DISPLAY_OBJECT_RAW_CSS_HELP: StyleRawCssHelp = {
+  selectors: [
+    { name: '(no selector)',   descKey: 'selectorBlockSelf' },
+    { name: '.tg-do-row',      descKey: 'selectorDoRow' },
+    { name: '.tg-do-label',    descKey: 'selectorDoLabel' },
+    { name: '.tg-do-value',    descKey: 'selectorDoValue' },
+    { name: '.tg-do-bar',      descKey: 'selectorDoBar' },
+    { name: '.tg-do-bar-fill', descKey: 'selectorDoBarFill' },
+    { name: '.tg-do-card',     descKey: 'selectorDoCard' },
+    { name: '.tg-do-badge',    descKey: 'selectorDoBadge' },
+  ],
+  exampleCode:
+`/* container */
+{ box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+.tg-do-row { padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); }
+.tg-do-label { font-variant: small-caps; letter-spacing: 0.05em; }
+.tg-do-bar-fill { transition: width 0.4s ease-out; }
+.tg-do-card { background: rgba(0,0,0,0.25); border-radius: 6px; padding: 6px 8px; }`,
+  placeholderKey: 'placeholderDisplayObject',
 };
 
 export const DIVIDER_RAW_CSS_HELP: StyleRawCssHelp = {
@@ -754,8 +797,14 @@ export function collectButtonFamilyBlocks(blocks: Block[]): ButtonFamilyBlock[] 
     if (b.type === 'dialogue' && b.innerBlocks) {
       result.push(...collectButtonFamilyBlocks(b.innerBlocks));
     }
+    if (b.type === 'section') {
+      result.push(...collectButtonFamilyBlocks(b.blocks));
+    }
     if (b.type === 'tabs') {
       for (const tab of b.tabs) result.push(...collectButtonFamilyBlocks(tab.blocks));
+    }
+    if (b.type === 'table') {
+      for (const row of b.rows) for (const cell of row.cells) result.push(...collectButtonFamilyBlocks(cell.blocks));
     }
   }
   return result;
@@ -899,11 +948,13 @@ export function buildBlockTypesCSS(): string {
 
 export type SimpleBlockType =
   | 'text' | 'image' | 'image-gen' | 'video' | 'include' | 'divider'
-  | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup' | 'tabs';
+  | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup' | 'tabs'
+  | 'display-object';
 
 type SimpleBlockBlock =
   | TextBlock | ImageBlock | ImageGenBlock | VideoBlock | IncludeBlock | DividerBlock
-  | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock | TabsBlock;
+  | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock | TabsBlock
+  | DisplayObjectBlock;
 
 interface SimpleBlockConfig {
   /** The structural base class already emitted by the export. */
@@ -1259,8 +1310,14 @@ export function buildPopupClassSyncScript(scenes: Scene[]): string {
       if (b.type === 'dialogue' && b.innerBlocks) {
         if (hasPopupAnywhere(b.innerBlocks)) return true;
       }
+      if (b.type === 'section') {
+        if (hasPopupAnywhere(b.blocks)) return true;
+      }
       if (b.type === 'tabs') {
         for (const tab of b.tabs) if (hasPopupAnywhere(tab.blocks)) return true;
+      }
+      if (b.type === 'table') {
+        for (const row of b.rows) for (const cell of row.cells) if (hasPopupAnywhere(cell.blocks)) return true;
       }
     }
     return false;
@@ -1282,6 +1339,64 @@ export function buildPopupClassSyncScript(scenes: Scene[]): string {
   ].join('\n');
 }
 
+/**
+ * DisplayObject rule builder. Container-level fields go on `.scopeClass` itself;
+ * `labelColor` / `valueColor` / `barColor` / `barEmptyColor` are mapped to the
+ * structural sub-element classes (`.tg-do-label / .tg-do-value / .tg-do-bar-fill / .tg-do-bar`).
+ * `gap` becomes a CSS gap, useful in inline / cards / grid / list layouts.
+ */
+function buildDisplayObjectRules(): SimpleBlockConfig['buildRules'] {
+  return (scopeClass, fields, rawCss) => {
+    const wrap: string[] = [];
+    const label: string[] = [];
+    const value: string[] = [];
+    const barFill: string[] = [];
+    const barTrack: string[] = [];
+
+    if (fields.bgColor   !== undefined && fields.bgColor   !== '') wrap.push(`background: ${fields.bgColor}`);
+    if (fields.textColor !== undefined && fields.textColor !== '') wrap.push(`color: ${fields.textColor}`);
+
+    const bw = fields.borderWidth;
+    const bc = fields.borderColor;
+    const hasBW = bw !== undefined && bw !== '';
+    const hasBC = bc !== undefined && bc !== '';
+    if (hasBW && hasBC) wrap.push(`border: ${bw}px solid ${bc}`);
+    else if (hasBW)     wrap.push(`border-width: ${bw}px; border-style: solid`);
+    else if (hasBC)     wrap.push(`border: 1px solid ${bc}`);
+
+    if (fields.borderRadius !== undefined && fields.borderRadius !== '') wrap.push(`border-radius: ${fields.borderRadius}px`);
+
+    const pv = fields.paddingV;
+    const ph = fields.paddingH;
+    const hasPV = pv !== undefined && pv !== '';
+    const hasPH = ph !== undefined && ph !== '';
+    if (hasPV && hasPH) wrap.push(`padding: ${pv}px ${ph}px`);
+    else if (hasPV)     wrap.push(`padding-top: ${pv}px; padding-bottom: ${pv}px`);
+    else if (hasPH)     wrap.push(`padding-left: ${ph}px; padding-right: ${ph}px`);
+
+    if (fields.gap !== undefined && fields.gap !== '') wrap.push(`gap: ${fields.gap}px`);
+
+    if (fields.fontSize !== undefined && fields.fontSize !== '') {
+      const n = Number(fields.fontSize);
+      if (Number.isFinite(n)) wrap.push(`font-size: ${(n / 10).toFixed(1)}em`);
+    }
+
+    if (fields.labelColor     !== undefined && fields.labelColor     !== '') label.push(`color: ${fields.labelColor}`);
+    if (fields.valueColor     !== undefined && fields.valueColor     !== '') value.push(`color: ${fields.valueColor}`);
+    if (fields.barColor       !== undefined && fields.barColor       !== '') barFill.push(`background: ${fields.barColor}`);
+    if (fields.barEmptyColor  !== undefined && fields.barEmptyColor  !== '') barTrack.push(`background: ${fields.barEmptyColor}`);
+
+    const parts: string[] = [];
+    if (wrap.length)     parts.push(`.${scopeClass} { ${wrap.join('; ')}; }`);
+    if (label.length)    parts.push(`.${scopeClass} .tg-do-label { ${label.join('; ')}; }`);
+    if (value.length)    parts.push(`.${scopeClass} .tg-do-value { ${value.join('; ')}; }`);
+    if (barFill.length)  parts.push(`.${scopeClass} .tg-do-bar-fill { ${barFill.join('; ')}; }`);
+    if (barTrack.length) parts.push(`.${scopeClass} .tg-do-bar { ${barTrack.join('; ')}; }`);
+    if (rawCss && rawCss.trim()) parts.push(autoScopeRawCss(`.${scopeClass}`, rawCss));
+    return parts.join('\n');
+  };
+}
+
 const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
   text:          { baseClass: 'tg-text',         buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
   image:         { baseClass: 'tg-image',        buildRules: buildMediaBlockRules('img'),                          schema: MEDIA_BLOCK_FIELD_SCHEMA },
@@ -1300,6 +1415,8 @@ const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
   popup:         { baseClass: 'tg-popup',        buildRules: buildPopupBlockRules(),                               schema: POPUP_FIELD_SCHEMA },
   // Tabs — wrapping <div class="tg-tabs-block"> around per-tab spans containing <<link>>s.
   tabs:          { baseClass: 'tg-tabs-block',   buildRules: buildTabsBlockRules(),                                schema: TABS_FIELD_SCHEMA },
+  // DisplayObject — `<div class="tg-do tg-do-{layout}">` with `.tg-do-row/-label/-value/-bar*` sub-elements.
+  'display-object': { baseClass: 'tg-do',        buildRules: buildDisplayObjectRules(),                            schema: DISPLAY_OBJECT_FIELD_SCHEMA },
 };
 
 /** Returns the structural base class for a simple block type. */
@@ -1331,7 +1448,8 @@ export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
     if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video'
         || b.type === 'include' || b.type === 'divider'
         || b.type === 'checkbox' || b.type === 'radio' || b.type === 'input-field'
-        || b.type === 'choice' || b.type === 'popup' || b.type === 'tabs') {
+        || b.type === 'choice' || b.type === 'popup' || b.type === 'tabs'
+        || b.type === 'display-object') {
       result.push(b as SimpleBlockBlock);
     }
     if (b.type === 'condition') {
@@ -1342,6 +1460,12 @@ export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
     }
     if (b.type === 'tabs') {
       for (const tab of b.tabs) result.push(...collectSimpleBlocks(tab.blocks));
+    }
+    if (b.type === 'section') {
+      result.push(...collectSimpleBlocks(b.blocks));
+    }
+    if (b.type === 'table') {
+      for (const row of b.rows) for (const cell of row.cells) result.push(...collectSimpleBlocks(cell.blocks));
     }
   }
   return result;
@@ -1449,6 +1573,12 @@ export function buildAllSpotStyleRules(scenes: Scene[]): string {
       }
       if (b.type === 'tabs') {
         for (const tab of b.tabs) walk(tab.blocks);
+      }
+      if (b.type === 'section') {
+        walk(b.blocks);
+      }
+      if (b.type === 'table') {
+        for (const row of b.rows) for (const cell of row.cells) walk(cell.blocks);
       }
     }
   }

@@ -148,6 +148,15 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="3" y="27" width="12" height="2" rx="1" fill="currentColor" opacity=".2"/>
   </>, p),
 
+  // Spacer — two content bars with empty gap + up/down arrows marking the gap.
+  spacer: (p) => svg(<>
+    <rect x="3" y="5" width="26" height="3" rx="1.5" fill="currentColor" opacity=".35"/>
+    <rect x="3" y="24" width="26" height="3" rx="1.5" fill="currentColor" opacity=".35"/>
+    <path d="M16 11 V21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".8"/>
+    <path d="M13 13 L16 10.5 L19 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity=".8"/>
+    <path d="M13 19 L16 21.5 L19 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity=".8"/>
+  </>, p),
+
   button: (p) => svg(<>
     <rect x="3" y="10" width="26" height="12" rx="6" fill="currentColor" fillOpacity=".18" stroke="currentColor" strokeWidth="1.8"/>
     <rect x="9" y="14.5" width="14" height="2.5" rx="1.25" fill="currentColor" opacity=".75"/>
@@ -159,6 +168,13 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="7" y="14.5" width="9" height="2.5" rx="1.25" fill="currentColor" opacity=".7"/>
     <path d="M24 16 H31" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
     <path d="M27.5 12.5 L31.5 16 L27.5 19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </>, p),
+
+  // Chain-link glyph — a bare hyperlink (no button chrome), as used in menus.
+  'menu-link': (p) => svg(<>
+    <path d="M13 19 L19 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M11.5 14.5 L8.5 17.5 a4 4 0 0 1 -5.7 -5.7 L6 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M20.5 17.5 L23.5 14.5 a4 4 0 0 0 -5.7 -5.7 L14.5 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
   </>, p),
 
   'input-field': (p) => svg(<>
@@ -257,5 +273,64 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="6" y="15" width="20" height="2" rx="1" fill="currentColor" opacity=".7"/>
     <rect x="6" y="19" width="14" height="2" rx="1" fill="currentColor" opacity=".5"/>
     <rect x="6" y="23" width="17" height="2" rx="1" fill="currentColor" opacity=".4"/>
+  </>, p),
+
+  // Progress — a meter bar partially filled.
+  progress: (p) => svg(<>
+    <rect x="2" y="12" width="28" height="8" rx="4" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".1"/>
+    <rect x="4" y="14" width="15" height="4" rx="2" fill="currentColor" opacity=".8"/>
+  </>, p),
+
+  // Audio volume — a speaker with radiating sound waves.
+  'audio-volume': (p) => svg(<>
+    <path d="M4 13 H8 L13 8 V24 L8 19 H4 Z" fill="currentColor" opacity=".8"/>
+    <path d="M17 11 Q20 16 17 21" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity=".65"/>
+    <path d="M20.5 8 Q25.5 16 20.5 24" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity=".4"/>
+  </>, p),
+
+  // Date-Time — a clock face with hands.
+  'date-time': (p) => svg(<>
+    <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity=".1"/>
+    <path d="M16 9 V16 L21 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </>, p),
+
+  // Callout — a notice box with a thick accent bar on the left.
+  callout: (p) => svg(<>
+    <rect x="4" y="7" width="24" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+    <rect x="4" y="7" width="4" height="18" rx="1" fill="currentColor" opacity=".8"/>
+    <rect x="12" y="12" width="12" height="2" rx="1" fill="currentColor" opacity=".6"/>
+    <rect x="12" y="17" width="9" height="2" rx="1" fill="currentColor" opacity=".4"/>
+  </>, p),
+
+  // Select — a dropdown field with a chevron.
+  select: (p) => svg(<>
+    <rect x="3" y="9" width="26" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+    <rect x="7" y="15" width="10" height="2" rx="1" fill="currentColor" opacity=".6"/>
+    <path d="M21.5 14.5 L24 17 L26.5 14.5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  </>, p),
+
+  // Slider — a track with a draggable knob.
+  slider: (p) => svg(<>
+    <rect x="3" y="15" width="26" height="2.5" rx="1.25" fill="currentColor" opacity=".4"/>
+    <circle cx="20" cy="16.25" r="4.5" fill="currentColor" fillOpacity=".18" stroke="currentColor" strokeWidth="1.8"/>
+  </>, p),
+
+  // DisplayObject — a framed stat sheet (label/value rows).
+  'display-object': (p) => svg(<>
+    <rect x="3" y="5" width="26" height="22" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+    <rect x="6"  y="9"  width="8" height="2" rx="1" fill="currentColor" opacity=".75"/>
+    <rect x="18" y="9"  width="8" height="2" rx="1" fill="currentColor" opacity=".5"/>
+    <rect x="6"  y="14" width="8" height="2" rx="1" fill="currentColor" opacity=".75"/>
+    <rect x="18" y="14" width="8" height="2" rx="1" fill="currentColor" opacity=".5"/>
+    <rect x="6"  y="19" width="8" height="2" rx="1" fill="currentColor" opacity=".75"/>
+    <rect x="18" y="19" width="8" height="2" rx="1" fill="currentColor" opacity=".5"/>
+  </>, p),
+
+  // Section — titled box: a header bar + framed content area.
+  section: (p) => svg(<>
+    <rect x="3" y="5" width="26" height="22" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+    <rect x="3" y="5" width="26" height="6" rx="2.5" fill="currentColor" opacity=".35"/>
+    <rect x="7" y="15" width="18" height="2" rx="1" fill="currentColor" opacity=".55"/>
+    <rect x="7" y="20" width="13" height="2" rx="1" fill="currentColor" opacity=".4"/>
   </>, p),
 };

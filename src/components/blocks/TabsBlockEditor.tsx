@@ -23,8 +23,9 @@ import { useVariableNodes } from '../shared/VariableScope';
 import type {
   TabsBlock, TabsTab, Block,
   TextBlock, DialogueBlock, ChoiceBlock, ConditionBlock, VariableSetBlock, SetObjectBlock, ForBlock,
-  ImageBlock, VideoBlock, ButtonBlock, LinkBlock, FunctionBlock, PopupBlock,
-  AudioBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock,
+  ImageBlock, VideoBlock, ButtonBlock, LinkBlock, MenuLinkBlock, FunctionBlock, PopupBlock,
+  AudioBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, SectionBlock, ProgressBlock,
+  AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
   CheckboxBlock, RadioBlock, InputFieldBlock, NoteBlock,
 } from '../../types';
 import { AddBlockMenu } from './AddBlockMenu';
@@ -47,6 +48,16 @@ import { ImageBlockEditor } from './ImageBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
 import { ButtonBlockEditor } from './ButtonBlockEditor';
 import { LinkBlockEditor } from './LinkBlockEditor';
+import { MenuLinkBlockEditor } from './MenuLinkBlockEditor';
+import { SpacerBlockEditor } from './SpacerBlockEditor';
+import { SectionBlockEditor } from './SectionBlockEditor';
+import { ProgressBlockEditor } from './ProgressBlockEditor';
+import { AudioVolumeBlockEditor } from './AudioVolumeBlockEditor';
+import { DateTimeBlockEditor } from './DateTimeBlockEditor';
+import { CalloutBlockEditor } from './CalloutBlockEditor';
+import { SelectBlockEditor } from './SelectBlockEditor';
+import { SliderBlockEditor } from './SliderBlockEditor';
+import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
 import { FunctionBlockEditor } from './FunctionBlockEditor';
 import { PopupBlockEditor } from './PopupBlockEditor';
 import { AudioBlockEditor } from './AudioBlockEditor';
@@ -61,7 +72,8 @@ import { NoteBlockEditor } from './NoteBlockEditor';
 
 // ── Nested editor switch ────────────────────────────────────────────────────
 
-function InnerBlockEditor({
+/** Exported so SectionBlockEditor reuses the exact same nested-block editor switch. */
+export function InnerBlockEditor({
   block, sceneId, onUpdate,
 }: {
   block: Block;
@@ -81,6 +93,7 @@ function InnerBlockEditor({
     case 'video':        return <VideoBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VideoBlock>) => void} />;
     case 'button':       return <ButtonBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ButtonBlock>) => void} />;
     case 'link':         return <LinkBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<LinkBlock>) => void} />;
+    case 'menu-link':    return <MenuLinkBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<MenuLinkBlock>) => void} />;
     case 'function':     return <FunctionBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<FunctionBlock>) => void} />;
     case 'popup':        return <PopupBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<PopupBlock>) => void} />;
     case 'audio':        return <AudioBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioBlock>) => void} />;
@@ -88,6 +101,15 @@ function InnerBlockEditor({
     case 'table':        return <TableBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
     case 'include':      return <IncludeBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<IncludeBlock>) => void} />;
     case 'divider':      return <DividerBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DividerBlock>) => void} />;
+    case 'spacer':       return <SpacerBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SpacerBlock>) => void} />;
+    case 'section':      return <SectionBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SectionBlock>) => void} />;
+    case 'progress':     return <ProgressBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ProgressBlock>) => void} />;
+    case 'audio-volume': return <AudioVolumeBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
+    case 'date-time':    return <DateTimeBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
+    case 'callout':      return <CalloutBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
+    case 'select':       return <SelectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
+    case 'slider':       return <SliderBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
+    case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;
     case 'checkbox':     return <CheckboxBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CheckboxBlock>) => void} />;
     case 'radio':        return <RadioBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RadioBlock>) => void} />;
     case 'input-field':  return <InputFieldBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<InputFieldBlock>) => void} />;

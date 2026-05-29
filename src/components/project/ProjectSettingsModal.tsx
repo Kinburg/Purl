@@ -92,12 +92,15 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   // Appearance
   const existing = mode === 'edit' ? project.settings : DEFAULT_PROJECT_SETTINGS;
   const [bgColor,      setBgColor]      = useState(existing.bgColor      ?? '');
-  const [sidebarColor, setSidebarColor] = useState(existing.sidebarColor ?? '');
-  const [titleColor,   setTitleColor]   = useState(existing.titleColor   ?? '');
-  const [titleFont,    setTitleFont]    = useState(existing.titleFont    ?? '');
+  // sidebarColor moved to the sidebar scene's systemConfig.bgColor (System tab).
+  // titleColor / titleFont moved to the title scene's systemConfig (kind 'title').
+  // Edit both via the System tab in SceneModal on the respective system scene.
 
   // Advanced
   const [audioUnlockText,  setAudioUnlockText]  = useState(existing.audioUnlockText  ?? '');
+  const [customInit,         setCustomInit]         = useState(existing.customInit         ?? '');
+  const [passageReadyScript, setPassageReadyScript] = useState(existing.passageReadyScript ?? '');
+  const [passageDoneScript,  setPassageDoneScript]  = useState(existing.passageDoneScript  ?? '');
 
   // Block defaults (per-block-type cascade common-custom). Empty record = no overrides.
   const [defaultBlockStyles, setDefaultBlockStyles] = useState<ProjectSettings['defaultBlockStyles']>(
@@ -174,10 +177,10 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   function buildSettings(): ProjectSettings {
     const s: ProjectSettings = {};
     if (bgColor.trim())      s.bgColor      = bgColor.trim();
-    if (sidebarColor.trim()) s.sidebarColor = sidebarColor.trim();
-    if (titleColor.trim())   s.titleColor   = titleColor.trim();
-    if (titleFont.trim())    s.titleFont    = titleFont.trim();
     if (audioUnlockText.trim())  s.audioUnlockText  = audioUnlockText.trim();
+    if (customInit.trim())         s.customInit         = customInit.trim();
+    if (passageReadyScript.trim()) s.passageReadyScript = passageReadyScript.trim();
+    if (passageDoneScript.trim())  s.passageDoneScript  = passageDoneScript.trim();
     // Block defaults (cascade common-custom per block type) — set when at least one entry exists.
     if (defaultBlockStyles && Object.keys(defaultBlockStyles).length > 0) {
       s.defaultBlockStyles = defaultBlockStyles;
@@ -397,21 +400,8 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
                 <ModalRow label={ps.fieldBgColor}>
                   <ColorSwatchInput value={bgColor} onChange={setBgColor} allowClear />
                 </ModalRow>
-                <ModalRow label={ps.fieldSidebarColor}>
-                  <ColorSwatchInput value={sidebarColor} onChange={setSidebarColor} allowClear />
-                </ModalRow>
-                <ModalRow label={ps.fieldTitleColor}>
-                  <ColorSwatchInput value={titleColor} onChange={setTitleColor} allowClear />
-                </ModalRow>
-
-                <ModalField label={ps.fieldTitleFont}>
-                  <input
-                    className={INPUT_CLS}
-                    placeholder={ps.fieldTitleFontPlaceholder}
-                    value={titleFont}
-                    onChange={e => setTitleFont(e.target.value)}
-                  />
-                </ModalField>
+                <p className="text-[10px] text-slate-500 mt-1">{ps.sidebarStyleHint}</p>
+                <p className="text-[10px] text-slate-500">{ps.titleStyleHint}</p>
               </ModalSection>
 
 
@@ -429,20 +419,56 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 
           {/* ── Advanced ───────────────────────────────────────────────── */}
           {tab === 'advanced' && (
-            <ModalSection title={ps.sectionAdvanced}>
-              <p className="text-[10px] text-slate-500 -mt-1 mb-1">
-                History navigation and save/load menu are now configured per-scene on the <code className="text-slate-400 bg-slate-800 px-1 rounded">StoryCaption</code> scene's «System» tab (UIBar settings).
-              </p>
+            <>
+              <ModalSection title={ps.sectionAdvanced}>
+                <p className="text-[10px] text-slate-500 -mt-1 mb-1">
+                  History navigation and save/load menu are now configured per-scene on the <code className="text-slate-400 bg-slate-800 px-1 rounded">StoryCaption</code> scene's «System» tab (UIBar settings).
+                </p>
 
-              <ModalField label={ps.fieldAudioUnlockText} note={ps.fieldAudioUnlockTextNote}>
-                <input
-                  className={INPUT_CLS}
-                  placeholder={ps.fieldAudioUnlockTextPlaceholder}
-                  value={audioUnlockText}
-                  onChange={e => setAudioUnlockText(e.target.value)}
-                />
-              </ModalField>
-            </ModalSection>
+                <ModalField label={ps.fieldAudioUnlockText} note={ps.fieldAudioUnlockTextNote}>
+                  <input
+                    className={INPUT_CLS}
+                    placeholder={ps.fieldAudioUnlockTextPlaceholder}
+                    value={audioUnlockText}
+                    onChange={e => setAudioUnlockText(e.target.value)}
+                  />
+                </ModalField>
+              </ModalSection>
+
+              <ModalSection title={ps.sectionLifecycleHooks}>
+                <p className="text-[10px] text-slate-500 -mt-1 mb-1">{ps.lifecycleHooksNote}</p>
+
+                <ModalField label={ps.fieldCustomInit} note={ps.fieldCustomInitNote}>
+                  <textarea
+                    className={`${INPUT_CLS} resize-y font-mono text-xs`}
+                    rows={4}
+                    placeholder={ps.fieldCustomInitPlaceholder}
+                    value={customInit}
+                    onChange={e => setCustomInit(e.target.value)}
+                  />
+                </ModalField>
+
+                <ModalField label={ps.fieldPassageReadyScript} note={ps.fieldPassageReadyScriptNote}>
+                  <textarea
+                    className={`${INPUT_CLS} resize-y font-mono text-xs`}
+                    rows={4}
+                    placeholder={ps.fieldPassageReadyScriptPlaceholder}
+                    value={passageReadyScript}
+                    onChange={e => setPassageReadyScript(e.target.value)}
+                  />
+                </ModalField>
+
+                <ModalField label={ps.fieldPassageDoneScript} note={ps.fieldPassageDoneScriptNote}>
+                  <textarea
+                    className={`${INPUT_CLS} resize-y font-mono text-xs`}
+                    rows={4}
+                    placeholder={ps.fieldPassageDoneScriptPlaceholder}
+                    value={passageDoneScript}
+                    onChange={e => setPassageDoneScript(e.target.value)}
+                  />
+                </ModalField>
+              </ModalSection>
+            </>
           )}
         </ModalBody>
         </div>

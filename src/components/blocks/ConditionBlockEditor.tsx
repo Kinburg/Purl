@@ -24,7 +24,8 @@ import { useVariableNodes } from '../shared/VariableScope';
 import { useT, blockTypeLabel } from '../../i18n';
 import type {
   ConditionBlock, ConditionBranch, ConditionBranchType, ConditionOperator, Block, ArrayAccessor,
-  TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, SetObjectBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock,
+  TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, SetObjectBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, ProgressBlock,
+  AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
   ForBlock,
 } from '../../types';
 import { AddBlockMenu } from './AddBlockMenu';
@@ -40,6 +41,14 @@ import { RawBlockEditor } from './RawBlockEditor';
 import { TableBlockEditor } from './TableBlockEditor';
 import { IncludeBlockEditor } from './IncludeBlockEditor';
 import { DividerBlockEditor } from './DividerBlockEditor';
+import { SpacerBlockEditor } from './SpacerBlockEditor';
+import { ProgressBlockEditor } from './ProgressBlockEditor';
+import { AudioVolumeBlockEditor } from './AudioVolumeBlockEditor';
+import { DateTimeBlockEditor } from './DateTimeBlockEditor';
+import { CalloutBlockEditor } from './CalloutBlockEditor';
+import { SelectBlockEditor } from './SelectBlockEditor';
+import { SliderBlockEditor } from './SliderBlockEditor';
+import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
 
 /**
@@ -146,6 +155,14 @@ function NestedBlockEditor({
     case 'table':        return <TableBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
     case 'include':      return <IncludeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<IncludeBlock>) => void} />;
     case 'divider':      return <DividerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DividerBlock>) => void} />;
+    case 'spacer':       return <SpacerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SpacerBlock>) => void} />;
+    case 'progress':     return <ProgressBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ProgressBlock>) => void} />;
+    case 'audio-volume': return <AudioVolumeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
+    case 'date-time':    return <DateTimeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
+    case 'callout':      return <CalloutBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
+    case 'select':       return <SelectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
+    case 'slider':       return <SliderBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
+    case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;
     // Recursive: a ConditionBlock nested inside a branch renders the full
     // ConditionBlockEditor in local-mode — all mutations route up through the
     // parent's `onUpdate` chain, so the store sees a single patch at the top.

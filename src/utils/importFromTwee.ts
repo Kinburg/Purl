@@ -197,10 +197,17 @@ export function importFromTweeSource(text: string): ImportResult {
   const captionSceneName = 'StoryCaption';
   const captionSceneId: string | null = captionPassage && captionPassage.body.trim() ? uid() : null;
 
+  // ── StoryDisplayTitle → dedicated Scene tagged `title` ───────────────────
+  // Mirrors the StoryCaption→sidebar round trip: the rich display-title passage
+  // becomes a `title`-tagged scene, routed back to ::StoryDisplayTitle on export.
+  const displayTitlePassage = passages.find(p => p.name === 'StoryDisplayTitle');
+  const displayTitleSceneName = 'StoryDisplayTitle';
+  const displayTitleSceneId: string | null = displayTitlePassage && displayTitlePassage.body.trim() ? uid() : null;
+
   // ── Scenes (Phase 2: token-driven block recognition) ──────────────────────
   const SYSTEM_NAMES = new Set([
     'StoryTitle', 'StoryData', 'StoryInit',
-    'StoryStylesheet', 'StoryScript', 'StoryCaption',
+    'StoryStylesheet', 'StoryScript', 'StoryCaption', 'StoryDisplayTitle',
   ]);
   const scenes: Scene[] = [];
   let startSceneId: string | null = null;
@@ -223,17 +230,23 @@ export function importFromTweeSource(text: string): ImportResult {
       continue;
     }
 
-    // StoryCaption → keep the same name, add the `sidebar` system tag so the
-    // exporter routes it back to ::StoryCaption.
+    // StoryCaption / StoryDisplayTitle → keep the canonical name, add the matching
+    // system tag so the exporter routes them back to ::StoryCaption / ::StoryDisplayTitle.
     const isCaption = p.name === 'StoryCaption';
-    const sceneName = isCaption ? captionSceneName : p.name;
-    const sceneId = isCaption && captionSceneId ? captionSceneId : uid();
+    const isDisplayTitle = p.name === 'StoryDisplayTitle';
+    const sceneName = isCaption ? captionSceneName : isDisplayTitle ? displayTitleSceneName : p.name;
+    const sceneId = isCaption && captionSceneId
+      ? captionSceneId
+      : isDisplayTitle && displayTitleSceneId
+        ? displayTitleSceneId
+        : uid();
     const blocks = passageBodyToBlocks(p.body, ctx);
 
     // Preserve foreign tags except the system names we already consumed.
-    // Add `sidebar` for the caption scene so it routes back to ::StoryCaption on export.
+    // Add the system tag for caption / display-title scenes so they route back on export.
     const tags = p.tags.filter(t => !SYSTEM_NAMES.has(t));
     if (isCaption) tags.push('sidebar');
+    if (isDisplayTitle) tags.push('title');
 
     const scene: Scene = { id: sceneId, name: sceneName, tags, blocks };
 

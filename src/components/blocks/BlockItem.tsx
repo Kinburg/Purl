@@ -22,10 +22,20 @@ import { ImageBlockEditor } from './ImageBlockEditor';
 import { VideoBlockEditor } from './VideoBlockEditor';
 import { ButtonBlockEditor } from './ButtonBlockEditor';
 import { LinkBlockEditor } from './LinkBlockEditor';
+import { MenuLinkBlockEditor } from './MenuLinkBlockEditor';
 import { InputFieldBlockEditor } from './InputFieldBlockEditor';
 import { RawBlockEditor } from './RawBlockEditor';
 import { NoteBlockEditor } from './NoteBlockEditor';
 import { DividerBlockEditor } from './DividerBlockEditor';
+import { SpacerBlockEditor } from './SpacerBlockEditor';
+import { SectionBlockEditor } from './SectionBlockEditor';
+import { ProgressBlockEditor } from './ProgressBlockEditor';
+import { AudioVolumeBlockEditor } from './AudioVolumeBlockEditor';
+import { DateTimeBlockEditor } from './DateTimeBlockEditor';
+import { CalloutBlockEditor } from './CalloutBlockEditor';
+import { SelectBlockEditor } from './SelectBlockEditor';
+import { SliderBlockEditor } from './SliderBlockEditor';
+import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
 import { IncludeBlockEditor } from './IncludeBlockEditor';
 import { CheckboxBlockEditor } from './CheckboxBlockEditor';
 import { RadioBlockEditor } from './RadioBlockEditor';
@@ -73,9 +83,19 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'video':             VideoBlockEditor            as never,
   'button':            ButtonBlockEditor           as never,
   'link':              LinkBlockEditor             as never,
+  'menu-link':         MenuLinkBlockEditor         as never,
   'input-field':       InputFieldBlockEditor       as never,
   'raw':               RawBlockEditor              as never,
   'note':              NoteBlockEditor             as never,
+  'spacer':            SpacerBlockEditor           as never,
+  'section':           SectionBlockEditor          as never,
+  'progress':          ProgressBlockEditor         as never,
+  'audio-volume':      AudioVolumeBlockEditor       as never,
+  'date-time':         DateTimeBlockEditor          as never,
+  'callout':           CalloutBlockEditor           as never,
+  'select':            SelectBlockEditor            as never,
+  'slider':            SliderBlockEditor            as never,
+  'display-object':    DisplayObjectBlockEditor     as never,
   'table':             TableBlockEditor            as never,
   'include':           IncludeBlockEditor          as never,
   'divider':           DividerBlockEditor          as never,
@@ -107,6 +127,7 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'for':               'bg-amber-900/40',
   'button':            'bg-blue-900/40',
   'link':              'bg-emerald-900/40',
+  'menu-link':         'bg-emerald-900/40',
   'input-field':       'bg-teal-900/40',
   'image':             'bg-pink-900/40',
   'image-gen':         'bg-fuchsia-900/30',
@@ -116,6 +137,14 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'table':             'bg-cyan-900/40',
   'include':           'bg-sky-900/40',
   'divider':           'bg-slate-700/40',
+  'spacer':            'bg-slate-700/40',
+  'progress':          'bg-cyan-900/40',
+  'audio-volume':      'bg-amber-900/40',
+  'date-time':         'bg-sky-900/40',
+  'callout':           'bg-amber-800/30',
+  'select':            'bg-teal-900/40',
+  'slider':            'bg-teal-900/40',
+  'display-object':    'bg-cyan-900/40',
   'checkbox':          'bg-violet-900/40',
   'radio':             'bg-fuchsia-900/40',
   'function':          'bg-purple-900/40',
@@ -127,6 +156,7 @@ const BLOCK_COLORS: Record<Block['type'], string> = {
   'paperdoll':         'bg-violet-900/40',
   'inventory':         'bg-teal-900/40',
   'tabs':              'bg-amber-900/40',
+  'section':           'bg-amber-900/40',
   'plugin':            'bg-indigo-900/40',
 };
 

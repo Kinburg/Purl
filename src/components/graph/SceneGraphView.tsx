@@ -95,9 +95,13 @@ type SceneNodeData = {
 };
 
 const SYSTEM_ICONS: Record<SystemTag, string> = {
-  func:    'ƒ',
-  popup:   '⬝',
-  sidebar: '▌',  // left-half block — visually evokes a sidebar column
+  func:             'ƒ',
+  popup:            '⬝',
+  sidebar:          '▌',  // left-half block — visually evokes a sidebar column
+  title:            'T',  // title bar
+  menu:             '☰',  // hamburger / menu
+  'passage-header': '⤒',  // arrow up — runs before each passage
+  'passage-footer': '⤓',  // arrow down — runs after each passage
 };
 
 const SceneNode = memo(({ data }: { data: SceneNodeData }) => {

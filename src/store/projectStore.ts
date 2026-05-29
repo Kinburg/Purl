@@ -688,6 +688,19 @@ export function deepCloneBlock(block: Block): Block {
       })),
     };
   }
+  if (block.type === 'table') {
+    // Cells hold nested block-lists; regenerate row/cell ids and deep-clone
+    // their blocks so a duplicated table shares no ids with the original.
+    return {
+      ...block,
+      id: newId,
+      rows: block.rows.map(r => ({
+        ...r,
+        id: uuid(),
+        cells: r.cells.map(c => ({ ...c, id: uuid(), blocks: c.blocks.map(deepCloneBlock) })),
+      })),
+    };
+  }
   return { ...block, id: newId };
 }
 
@@ -1035,6 +1048,9 @@ function migrateSceneLinks(p: Project): Project {
       } else if (b.type === 'link') {
         if (b.targetSceneId) b.targetSceneId = resolve(b.targetSceneId);
         if (b.actions) migrateActions(b.actions);
+      } else if (b.type === 'menu-link') {
+        if (b.targetSceneId) b.targetSceneId = resolve(b.targetSceneId);
+        if (b.actions) migrateActions(b.actions);
       } else if (b.type === 'function') {
         if (b.targetSceneId) b.targetSceneId = resolve(b.targetSceneId);
         if (b.actions) migrateActions(b.actions);
@@ -1054,13 +1070,12 @@ function migrateSceneLinks(p: Project): Project {
         for (const tab of b.tabs ?? []) {
           migrateBlocks(tab.blocks ?? []);
         }
+      } else if (b.type === 'section') {
+        migrateBlocks(b.blocks ?? []);
       } else if (b.type === 'table') {
         for (const row of b.rows ?? []) {
           for (const cell of row.cells ?? []) {
-            if (cell.content?.type === 'button') {
-              if (cell.content.actions) migrateActions(cell.content.actions);
-              migrateNav(cell.content.navigate);
-            }
+            migrateBlocks(cell.blocks ?? []);
           }
         }
       }
@@ -1077,6 +1092,180 @@ function migrateSceneLinks(p: Project): Project {
     migrateNav(w.navigate);
   }
 
+  return p;
+}
+
+/**
+ * P2 migration: a legacy table-cell `CellContent` widget → the equivalent
+ * standalone block(s). Runtime output is preserved; the structured editors for
+ * `variable` / `list` / `image-from-var` are intentionally lossy (they become a
+ * TextBlock/RawBlock with embedded SugarCube markup — runtime-equivalent).
+ */
+function cellContentToBlocks(content: any, nodes: VariableTreeNode[]): Block[] {
+  if (!content || typeof content !== 'object') return [];
+  const pathOf = (vid: string): string => (vid ? (getVariablePath(vid, nodes) || '???') : '???');
+
+  switch (content.type) {
+    case 'text':
+      return [{ id: uuid(), type: 'text', content: content.value ?? '' } as Block];
+
+    case 'variable': {
+      const sv = `$${pathOf(content.variableId)}`;
+      return [{ id: uuid(), type: 'text', content: `${content.prefix ?? ''}<<print ${sv}>>${content.suffix ?? ''}` } as Block];
+    }
+
+    case 'progress':
+      return [{
+        id: uuid(), type: 'progress',
+        variableId: content.variableId ?? '',
+        maxValue: content.maxValue ?? 100,
+        color: content.color ?? '#4ade80',
+        emptyColor: content.emptyColor ?? '#333333',
+        textColor: content.textColor ?? '',
+        colorRange: content.colorRange ?? null,
+        showText: content.showText ?? false,
+        vertical: content.vertical,
+        height: 16,
+      } as Block];
+
+    case 'image-static':
+      return [{ id: uuid(), type: 'image', mode: 'static', src: content.src ?? '', alt: '', width: 0 } as Block];
+
+    case 'image-bound':
+      return [{
+        id: uuid(), type: 'image', mode: 'bound',
+        src: '', alt: '', width: 0,
+        variableId: content.variableId ?? '',
+        mapping: content.mapping ?? [],
+        defaultSrc: content.defaultSrc ?? '',
+        genSettings: content.genSettings,
+      } as Block];
+
+    case 'image-gen':
+      return [{
+        id: uuid(), type: 'image-gen',
+        provider: 'comfyui',
+        workflowFile: content.workflowFile ?? '',
+        promptMode: content.promptMode ?? 'manual',
+        llmPromptMode: content.llmPromptMode,
+        prompt: content.prompt ?? '',
+        negativePrompt: content.negativePrompt,
+        styleHints: content.styleHints,
+        seedMode: content.seedMode ?? 'random',
+        seed: content.seed,
+        genWidth: content.genWidth,
+        genHeight: content.genHeight,
+        width: content.width ?? 0,
+        alt: content.alt ?? '',
+        src: content.src ?? '',
+        approvedHistoryId: content.approvedHistoryId,
+        lastApprovedDir: content.lastApprovedDir,
+        history: content.history,
+      } as Block];
+
+    case 'image-from-var': {
+      const sv = `$${pathOf(content.variableId)}`;
+      return [{ id: uuid(), type: 'raw', code: `<<if ${sv}>><img @src="${sv}" style="max-width:100%;display:block"><</if>>` } as Block];
+    }
+
+    case 'raw':
+      return [{ id: uuid(), type: 'raw', code: content.code ?? '' } as Block];
+
+    case 'include':
+      return [{ id: uuid(), type: 'include', passageName: content.passageName ?? '' } as Block];
+
+    case 'button': {
+      const nav = content.navigate;
+      if (nav?.type === 'scene' || nav?.type === 'back') {
+        return [{
+          id: uuid(), type: 'link',
+          label: content.label ?? '',
+          target: nav.type === 'back' ? 'back' : 'scene',
+          targetSceneId: nav.type === 'scene' ? nav.sceneId : undefined,
+          actions: content.actions ?? [],
+          style: content.style,
+        } as Block];
+      }
+      // No navigation → a plain action button.
+      return [{
+        id: uuid(), type: 'button',
+        label: content.label ?? '',
+        style: content.style,
+        actions: content.actions ?? [],
+      } as Block];
+    }
+
+    case 'list': {
+      const sv = `$${pathOf(content.variableId)}`;
+      const sep = (content.separator || ', ').replace(/"/g, '\\"');
+      const inner = `${content.prefix ?? ''}<<print ${sv}.join("${sep}")>>${content.suffix ?? ''}`;
+      const code = content.emptyText
+        ? `<<if ${sv}.length gt 0>>${inner}<<else>>${content.emptyText}<</if>>`
+        : inner;
+      return [{ id: uuid(), type: 'text', content: code } as Block];
+    }
+
+    case 'audio-volume':
+      return [{ id: uuid(), type: 'audio-volume', showMuteButton: content.showMuteButton ?? true } as Block];
+
+    case 'date-time':
+      return [{
+        id: uuid(), type: 'date-time',
+        variableId: content.variableId ?? '',
+        displayMode: content.displayMode,
+        format: content.format ?? 'DD.MM.YYYY HH:mm',
+        prefix: content.prefix,
+        suffix: content.suffix,
+      } as Block];
+
+    case 'paperdoll':
+      return [{ id: uuid(), type: 'paperdoll', charId: content.charId ?? '', showLabels: content.showLabels ?? false } as Block];
+
+    default:
+      return [];
+  }
+}
+
+/**
+ * P2 migration: walk every scene's blocks; for each TableBlock cell that still
+ * carries the legacy single `content` widget, convert it to `blocks: Block[]`.
+ * Idempotent — cells already holding `blocks` are left as-is. Recurses through
+ * all container blocks (incl. nested tables inside cells).
+ */
+function migrateTableCellsToBlocks(p: any): any {
+  const nodes: VariableTreeNode[] = p.variableNodes ?? [];
+  const walk = (blocks: any[]) => {
+    if (!Array.isArray(blocks)) return;
+    for (const b of blocks) {
+      if (!b || typeof b !== 'object') continue;
+      switch (b.type) {
+        case 'table':
+          for (const row of b.rows ?? []) {
+            for (const cell of row.cells ?? []) {
+              if (cell && !Array.isArray(cell.blocks)) {
+                cell.blocks = cell.content ? cellContentToBlocks(cell.content, nodes) : [];
+                delete cell.content;
+              }
+              walk(cell.blocks);
+            }
+          }
+          break;
+        case 'condition':
+          for (const br of b.branches ?? []) walk(br.blocks ?? []);
+          break;
+        case 'dialogue':
+          if (b.innerBlocks) walk(b.innerBlocks);
+          break;
+        case 'tabs':
+          for (const tab of b.tabs ?? []) walk(tab.blocks ?? []);
+          break;
+        case 'section':
+          walk(b.blocks ?? []);
+          break;
+      }
+    }
+  };
+  for (const scene of p.scenes ?? []) walk(scene.blocks ?? []);
   return p;
 }
 
@@ -1169,6 +1358,62 @@ function migrateProject(raw: any): Project {
     delete p.settings.historyControls;
     delete p.settings.saveLoadMenu;
   }
+
+  // Migrate `ProjectSettings.titleColor` / `titleFont` → title scene's systemConfig.
+  // The title color/font used to be project-wide; they're now per-scene since title is a
+  // system tag (singleton, maps to ::StoryDisplayTitle). When either was set, create or
+  // update a title-tagged scene to carry those visual settings; the display title body
+  // falls back to the plain project title when the scene's blocks are empty.
+  if (p.settings && (p.settings.titleColor || p.settings.titleFont)) {
+    let titleScene = p.scenes?.find((s: any) => s.tags?.includes('title'));
+    if (!titleScene) {
+      titleScene = {
+        id: uuid(),
+        name: 'StoryDisplayTitle',
+        tags: ['title'],
+        blocks: [],
+      };
+      p.scenes = [...(p.scenes ?? []), titleScene];
+    }
+    const sc = titleScene.systemConfig && titleScene.systemConfig.kind === 'title'
+      ? titleScene.systemConfig
+      : { kind: 'title' };
+    if (p.settings.titleColor && sc.textColor === undefined) sc.textColor = p.settings.titleColor;
+    if (p.settings.titleFont  && sc.font      === undefined) sc.font      = p.settings.titleFont;
+    titleScene.systemConfig = sc;
+  }
+  if (p.settings) {
+    delete p.settings.titleColor;
+    delete p.settings.titleFont;
+  }
+
+  // Migrate legacy `ProjectSettings.sidebarColor` → sidebar scene's systemConfig.bgColor.
+  // Both used to set the UIBar background; the per-scene config is now the single source.
+  if (p.settings && p.settings.sidebarColor) {
+    const sb = p.scenes?.find((s: any) => s.tags?.includes('sidebar'));
+    if (sb) {
+      const sc = sb.systemConfig && sb.systemConfig.kind === 'sidebar'
+        ? sb.systemConfig
+        : { kind: 'sidebar' };
+      if (sc.bgColor === undefined || sc.bgColor === '') sc.bgColor = p.settings.sidebarColor;
+      sb.systemConfig = sc;
+    }
+  }
+  if (p.settings) delete p.settings.sidebarColor;
+
+  // Canonical name of the title scene changed 'StoryTitle' → 'StoryDisplayTitle' (it
+  // exports as ::StoryDisplayTitle, not the plain ::StoryTitle). Rename any title-tagged
+  // scene still carrying the old canonical name so the editor label matches the passage.
+  if (Array.isArray(p.scenes)) {
+    for (const sc of p.scenes) {
+      if (sc?.tags?.includes('title') && sc.name === 'StoryTitle') sc.name = 'StoryDisplayTitle';
+    }
+  }
+
+  // P2: convert legacy table cells (single CellContent) → cells holding Block[].
+  // Must run BEFORE migrateSceneLinks so the link/button blocks it produces get
+  // their scene-name refs resolved to IDs by that pass.
+  p = migrateTableCellsToBlocks(p);
 
   // Migrate targetSceneId / navigate.sceneId from scene NAMES → scene IDs
   p = migrateSceneLinks(p as Project);
@@ -1476,7 +1721,17 @@ export const useProjectStore = create<ProjectState>()(
             // strip the tag from any other scene that had it (mirrors updateSceneSettings).
             const forcedName = canonicalNameForTags(tags);
             const finalName = forcedName ?? name;
-            const scene: Scene = { id, name: finalName, tags, blocks: [], notes: notes || undefined };
+            // Pre-fill the title scene with one TextBlock holding the current project
+            // title, so users see an immediately editable starting point rather than a
+            // blank canvas. StoryMenu is intentionally NOT pre-filled: SugarCube's
+            // built-in `#menu-core` already shows Saves/Restart, so duplicating them in
+            // `::StoryMenu` (`#menu-story`) would render two identical sets of buttons.
+            // sidebar/menu/passage-header/passage-footer start empty.
+            const initialBlocks: Block[] = [];
+            if (tags.includes('title')) {
+              initialBlocks.push({ id: uuid(), type: 'text', content: s.project.title });
+            }
+            const scene: Scene = { id, name: finalName, tags, blocks: initialBlocks, notes: notes || undefined };
             // Initialize systemConfig for sidebar tag so the new scene's UIBar
             // settings are wired to the existing $sidePanel.* variables (if any).
             if (tags.includes('sidebar')) {
