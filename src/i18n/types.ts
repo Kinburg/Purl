@@ -295,7 +295,9 @@ export interface Translations {
     categories: {
       narrative: string;
       media: string;
+      layout: string;
       game: string;
+      data: string;
       interaction: string;
       logic: string;
       system: string;

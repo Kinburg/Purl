@@ -114,21 +114,33 @@ export function makePluginBlock(def: PluginBlockDef): PluginBlock {
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
-type CategoryKey = 'narrative' | 'media' | 'game' | 'interaction' | 'logic' | 'system';
+type CategoryKey = 'narrative' | 'media' | 'layout' | 'game' | 'data' | 'interaction' | 'logic' | 'system';
 
 const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
-  { key: 'narrative',   types: ['text', 'dialogue', 'divider', 'spacer', 'callout'] },
+  { key: 'narrative',   types: ['text', 'dialogue', 'callout'] },
   { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen', 'audio-volume'] },
-  { key: 'game',        types: ['paperdoll', 'inventory', 'container', 'table', 'progress', 'date-time', 'display-object'] },
-  { key: 'interaction', types: ['choice', 'button', 'link', 'menu-link', 'input-field', 'checkbox', 'radio', 'select', 'slider', 'popup'] },
-  { key: 'logic',       types: ['condition', 'for', 'variable-set', 'set-object', 'time-manipulation', 'function', 'tabs', 'section'] },
-  { key: 'system',      types: ['raw', 'include', 'note'] },
+  // layout = blocks that space / arrange / compose content (rather than being content). No logic, no own player input.
+  //   divider/spacer space; tabs/section/table group inline blocks; include embeds another passage's content.
+  { key: 'layout',      types: ['divider', 'spacer', 'tabs', 'section', 'table', 'include'] },
+  // game = entities that need the Characters / Items systems.
+  { key: 'game',        types: ['paperdoll', 'inventory', 'container'] },
+  // data = blocks that read OR write story variables (genre-agnostic; useful for debug too).
+  //   read/display: progress, date-time, display-object — author-side writes: variable-set, set-object, time-manipulation.
+  //   (player-input writers like input-field/select/slider stay under `interaction`.)
+  { key: 'data',        types: ['progress', 'date-time', 'display-object', 'variable-set', 'set-object', 'time-manipulation'] },
+  // interaction = blocks the player acts on (click / type / toggle). `function` is a clickable button (like button/link).
+  { key: 'interaction', types: ['choice', 'button', 'link', 'menu-link', 'input-field', 'checkbox', 'radio', 'select', 'slider', 'popup', 'function'] },
+  // logic = control-flow primitives.
+  { key: 'logic',       types: ['condition', 'for'] },
+  { key: 'system',      types: ['raw', 'note'] },
 ];
 
 const CAT_COLORS: Record<string, { color: string; bg: string; ring: string }> = {
   narrative:   { color: '#818cf8', bg: 'rgba(99,102,241,0.14)',  ring: 'rgba(99,102,241,0.5)'  },
   media:       { color: '#2dd4bf', bg: 'rgba(45,212,191,0.14)',  ring: 'rgba(45,212,191,0.5)'  },
+  layout:      { color: '#f472b6', bg: 'rgba(244,114,182,0.14)', ring: 'rgba(244,114,182,0.5)' },
   game:        { color: '#fb923c', bg: 'rgba(251,146,60,0.14)',  ring: 'rgba(251,146,60,0.5)'  },
+  data:        { color: '#38bdf8', bg: 'rgba(56,189,248,0.14)',  ring: 'rgba(56,189,248,0.5)'  },
   interaction: { color: '#34d399', bg: 'rgba(16,185,129,0.14)',  ring: 'rgba(16,185,129,0.5)'  },
   logic:       { color: '#a78bfa', bg: 'rgba(167,139,250,0.14)', ring: 'rgba(167,139,250,0.5)' },
   system:      { color: '#94a3b8', bg: 'rgba(100,116,139,0.14)', ring: 'rgba(100,116,139,0.5)' },
@@ -166,8 +178,6 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
   return [
     make('text',              t.addBlock.text.label,             t.addBlock.text.desc,             'narrative'),
     make('dialogue',          t.addBlock.dialogue.label,         t.addBlock.dialogue.desc,         'narrative'),
-    make('divider',           t.addBlock.divider.label,          t.addBlock.divider.desc,          'narrative'),
-    make('spacer',            t.addBlock.spacer.label,           t.addBlock.spacer.desc,           'narrative'),
     make('callout',           t.addBlock.callout.label,          t.addBlock.callout.desc,          'narrative'),
     make('image',             t.addBlock.image.label,            t.addBlock.image.desc,            'media'),
     make('image-gen',         t.addBlock.imageGen.label,         t.addBlock.imageGen.desc,         'media'),
@@ -178,10 +188,12 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('paperdoll',         t.addBlock.paperdoll.label,        t.addBlock.paperdoll.desc,        'game'),
     make('inventory',         t.addBlock.inventory.label,        t.addBlock.inventory.desc,        'game'),
     make('container',         t.addBlock.container.label,        t.addBlock.container.desc,        'game'),
-    make('table',             t.addBlock.table.label,            t.addBlock.table.desc,            'game'),
-    make('progress',          t.addBlock.progress.label,         t.addBlock.progress.desc,         'game'),
-    make('date-time',         t.addBlock.dateTime.label,         t.addBlock.dateTime.desc,         'game'),
-    make('display-object',    t.addBlock.displayObject.label,    t.addBlock.displayObject.desc,    'game'),
+    make('progress',          t.addBlock.progress.label,         t.addBlock.progress.desc,         'data'),
+    make('date-time',         t.addBlock.dateTime.label,         t.addBlock.dateTime.desc,         'data'),
+    make('display-object',    t.addBlock.displayObject.label,    t.addBlock.displayObject.desc,    'data'),
+    make('variable-set',      t.addBlock.variableSet.label,      t.addBlock.variableSet.desc,      'data'),
+    make('set-object',        t.addBlock.setObject.label,        t.addBlock.setObject.desc,        'data'),
+    make('time-manipulation', t.addBlock.timeManipulation.label, t.addBlock.timeManipulation.desc, 'data'),
     make('choice',            t.addBlock.choice.label,           t.addBlock.choice.desc,           'interaction'),
     make('button',            t.addBlock.button.label,           t.addBlock.button.desc,           'interaction'),
     make('link',              t.addBlock.link.label,             t.addBlock.link.desc,             'interaction'),
@@ -192,16 +204,16 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('select',            t.addBlock.select.label,           t.addBlock.select.desc,           'interaction'),
     make('slider',            t.addBlock.slider.label,           t.addBlock.slider.desc,           'interaction'),
     make('popup',             t.addBlock.popup.label,            t.addBlock.popup.desc,            'interaction'),
+    make('function',          t.addBlock.function.label,         t.addBlock.function.desc,         'interaction'),
     make('condition',         t.addBlock.condition.label,        t.addBlock.condition.desc,        'logic'),
     make('for',               t.addBlock.forLoop.label,          t.addBlock.forLoop.desc,          'logic'),
-    make('variable-set',      t.addBlock.variableSet.label,      t.addBlock.variableSet.desc,      'logic'),
-    make('set-object',        t.addBlock.setObject.label,        t.addBlock.setObject.desc,        'logic'),
-    make('time-manipulation', t.addBlock.timeManipulation.label, t.addBlock.timeManipulation.desc, 'logic'),
-    make('function',          t.addBlock.function.label,         t.addBlock.function.desc,         'logic'),
-    make('tabs',              t.addBlock.tabs.label,             t.addBlock.tabs.desc,             'logic'),
-    make('section',           t.addBlock.section.label,          t.addBlock.section.desc,          'logic'),
+    make('divider',           t.addBlock.divider.label,          t.addBlock.divider.desc,          'layout'),
+    make('spacer',            t.addBlock.spacer.label,           t.addBlock.spacer.desc,           'layout'),
+    make('tabs',              t.addBlock.tabs.label,             t.addBlock.tabs.desc,             'layout'),
+    make('section',           t.addBlock.section.label,          t.addBlock.section.desc,          'layout'),
+    make('table',             t.addBlock.table.label,            t.addBlock.table.desc,            'layout'),
+    make('include',           t.addBlock.include.label,          t.addBlock.include.desc,          'layout'),
     make('raw',               t.addBlock.raw.label,              t.addBlock.raw.desc,              'system'),
-    make('include',           t.addBlock.include.label,          t.addBlock.include.desc,          'system'),
     make('note',              t.addBlock.note.label,             t.addBlock.note.desc,             'system'),
   ];
 }
