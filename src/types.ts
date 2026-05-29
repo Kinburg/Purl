@@ -569,6 +569,29 @@ export interface LinkBlock {
 }
 
 /**
+ * Target for MenuLinkBlock. Beyond scene/back it can invoke SugarCube's built-in
+ * UI dialogs, and `none` runs only the actions (no navigation).
+ */
+export type MenuLinkTarget = 'scene' | 'back' | 'saves' | 'restart' | 'settings' | 'none';
+
+/**
+ * A bare SugarCube `<<link>>` with NO button chrome (no `<span class="tg-btn">`
+ * wrapper, no styling). Emits `<<link "label">>{actions}{nav}<</link>>` on a single
+ * line so it is recognized inside `::StoryMenu` (SugarCube sifts the rendered output
+ * for `<a>` elements and builds the UI-bar menu from them). Also usable as a plain
+ * inline text link anywhere. Built-in targets map to `UI.saves()/restart()/settings()`.
+ */
+export interface MenuLinkBlock {
+  id: string;
+  type: 'menu-link';
+  label: string;
+  target: MenuLinkTarget;
+  targetSceneId?: string;   // used when target === 'scene' (scene NAME)
+  actions: ButtonAction[];  // optional — run before the target action
+  delay?: BlockDelay;
+}
+
+/**
  * Player-facing input field that updates a story variable.
  * Exports as <<textbox>> for string/boolean variables,
  * <<numberbox>> for number variables.
@@ -666,6 +689,82 @@ export interface DividerBlock {
   customStyle?: BlockStyleOverride;
 }
 
+/** Empty vertical space — a layout gap with no visible line (unlike DividerBlock). */
+export interface SpacerBlock {
+  id: string;
+  type: 'spacer';
+  size: number;        // height in px
+}
+
+/**
+ * Standalone progress/meter bar driven by a numeric variable (HP/XP/mana…).
+ * Same fields as the legacy table `CellProgress`, plus `height` (a block needs an
+ * explicit height since `.tg-progress` is `height:100%`). Usable anywhere — scenes,
+ * the sidebar (stat bars), sections, IF branches.
+ */
+export interface ProgressBlock {
+  id: string;
+  type: 'progress';
+  variableId: string;   // current value
+  maxValue: number;     // static maximum
+  color: string;        // CSS fill color (used when colorRange is null/unset)
+  emptyColor?: string;  // background of empty portion (default '#333')
+  textColor?: string;   // '' / undefined = inherit
+  colorRange?: { from: string; to: string } | null;  // interpolate 0%→from, 100%→to
+  showText: boolean;    // show "cur/max"
+  vertical?: boolean;   // fill grows upward
+  height?: number;      // bar height in px (default 16)
+  delay?: BlockDelay;
+}
+
+/**
+ * Master audio-volume slider (+ optional mute toggle). Drives SugarCube's
+ * SimpleAudio master volume and persists it in `$__tgMasterVol` so the level
+ * survives navigation and is part of saves. Standalone block — usable in
+ * scenes, the sidebar, or a settings page. Mirrors the legacy `CellAudioVolume`.
+ */
+export interface AudioVolumeBlock {
+  id: string;
+  type: 'audio-volume';
+  showMuteButton: boolean;
+  delay?: BlockDelay;
+}
+
+/**
+ * Renders a date/time variable as formatted text or a graphical widget
+ * (clock / digital / calendar). Mirrors the legacy `CellDateTime` and reuses the
+ * same runtime helpers (`tgFormatDate` / `tgRenderClock` / …) emitted by
+ * `buildDateTimeScript`. Usable anywhere — scenes, the sidebar, sections.
+ */
+export interface DateTimeBlock {
+  id: string;
+  type: 'date-time';
+  variableId: string;
+  displayMode?: DateTimeDisplayMode;
+  format: string;       // used when displayMode === 'text', e.g. "DD.MM.YYYY HH:mm"
+  prefix?: string;
+  suffix?: string;
+  delay?: BlockDelay;
+}
+
+/**
+ * A titled group of nested blocks (a container, like TabsBlock but single-list).
+ * Useful for organizing sidebar/scene content into labeled sections («Stats»,
+ * «Navigation»). Optionally collapsible via a native `<details>` disclosure.
+ */
+export interface SectionBlock {
+  id: string;
+  type: 'section';
+  /** Optional heading shown above (or as the <summary> of) the section. */
+  title?: string;
+  /** Render as a collapsible <details>/<summary> disclosure. */
+  collapsible?: boolean;
+  /** When collapsible, start collapsed (details without `open`). */
+  defaultCollapsed?: boolean;
+  blocks: Block[];
+  delay?: BlockDelay;
+}
+
 // ─── Checkbox block ──────────────────────────────────────────────────────────
 
 export interface CheckboxOption {
@@ -720,7 +819,7 @@ export interface RadioBlock {
 // ─── System tags ──────────────────────────────────────────────────────────────
 
 /** Predefined tags with special editor behavior (filtered from navigation dropdowns, distinct visual in graph). */
-export const SYSTEM_TAGS = ['func', 'popup', 'sidebar'] as const;
+export const SYSTEM_TAGS = ['func', 'popup', 'sidebar', 'title', 'menu', 'passage-header', 'passage-footer'] as const;
 export type SystemTag = typeof SYSTEM_TAGS[number];
 
 /**
@@ -731,16 +830,24 @@ export type SystemTag = typeof SYSTEM_TAGS[number];
  */
 export type SystemTagKind = 'multi' | 'singleton';
 export const SYSTEM_TAG_KIND: Record<SystemTag, SystemTagKind> = {
-  func:    'multi',
-  popup:   'multi',
-  sidebar: 'singleton',
+  func:             'multi',
+  popup:            'multi',
+  sidebar:          'singleton',
+  title:            'singleton',
+  menu:             'singleton',
+  'passage-header': 'singleton',
+  'passage-footer': 'singleton',
 };
 
 /** Accent colors for system tag chips and graph nodes. */
 export const SYSTEM_TAG_COLORS: Record<SystemTag, string> = {
-  func:    '#a855f7',  // violet
-  popup:   '#3b82f6',  // blue
-  sidebar: '#14b8a6',  // teal
+  func:             '#a855f7',  // violet
+  popup:            '#3b82f6',  // blue
+  sidebar:          '#14b8a6',  // teal
+  title:            '#f59e0b',  // amber
+  menu:             '#ec4899',  // pink
+  'passage-header': '#10b981',  // emerald
+  'passage-footer': '#84cc16',  // lime
 };
 
 /**
@@ -750,8 +857,14 @@ export const SYSTEM_TAG_COLORS: Record<SystemTag, string> = {
  * Multi-kind system tags (func, popup) are absent — they use user-chosen names.
  */
 export const SINGLETON_TAG_PASSAGE_NAME: Partial<Record<SystemTag, string>> = {
-  sidebar: 'StoryCaption',
-  // future: title: 'StoryTitle', menu: 'StoryMenu', etc.
+  sidebar:          'StoryCaption',
+  // The title scene is exported as ::StoryDisplayTitle (rich title — text/markup/images
+  // in the UI bar). The plain ::StoryTitle / tw-storydata name (the save-ID) stays the
+  // project title, NOT this scene. Canonical name mirrors the passage it produces.
+  title:            'StoryDisplayTitle',
+  menu:             'StoryMenu',
+  'passage-header': 'PassageHeader',
+  'passage-footer': 'PassageFooter',
 };
 
 /** Editor-only tag that marks the starting scene. Not exported to Twee/HTML. */
@@ -849,6 +962,124 @@ export interface TabsBlock {
   customStyle?: BlockStyleOverride;
 }
 
+// ─── Callout / Select / Slider blocks ────────────────────────────────────────
+
+export type CalloutVariant = 'info' | 'success' | 'warning' | 'danger' | 'note';
+
+/**
+ * A styled notice/callout box (info / success / warning / danger / note) for
+ * system messages, tips, and lore asides. The variant sets the accent color via a
+ * CSS class; `content` (and optional `title`) accept SugarCube markup. The optional
+ * leading `icon` is a user-supplied glyph — there's no baked-in default, so the
+ * export stays icon-free unless the author adds one.
+ */
+export interface CalloutBlock {
+  id: string;
+  type: 'callout';
+  variant: CalloutVariant;
+  title?: string;
+  content: string;
+  icon?: string;
+  delay?: BlockDelay;
+}
+
+export interface SelectOption {
+  id: string;
+  label: string;   // shown to the player
+  value: string;   // written to the variable when chosen
+}
+
+/**
+ * A dropdown (`<<listbox>>`) that sets a string variable to the chosen option's
+ * value. Sibling of RadioBlock — same data shape, different widget.
+ */
+export interface SelectBlock {
+  id: string;
+  type: 'select';
+  label?: string;
+  variableId: string;       // string variable to set
+  options: SelectOption[];
+  delay?: BlockDelay;
+}
+
+/**
+ * A numeric range slider bound to a number variable. Plain `<input type="range">`
+ * (SugarCube has no range macro) wired to the variable via a deferred `<<script>>`.
+ */
+export interface SliderBlock {
+  id: string;
+  type: 'slider';
+  label?: string;
+  variableId: string;       // number variable to drive
+  min: number;
+  max: number;
+  step: number;
+  showValue?: boolean;      // show the current numeric value next to the slider
+  delay?: BlockDelay;
+}
+
+// ─── DisplayObject block ─────────────────────────────────────────────────────
+
+export type DisplayObjectSource = 'group' | 'manual';
+export type DisplayObjectLayout = 'list' | 'inline' | 'table' | 'cards' | 'grid' | 'bars';
+export type DisplayFieldRender  = 'text' | 'bar' | 'bool' | 'badge';
+
+/** One field rendered inside a DisplayObjectBlock. */
+export interface DisplayField {
+  id: string;
+  /** The variable being displayed (any path). */
+  variableId: string;
+  /** Override label shown next to the value (falls back to the variable's name). */
+  label?: string;
+  /** How the value renders. Defaults to 'text'. */
+  render?: DisplayFieldRender;
+  /** Static max for `render:'bar'`. */
+  maxValue?: number;
+  /** Variable-sourced max for `render:'bar'` (e.g. hp/maxHp). Overrides `maxValue`. */
+  maxVariableId?: string;
+}
+
+/**
+ * Renders a set of variables (the "fields" of an object — typically the leaves of
+ * a VariableGroup like `$chars.hero`) as a formatted display. Six structural
+ * layouts (list / inline / table / cards / grid / bars) and four per-field
+ * renderers (text / bar / bool / badge); the cascade-style system covers
+ * project-wide and per-instance styling (`tg-do` base class, sub-element
+ * selectors `.tg-do-row` / `.tg-do-label` / `.tg-do-value` / `.tg-do-bar*`).
+ *
+ * Source modes:
+ *  - 'group'  — fields are populated from a picked VariableGroup. The list is
+ *               editable: re-order, retitle, change render mode, drop unwanted
+ *               leaves. (A "load fields from group" button re-syncs.)
+ *  - 'manual' — fields are added one by one (any variable, not necessarily from
+ *               one group). Maximum control, decoupled from group structure.
+ */
+export interface DisplayObjectBlock {
+  id: string;
+  type: 'display-object';
+  source: DisplayObjectSource;
+  /** The VariableGroup id (or any group node) used to (re-)populate `fields`. */
+  groupId?: string;
+  fields: DisplayField[];
+  /**
+   * When true (and `source:'group'`), the editor reconciles `fields` with the
+   * group's current leaves on every render — adds new leaves at the end, drops
+   * fields whose variable was removed, and preserves the order + per-field
+   * customizations (label / render / max) of fields that survive. Manual
+   * add/delete UI is hidden while on; drag-reorder still works in both modes.
+   * `undefined` is treated as `false` (legacy data → preserve the old behavior).
+   */
+  autoSync?: boolean;
+  layout: DisplayObjectLayout;
+  /** Column count for `layout:'grid'` (default 2). */
+  columns?: number;
+  /** Wrap each value in `.tg-live` for reactive auto-refresh. */
+  live?: boolean;
+  delay?: BlockDelay;
+  /** Spot-level cascade override (always static; supersedes `defaultBlockStyles['display-object']`). */
+  customStyle?: BlockStyleOverride;
+}
+
 export type Block =
   | TextBlock
   | DialogueBlock
@@ -862,9 +1093,19 @@ export type Block =
   | VideoBlock
   | ButtonBlock
   | LinkBlock
+  | MenuLinkBlock
   | InputFieldBlock
   | RawBlock
   | NoteBlock
+  | SpacerBlock
+  | SectionBlock
+  | ProgressBlock
+  | AudioVolumeBlock
+  | DateTimeBlock
+  | CalloutBlock
+  | SelectBlock
+  | SliderBlock
+  | DisplayObjectBlock
   | TableBlock
   | PaperdollBlock
   | InventoryBlock
@@ -1003,12 +1244,34 @@ export interface SidebarSceneConfig {
   historyControls?: BoundBool;
   /** Show SugarCube save/load menu in UIBar. undefined = true (default). */
   saveLoadMenu?: BoundBool;
+
+  // ── Typography & spacing (added in system-passages-followup sidebar round A) ──
+  /** Text color for the whole UIBar (`#ui-bar { color }`). */
+  textColor?: BoundString;
+  /** Font family for the UIBar (`#ui-bar { font-family }`). Static — fonts rarely change at runtime. */
+  fontFamily?: string;
+  /** Font size for the UIBar (`#ui-bar { font-size }`). Unit in `fontSizeUnit`. */
+  fontSize?: BoundNumber;
+  /** Unit for `fontSize` — em or px. Default 'em'. Static. */
+  fontSizeUnit?: 'em' | 'px';
+  /** Inner padding of the UIBar body (`#ui-bar-body { padding }`), px. */
+  padding?: BoundNumber;
+  /** Vertical gap between StoryCaption blocks (`#story-caption` sibling spacing), px. */
+  blockGap?: BoundNumber;
+}
+
+/** Configuration for the title scene (mapped to ::StoryTitle). */
+export interface TitleSceneConfig {
+  kind: 'title';
+  /** CSS color string applied to `#story-title`. */
+  textColor?: string;
+  /** CSS font-family string applied to `#story-title`. */
+  font?: string;
 }
 
 /** Discriminated union — extend with new kinds as more system tags are added. */
-export type SystemSceneConfig = SidebarSceneConfig;
+export type SystemSceneConfig = SidebarSceneConfig | TitleSceneConfig;
 // Future:
-//   | { kind: 'title';   textColor?: string; font?: string }
 //   | { kind: 'menu';    /* TBD */ };
 
 export interface Scene {
@@ -1358,41 +1621,14 @@ export interface AssetGroup {
 
 export type AssetTreeNode = AssetGroup | Asset;
 
-// ─── Sidebar panel (story UI bar content) ────────────────────────────────────
-
-/** Static text in a cell */
-export interface CellText {
-  type: 'text';
-  value: string;
-}
-
-/** Displays a variable value, with optional prefix/suffix labels */
-export interface CellVariable {
-  type: 'variable';
-  variableId: string;
-  prefix: string;   // shown before the value, e.g. "HP: "
-  suffix: string;   // shown after the value, e.g. " pts"
-}
-
-/** Progress bar driven by a numeric variable */
-export interface CellProgress {
-  type: 'progress';
-  variableId: string;   // current value
-  maxValue: number;     // static maximum
-  color: string;        // CSS fill color (used when colorRange is null/unset)
-  emptyColor?: string;  // background of empty portion (default: '#333')
-  textColor?: string;   // text color; '' or undefined = inherit from page
-  colorRange?: { from: string; to: string } | null;  // if set, fill interpolates 0%→from, 100%→to
-  showText: boolean;    // show "cur/max" as text
-  vertical?: boolean;   // fill grows upward instead of rightward
-}
-
-/** Static image from assets */
-export interface CellImageStatic {
-  type: 'image-static';
-  src: string;           // relativePath from assets
-  objectFit: 'cover' | 'contain';
-}
+// ─── Image-bound mapping ─────────────────────────────────────────────────────
+// Shared by every "image changes with a variable" feature (ImageBlock /
+// ImageGenBlock bound mode, avatars, paperdoll slots, scene backgrounds, …).
+//
+// NOTE: table cells no longer have a dedicated widget union — a SidebarCell holds
+// a Block[] (see migrateTableCellsToBlocks). The old `Cell*` content types were
+// removed; the bound-image AI-gen panel's input type now lives beside that panel
+// as `ImageBoundGenInput` (src/components/shared/ImageBoundGenPanel.tsx).
 
 /**
  * A single entry in image-bound mapping.
@@ -1410,134 +1646,18 @@ export interface ImageBoundMapping {
   src: string;
 }
 
-/** Image that changes based on a variable value */
-export interface CellImageBound {
-  type: 'image-bound';
-  variableId: string;
-  mapping: ImageBoundMapping[];
-  defaultSrc: string;   // shown when no mapping matches
-  objectFit: 'cover' | 'contain';
-  genSettings?: AvatarGenSettings; // optional AI generation settings (one slot per mapping entry + default)
-}
-
-/** Image cell with embedded AI generation. Fields mirror ImageGenBlock (minus block-level fields). */
-export interface CellImageGen {
-  type: 'image-gen';
-  promptMode: ImageGenPromptMode;
-  llmPromptMode?: 'hint' | 'rephrase' | 'continue';
-  prompt: string;
-  negativePrompt?: string;
-  styleHints?: string[];
-  seedMode: ImageGenSeedMode;
-  seed?: number;
-  genWidth?: number;
-  genHeight?: number;
-  workflowFile: string;
-  alt: string;
-  src: string;
-  width: number;
-  approvedHistoryId?: string;
-  lastApprovedDir?: string;
-  history?: ImageGenHistoryEntry[];
-}
-
-/** Image cell where src is taken directly from a variable value (no value→file mapping). */
-export interface CellImageFromVar {
-  type: 'image-from-var';
-  variableId: string;
-  objectFit: 'cover' | 'contain';
-}
-
-/** Raw SugarCube / HTML code inserted verbatim into the StoryCaption cell */
-export interface CellRaw {
-  type: 'raw';
-  code: string;
-}
-
-/**
- * Embeds another passage (scene) inside a sidebar cell via `<<include "name">>`.
- * Lets users keep complex panel content in a regular Scene (with typed blocks)
- * and reference it from the sidebar, instead of duplicating logic across cells.
- */
-export interface CellInclude {
-  type: 'include';
-  /** Target scene NAME (consistent with IncludeBlock.passageName). */
-  passageName: string;
-}
-
-/** Displays the contents of an array variable as a joined string */
-export interface CellList {
-  type: 'list';
-  variableId: string;  // must be an array variable
-  separator: string;   // join separator, default ', '
-  emptyText: string;   // shown when the array is empty
-  prefix: string;      // prepended before the joined string
-  suffix: string;      // appended after the joined string
-}
-
-/** Navigation target for a sidebar button cell */
-export type CellButtonNavigate =
-  | { type: 'scene'; sceneId: string }
-  | { type: 'back' };
-
-/**
- * A styled button inside a sidebar panel cell.
- * Can change variables and/or navigate to a scene / go back.
- */
-export interface CellButton {
-  type: 'button';
-  label: string;
-  style: ButtonStyle;
-  actions: ButtonAction[];
-  navigate?: CellButtonNavigate;
-}
-
-/** Master audio volume slider + optional mute button */
-export interface CellAudioVolume {
-  type: 'audio-volume';
-  showMuteButton: boolean;
-}
-
 export type DateTimeDisplayMode = 'text' | 'clock' | 'digital' | 'calendar' | 'clock-calendar' | 'digital-calendar';
 
-/** Displays a date/time variable with a custom format or graphical widget */
-export interface CellDateTime {
-  type: 'date-time';
-  variableId: string;
-  displayMode?: DateTimeDisplayMode;
-  format: string;     // e.g. "DD.MM.YYYY HH:mm", only used when displayMode === 'text'
-  prefix?: string;
-  suffix?: string;
-}
-
-/** Displays a character's paperdoll (equipment grid) in a sidebar panel cell */
-export interface CellPaperdoll {
-  type: 'paperdoll';
-  charId: string;
-  showLabels?: boolean;
-}
-
-export type CellContent =
-  | CellText
-  | CellVariable
-  | CellProgress
-  | CellImageStatic
-  | CellImageBound
-  | CellImageGen
-  | CellImageFromVar
-  | CellRaw
-  | CellInclude
-  | CellButton
-  | CellList
-  | CellAudioVolume
-  | CellDateTime
-  | CellPaperdoll;
-
+/**
+ * A table cell — a mini block-list, like a TabsTab or SectionBlock.
+ * Holds an ordered `Block[]`; recursive walkers descend into `cells[].blocks`
+ * exactly as they descend into tabs/section/condition blocks.
+ */
 export interface SidebarCell {
   id: string;
   /** Cell width as a percentage (0–100). All cells in a row should sum to 100. */
   width: number;
-  content: CellContent;
+  blocks: Block[];
 }
 
 export interface SidebarRow {
@@ -1561,11 +1681,26 @@ export interface PanelStyle {
 
 export interface ProjectSettings {
   bgColor?:        string;   // story background color
-  sidebarColor?:   string;   // sidebar/StoryCaption background color
-  titleColor?:     string;   // StoryTitle text color
-  titleFont?:      string;   // StoryTitle font-family
   /** Text shown on the click-to-begin overlay when audio autoplay is blocked */
   audioUnlockText?: string;
+  /**
+   * Raw SugarCube markup appended at the END of the auto-generated ::StoryInit body.
+   * Used for project-specific initialization that can't be expressed via the variable tree
+   * (e.g. one-off `<<run setup.foo = bar>>`). Mirrors the SugarCube ::StoryInit semantics
+   * but adds to, rather than replaces, the autogenerated variable defaults / audio cache /
+   * character inventory lines.
+   */
+  customInit?: string;
+  /**
+   * Raw JavaScript run on every `:passagestart` event (SugarCube's PassageReady analogue).
+   * Wrapped in a jQuery handler at export time.
+   */
+  passageReadyScript?: string;
+  /**
+   * Raw JavaScript run on every `:passageend` event (SugarCube's PassageDone analogue).
+   * Wrapped in a jQuery handler at export time.
+   */
+  passageDoneScript?: string;
   /**
    * Common custom styles per block type (cascade layer 2 for non-dialogue blocks).
    * Dialogue uses Character.customDialogueStyle instead.

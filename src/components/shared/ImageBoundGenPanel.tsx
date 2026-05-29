@@ -1,15 +1,15 @@
 /**
- * AI image generation modal for image-bound cells.
- * Mirrors AvatarGenModal but operates on CellImageBound mapping entries
- * instead of character avatar slots.
+ * AI image-generation panel for variable-bound images — the bound mode of
+ * ImageBlock / ImageGenBlock. Mirrors AvatarGenModal but operates on
+ * `ImageBoundGenInput` mapping entries instead of character avatar slots.
  *
  * File paths:
- *   History : history/cells/{location}/{varPath}/{slotId}/{genId}.{ext}
- *   Approved: assets/cells/{location}/{varPath}/{filename}
+ *   History : history/{category}/{location}/{varPath}/{slotId}/{genId}.{ext}
+ *   Approved: assets/{category}/{location}/{varPath}/{filename}
  *
  * Where:
- *   location = sanitised scene name  (table block in scene)
- *            | "_panel"              (global sidebar panel)
+ *   category = `pathCategory` prop ('cells' legacy default | 'blocks')
+ *   location = sanitised scene name | "_panel" (global, no scene)
  *   varPath  = full dot-path of the variable, e.g. "warrior.sword"
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -18,7 +18,7 @@ import { useProjectStore, flattenAssets } from '../../store/projectStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { fsApi, joinPath, toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import type {
-  CellImageBound, ImageBoundMapping,
+  ImageBoundMapping,
   AvatarGenSettings, AvatarGenSlotData, AvatarGenHistoryEntry,
   AssetTreeNode,
 } from '../../types';
@@ -31,7 +31,6 @@ import NumericInput from './NumericInput';
 import { StyleChipsEditor } from './StyleChipsEditor';
 import { ImageAssetPicker } from './ImageMappingEditor';
 
-import { EmojiIcon } from './EmojiIcons';
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function detectExt(imageUrl: string, contentType: string | null): string {
@@ -104,7 +103,7 @@ interface SlotState {
   progress: ComfyProgress | null;
 }
 
-function initSlots(cell: CellImageBound, defaultLabel: string): SlotState[] {
+function initSlots(cell: ImageBoundGenInput, defaultLabel: string): SlotState[] {
   const saved = cell.genSettings?.slots ?? [];
   const find = (id: string) => saved.find(s => s.slotId === id);
 
@@ -143,18 +142,16 @@ function initSlots(cell: CellImageBound, defaultLabel: string): SlotState[] {
 
 // ─── props ────────────────────────────────────────────────────────────────────
 
-interface Props {
-  cell: CellImageBound;
-  cellId: string;
-  /** ID of the variable driving this cell (used to build file paths). */
+/**
+ * Input contract for the bound-image AI-gen panel: the bound-mode fields of an
+ * ImageBlock / ImageGenBlock (driving variable + value→image mapping + per-slot
+ * generation settings). Formerly the `CellImageBound` cell type.
+ */
+export interface ImageBoundGenInput {
   variableId: string;
-  /**
-   * Scene ID when this cell is inside a scene TableBlock.
-   * Pass empty string when opened from the global panel editor.
-   */
-  sceneId: string;
-  onSave: (updated: CellImageBound) => void;
-  onClose: () => void;
+  mapping: ImageBoundMapping[];
+  defaultSrc: string;
+  genSettings?: AvatarGenSettings;
 }
 
 export interface SharedGenSettings {
@@ -168,11 +165,11 @@ export interface SharedGenSettings {
 }
 
 interface PanelProps {
-  cell: CellImageBound;
+  cell: ImageBoundGenInput;
   cellId: string;
   variableId: string;
   sceneId: string;
-  onSave: (updated: CellImageBound) => void;
+  onSave: (updated: ImageBoundGenInput) => void;
   /**
    * Path category under history/ and assets/. Default 'cells' preserves
    * existing layout for table/panel cells; the inline image-gen block uses 'blocks'.
@@ -185,36 +182,9 @@ interface PanelProps {
   hideSharedSettings?: boolean;
 }
 
-// ─── modal wrapper ────────────────────────────────────────────────────────────
+// ─── panel ────────────────────────────────────────────────────────────────────
 
-export function CellImageBoundGenModal({ cell, cellId, variableId, sceneId, onSave, onClose }: Props) {
-  const t = useT();
-  const cb = t.cellBoundGen;
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative bg-slate-800 border border-slate-600 rounded-lg shadow-2xl w-[700px] max-w-[95vw] flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 shrink-0">
-          <h2 className="text-sm font-semibold text-white">{cb.modalTitle}</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors cursor-pointer text-base leading-none flex items-center"><EmojiIcon name="close" size={20} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">
-          <CellImageBoundGenPanel
-            cell={cell}
-            cellId={cellId}
-            variableId={variableId}
-            sceneId={sceneId}
-            onSave={onSave}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── inline panel ─────────────────────────────────────────────────────────────
-
-export function CellImageBoundGenPanel({
+export function ImageBoundGenPanel({
   cell, cellId: _cellId, variableId, sceneId, onSave,
   pathCategory = 'cells',
   shared: sharedExternal,
@@ -524,7 +494,7 @@ export function CellImageBoundGenPanel({
       });
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        console.error('[CellImageBoundGen] generation failed:', err);
+        console.error('[ImageBoundGen] generation failed:', err);
         toast.error(ag.errorGenerateImage);
       }
       updateSlot(slotId, { busy: false, progress: null });
@@ -580,7 +550,7 @@ export function CellImageBoundGenPanel({
   const approveAll = async () => {
     if (!projectDir) return toast.error(ag.errorNoProjectDir);
 
-    let updatedCell: CellImageBound = { ...cell };
+    let updatedCell: ImageBoundGenInput = { ...cell };
     const updatedSlots = [...slots];
     let anyApproved = false;
 

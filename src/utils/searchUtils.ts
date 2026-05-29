@@ -33,6 +33,41 @@ export function blockSearchText(block: Block, vars: Variable[]): string {
           ),
         ].filter(Boolean).join(' ');
 
+      case 'menu-link':
+        return block.label ?? '';
+
+      case 'progress':
+        return block.variableId ? `$${varName(vars, block.variableId)}` : '';
+
+      case 'date-time':
+        return [
+          block.variableId ? `$${varName(vars, block.variableId)}` : '',
+          block.prefix ?? '',
+          block.suffix ?? '',
+        ].filter(Boolean).join(' ');
+
+      case 'callout':
+        return [block.title ?? '', block.content ?? ''].filter(Boolean).join(' ');
+
+      case 'select':
+        return [
+          block.label ?? '',
+          ...(block.options ?? []).map(o => o.label ?? ''),
+          block.variableId ? `$${varName(vars, block.variableId)}` : '',
+        ].filter(Boolean).join(' ');
+
+      case 'slider':
+        return [
+          block.label ?? '',
+          block.variableId ? `$${varName(vars, block.variableId)}` : '',
+        ].filter(Boolean).join(' ');
+
+      case 'display-object':
+        return (block.fields ?? []).flatMap(f => [
+          f.label ?? '',
+          f.variableId ? `$${varName(vars, f.variableId)}` : '',
+        ]).filter(Boolean).join(' ');
+
       case 'input-field':
         return [
           block.label ?? '',
@@ -57,6 +92,17 @@ export function blockSearchText(block: Block, vars: Variable[]): string {
           tab.label,
           ...(tab.blocks ?? []).map(nb => blockSearchText(nb, vars)),
         ].filter(Boolean).join(' ')).join(' ');
+
+      case 'section':
+        return [
+          block.title ?? '',
+          ...(block.blocks ?? []).map(nb => blockSearchText(nb, vars)),
+        ].filter(Boolean).join(' ');
+
+      case 'table':
+        return (block.rows ?? [])
+          .flatMap(r => (r.cells ?? []).flatMap(c => (c.blocks ?? []).map(nb => blockSearchText(nb, vars))))
+          .filter(Boolean).join(' ');
 
       case 'image':
         return [

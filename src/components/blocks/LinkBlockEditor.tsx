@@ -157,7 +157,9 @@ function StyleEditor({
 
 // ─── Action row ───────────────────────────────────────────────────────────────
 
-function ActionRow({
+/** Exported so MenuLinkBlockEditor (and other simple action editors) can reuse the
+ *  same set-variable / open-popup row UI without duplicating it. */
+export function ActionRow({
   action, variables, onChange, onDelete, onFocusValue,
 }: {
   action: ButtonAction;

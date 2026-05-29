@@ -1,7 +1,8 @@
 import type { Project, ProjectSettings, PluginBlockDef } from '../types';
 import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
-import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, hasAudioVolumeCell } from './exportToTwee';
+import type { PassageContext } from './exportToTwee';
+import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, hasAudioVolumeCell } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
 import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
@@ -33,15 +34,9 @@ function buildGlobalCSS(settings?: ProjectSettings): string {
   if (settings.bgColor)
     rules.push(`body, #story { background-color: ${settings.bgColor} !important; }`);
 
-  if (settings.sidebarColor)
-    rules.push(`#ui-bar, #ui-bar-body { background-color: ${settings.sidebarColor} !important; }`);
-
-  if (settings.titleColor || settings.titleFont) {
-    const props: string[] = [];
-    if (settings.titleColor) props.push(`color: ${settings.titleColor}`);
-    if (settings.titleFont)  props.push(`font-family: ${settings.titleFont}`);
-    rules.push(`#story-title { ${props.join('; ')}; }`);
-  }
+  // Sidebar background moved to the sidebar scene's systemConfig.bgColor (kind 'sidebar'),
+  // emitted via `buildSidebarSystemConfigOutput`. Title color/font live on the title
+  // scene's systemConfig (kind 'title'), emitted via `buildTitleSystemConfigCSS`.
 
   return rules.join('\n');
 }
@@ -81,17 +76,33 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const idToName = new Map(scenes.map(s => [s.id, s.name]));
   // Sidebar-as-scene: see exportToTwee for the same logic
   const sidebarScene = scenes.find(s => s.tags.includes('sidebar'));
+  const titleScene   = scenes.find(s => s.tags.includes('title'));
+  const menuScene          = scenes.find(s => s.tags.includes('menu'));
+  const passageHeaderScene = scenes.find(s => s.tags.includes('passage-header'));
+  const passageFooterScene = scenes.find(s => s.tags.includes('passage-footer'));
   let pid = 1;
   const passages: PassageEntry[] = [];
   const colW = 180, rowH = 120;
-
-  // StoryTitle passage
-  passages.push({
-    pid: pid++, name: 'StoryTitle', tags: '',
-    content: project.title, x: colW, y: 100,
-  });
-
   const variableNodes = project.variableNodes;
+
+  // StoryDisplayTitle passage — the displayed title in the UI bar (#story-title).
+  // In Twine 2 the plain story title comes from `<tw-storydata name>` (set below);
+  // a "StoryTitle" passage would be treated as an ordinary navigable passage, so we
+  // emit StoryDisplayTitle instead, which SugarCube renders (markup/images) into
+  // #story-title. Omitted when the title scene is empty → SugarCube falls back to the
+  // story name. PassageContext 'title' strips the text `<div>` wrapper.
+  const titleDisplayBody = titleScene
+    ? titleScene.blocks
+        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, 'title'))
+        .filter(Boolean)
+        .join('\n')
+    : '';
+  if (titleDisplayBody) {
+    passages.push({
+      pid: pid++, name: 'StoryDisplayTitle', tags: '',
+      content: titleDisplayBody, x: colW, y: 100,
+    });
+  }
 
   // StoryInit — variable initialization + $__tgTab
   const inits: string[] = [];
@@ -129,6 +140,9 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
       inits.push(`<<run ${charPath}.inventory.push({ item: "${slot.itemVarName}", qty: ${slot.quantity}, equipped: ${isDefaultEquipped} })>>`);
     }
   }
+  // Custom init markup — user-supplied SugarCube macros appended at the end.
+  const customInit = (project.settings?.customInit ?? '').trim();
+  if (customInit) inits.push(customInit);
   if (inits.length > 0) {
     passages.push({
       pid: pid++, name: 'StoryInit', tags: '',
@@ -150,11 +164,36 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     });
   }
 
+  // StoryMenu / PassageHeader / PassageFooter — singleton system scenes mapped to
+  // named SugarCube passages. `menu` context strips text/link wrappers because
+  // SugarCube parses ::StoryMenu line-by-line into `<li>` items.
+  const systemPassagePairs: Array<[typeof sidebarScene, string, PassageContext]> = [
+    [menuScene,          'StoryMenu',     'menu'],
+    [passageHeaderScene, 'PassageHeader', undefined],
+    [passageFooterScene, 'PassageFooter', undefined],
+  ];
+  systemPassagePairs.forEach(([sc, passageName, ctx], i) => {
+    if (!sc) return;
+    const body = sc.blocks
+      .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, ctx))
+      .filter(Boolean)
+      .join('\n');
+    if (!body) return;
+    passages.push({
+      pid: pid++, name: passageName, tags: '',
+      content: body, x: colW * (4 + i), y: 100,
+    });
+  });
+
   // Scene passages — track PID for start-tagged scene
   let startPid = pid; // fallback to first scene
 
   scenes.forEach((scene, idx) => {
     if (sidebarScene && scene.id === sidebarScene.id) return; // sidebar scene → StoryCaption only
+    if (titleScene   && scene.id === titleScene.id)   return; // title scene   → StoryTitle only
+    if (menuScene          && scene.id === menuScene.id)          return;
+    if (passageHeaderScene && scene.id === passageHeaderScene.id) return;
+    if (passageFooterScene && scene.id === passageFooterScene.id) return;
     const bgMarkup = scene.background
       ? exportSceneBg(scene.background, variables, variableNodes)
       : '';
@@ -201,10 +240,14 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
 
   const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
   const sidebarCfgCSSSection = withSection('Sidebar systemConfig', sidebarCfgCSS);
+  const titleCfgCSSSection   = withSection('Title systemConfig',   buildTitleSystemConfigCSS(titleScene));
 
   const charCSS      = withSection('Dialogue',      buildAllDialogueCss(characters));
   const cellCSS      = withSection('Cell utilities (lightbox / progress)', buildCellSharedCSS(scenes));
   const tabsCSS      = withSection('TabsBlock', buildTabsBlockCSS(scenes));
+  const sectionCSS   = withSection('SectionBlock', buildSectionCSS(scenes));
+  const calloutCSS   = withSection('Callout',      buildCalloutCSS(scenes));
+  const doCSS        = withSection('DisplayObject', buildDisplayObjectCSS(scenes));
   const buttonCSS    = withSection('Buttons',       buildButtonsCascadeCss(scenes, project.settings));
   const simpleCSS    = withSection('Block overrides', buildSimpleBlocksCascadeCss(scenes, project.settings));
   const tipCSS       = withSection('Tooltips',      buildTooltipCSS());
@@ -215,7 +258,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
   const userCSSRaw    = (project.customCss ?? '').trim();
   const userCSS       = userCSSRaw ? `/* ─── User CSS ─── */\n${userCSSRaw}` : '';
-  const combinedCSS   = [globalCSS, charCSS, cellCSS, tabsCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, sidebarCfgCSSSection, userCSS].filter(Boolean).join('\n\n');
+  const combinedCSS   = [globalCSS, charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, sidebarCfgCSSSection, titleCfgCSSSection, userCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
@@ -234,6 +277,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
     buildPopupClassSyncScript(scenes),
+    buildPassageLifecycleScript(project.settings),
     buildPurlSignatureScript(),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load (audio + video)',
@@ -258,6 +302,12 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
 export function generateStandaloneHtml(project: Project, scTemplate: string, plugins: PluginBlockDef[] = []): { html: string; css: string } {
   const { passages, startPid, combinedCSS, scriptContent } = buildPassages(project, plugins);
 
+  // `<tw-storydata name="…">` feeds `Story.title` / `document.title` and seeds the
+  // save-storage ID in SugarCube 2 + Twine 2. It must stay STABLE plain text, so it's
+  // always the project title — the (possibly rich) title scene drives only the
+  // *displayed* title via the StoryDisplayTitle passage built in buildPassages().
+  const storyDataName = project.title;
+
   const styleBlock  = `<style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style>`;
   const scriptBlock = `<script role="script" id="twine-user-script" type="text/twine-javascript">${scriptContent}</script>`;
 
@@ -269,7 +319,7 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
 
   const authorAttr = project.author ? ` author="${escAttr(project.author)}"` : '';
   const storyDataElement =
-    `<tw-storydata name="${escAttr(project.title)}" startnode="${startPid}" ` +
+    `<tw-storydata name="${escAttr(storyDataName)}" startnode="${startPid}" ` +
     `creator="Purl" creator-version="1.0.0"${authorAttr} ` +
     `format="SugarCube" format-version="2.36.1" ` +
     `ifid="${escAttr(project.ifid)}" zoom="1" options="" hidden>\n` +
@@ -279,7 +329,7 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
   let html = scTemplate;
 
   html = html.replace(/\{\{STORY_DATA}}/g, storyDataElement);
-  html = html.replace(/\{\{STORY_NAME}}/g,           escAttr(project.title));
+  html = html.replace(/\{\{STORY_NAME}}/g,           escAttr(storyDataName));
   html = html.replace(/\{\{STORY_START}}/g,          String(startPid));
   html = html.replace(/\{\{STORY_IFID}}/g,           project.ifid);
   html = html.replace(/\{\{CREATOR_NAME}}/g,         'Purl');

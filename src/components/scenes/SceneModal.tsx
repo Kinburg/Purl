@@ -5,7 +5,7 @@ import {
   SYSTEM_TAGS, SYSTEM_TAG_COLORS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME,
   START_TAG, START_TAG_COLOR,
 } from '../../types';
-import type { SystemTag, SystemSceneConfig, SidebarSceneConfig, BoundBool, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
+import type { SystemTag, SystemSceneConfig, SidebarSceneConfig, TitleSceneConfig, BoundBool, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
 import {
   ModalShell, ColorSwatchInput, INPUT_CLS,
 } from '../shared/ModalShell';
@@ -542,6 +542,15 @@ export function SceneModal({ mode, initial, takenNames, onSave, onClose, sceneId
               })}
             />
           )}
+          {tab === 'system' && lockedSystemTag === 'title' && (
+            <TitleConfigPanel
+              cfg={(sysCfg && sysCfg.kind === 'title' ? sysCfg : null)}
+              onChange={patch => setSysCfg(prev => {
+                const base: TitleSceneConfig = (prev && prev.kind === 'title') ? prev : { kind: 'title' };
+                return { ...base, ...patch };
+              })}
+            />
+          )}
         </div>
 
         {/* Sticky preview aside — always visible */}
@@ -848,6 +857,57 @@ function SidebarConfigPanel({
 
       <div className="border-t border-slate-700/40" />
 
+      {/* ── Typography & spacing ──────────────────────────────────────────── */}
+      <h4 className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{sc.sectionTypography}</h4>
+      <div className="flex flex-col gap-2.5">
+        <BoundColorRow
+          label={sc.textColor}
+          value={cfg?.textColor}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ textColor: v })}
+        />
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-300 w-32 shrink-0">{sc.fontFamily}</label>
+          <input
+            className={`${INPUT_CLS} flex-1`}
+            placeholder={sc.fontFamilyPlaceholder}
+            value={cfg?.fontFamily ?? ''}
+            onChange={e => onChange({ fontFamily: e.target.value || undefined })}
+          />
+        </div>
+        <BoundNumberRow
+          label={sc.fontSize}
+          value={cfg?.fontSize}
+          unit={cfg?.fontSizeUnit ?? 'em'}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ fontSize: v })}
+          onUnitChange={u => onChange({ fontSizeUnit: u })}
+          defaultLabel={sc.sizeDefault}
+          staticDefault={1}
+          step={0.05}
+        />
+        <BoundNumberRow
+          label={sc.padding}
+          value={cfg?.padding}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ padding: v })}
+          defaultLabel={sc.sizeDefault}
+          staticDefault={8}
+          step={1}
+        />
+        <BoundNumberRow
+          label={sc.blockGap}
+          value={cfg?.blockGap}
+          variableNodes={project.variableNodes}
+          onChange={v => onChange({ blockGap: v })}
+          defaultLabel={sc.sizeDefault}
+          staticDefault={8}
+          step={1}
+        />
+      </div>
+
+      <div className="border-t border-slate-700/40" />
+
       {/* ── Built-in UIBar menus ──────────────────────────────────────────── */}
       <div className="flex flex-col gap-2.5">
         <BoundBoolRow
@@ -867,6 +927,43 @@ function SidebarConfigPanel({
           defaultLabel={sc.onDefault}
           oppositeLabel={sc.alwaysOff}
           oppositeValue={false}
+        />
+      </div>
+    </Section>
+  );
+}
+
+// ─── Title system config panel ────────────────────────────────────────────────
+
+function TitleConfigPanel({
+  cfg, onChange,
+}: {
+  cfg: TitleSceneConfig | null;
+  onChange: (patch: Partial<TitleSceneConfig>) => void;
+}) {
+  const t = useT();
+  const tc = t.titleConfig;
+
+  return (
+    <Section title={tc.sectionTitle}>
+      <p className="text-[10px] text-slate-500 -mt-1">{tc.sectionNote}</p>
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-300 w-32 shrink-0">{tc.textColor}</label>
+        <ColorSwatchInput
+          value={cfg?.textColor ?? ''}
+          onChange={v => onChange({ textColor: v || undefined })}
+          allowClear
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-300 w-32 shrink-0">{tc.font}</label>
+        <input
+          className={`${INPUT_CLS} flex-1`}
+          placeholder={tc.fontPlaceholder}
+          value={cfg?.font ?? ''}
+          onChange={e => onChange({ font: e.target.value || undefined })}
         />
       </div>
     </Section>
@@ -982,29 +1079,35 @@ function BoundBoolRow({
 // ─── Bound-number row (Default / Static / From variable) ──────────────────────
 
 function BoundNumberRow({
-  label, value, unit, variableNodes, onChange, onUnitChange,
+  label, value, unit, variableNodes, onChange, onUnitChange, defaultLabel, staticDefault, step,
 }: {
   label: string;
   value: import('../../types').BoundNumber | undefined;
-  unit: 'em' | 'px';
+  /** When omitted, no em/px unit selector is shown (the value is a plain px number). */
+  unit?: 'em' | 'px';
   variableNodes: import('../../types').VariableTreeNode[];
   onChange: (v: import('../../types').BoundNumber | undefined) => void;
-  onUnitChange: (u: 'em' | 'px') => void;
+  onUnitChange?: (u: 'em' | 'px') => void;
+  /** Label for the "default" pill. Defaults to the width-specific "Default (17.5em)". */
+  defaultLabel?: string;
+  /** Value applied when switching to Static mode. Default 17.5 (width). */
+  staticDefault?: number;
+  step?: number;
 }) {
   const mode: 'default' | 'static' | 'bound' =
     value === undefined ? 'default'
     : typeof value === 'object' ? 'bound'
     : 'static';
-  const staticVal = typeof value === 'number' ? value : 17.5;
+  const staticVal = typeof value === 'number' ? value : (staticDefault ?? 17.5);
 
   const sc = useT().sidebarConfig;
   const options = [
-    ['default', sc.widthDefault],
+    ['default', defaultLabel ?? sc.widthDefault],
     ['static',  sc.custom],
     ['bound',   sc.fromVariable],
   ] as const;
 
-  const unitSelect = (
+  const unitSelect = (unit && onUnitChange) ? (
     <select
       // `!w-16` overrides the `w-full` baked into INPUT_CLS
       className={`${INPUT_CLS} !w-16 shrink-0`}
@@ -1014,7 +1117,7 @@ function BoundNumberRow({
       <option value="em">em</option>
       <option value="px">px</option>
     </select>
-  );
+  ) : null;
 
   return (
     <RowShell
@@ -1030,7 +1133,7 @@ function BoundNumberRow({
             <input
               type="number"
               min={0}
-              step={0.5}
+              step={step ?? 0.5}
               // `!w-24` overrides the `w-full` baked into INPUT_CLS
               className={`${INPUT_CLS} !w-24 shrink-0`}
               value={typeof value === 'number' ? value : ''}

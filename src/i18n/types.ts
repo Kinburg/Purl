@@ -38,6 +38,10 @@ export interface Translations {
     collapseAll: string;
     expandAll: string;
     empty: string;
+    /** Hint banner: ::StoryMenu renders only <<link>> items. */
+    menuSceneHint: string;
+    /** Hint banner: ::StoryTitle is the UI-bar title (text / image). */
+    titleSceneHint: string;
     selectPrompt: string;
     note: string;
     notePlaceholder: string;
@@ -172,6 +176,11 @@ export interface Translations {
       activeTextColor:   string;
       activeBorderColor: string;
       activeBold:        string;
+      // DisplayObject-specific
+      labelColor:        string;
+      valueColor:        string;
+      barColor:          string;
+      barEmptyColor:     string;
     };
     // Enum option labels — keyed by StyleFieldDescriptor.options[i].labelKey
     options: {
@@ -209,11 +218,20 @@ export interface Translations {
       // Tabs
       selectorTabsItem:       string;       // each tab anchor
       selectorTabsActive:     string;       // active tab anchor
+      // DisplayObject
+      selectorDoRow:          string;
+      selectorDoLabel:        string;
+      selectorDoValue:        string;
+      selectorDoBar:          string;
+      selectorDoBarFill:      string;
+      selectorDoCard:         string;
+      selectorDoBadge:        string;
     };
     // Block-specific raw-CSS placeholders (used by StyleRawCssHelp.placeholderKey)
-    placeholderChoice?:       string;
-    placeholderPopup?:        string;
-    placeholderTabs?:         string;
+    placeholderChoice?:        string;
+    placeholderPopup?:         string;
+    placeholderTabs?:          string;
+    placeholderDisplayObject?: string;
   };
 
   block: {
@@ -227,12 +245,14 @@ export interface Translations {
     forLoop: string;
     button: string;
     link: string;
+    menuLink: string;
     inputField: string;
     image: string;
     imageGen: string;
     video: string;
     raw: string;
     note: string;
+    spacer: string;
     table: string;
     include: string;
     divider: string;
@@ -247,6 +267,14 @@ export interface Translations {
     paperdoll: string;
     inventory: string;
     tabs: string;
+    section: string;
+    progress: string;
+    audioVolume: string;
+    dateTime: string;
+    callout: string;
+    select: string;
+    slider: string;
+    displayObject: string;
     plugin: string;
     /** Action tooltips / labels */
     drag: string;
@@ -282,12 +310,14 @@ export interface Translations {
     forLoop:     { label: string; desc: string };
     button:      { label: string; desc: string };
     link:        { label: string; desc: string };
+    menuLink:    { label: string; desc: string };
     inputField:  { label: string; desc: string };
     image:       { label: string; desc: string };
     imageGen:    { label: string; desc: string };
     video:       { label: string; desc: string };
     raw:         { label: string; desc: string };
     note:        { label: string; desc: string };
+    spacer:      { label: string; desc: string };
     table:       { label: string; desc: string };
     include:     { label: string; desc: string };
     divider:     { label: string; desc: string };
@@ -302,6 +332,14 @@ export interface Translations {
     paperdoll:        { label: string; desc: string };
     inventory:        { label: string; desc: string };
     tabs:             { label: string; desc: string };
+    section:          { label: string; desc: string };
+    progress:         { label: string; desc: string };
+    audioVolume:      { label: string; desc: string };
+    dateTime:         { label: string; desc: string };
+    callout:          { label: string; desc: string };
+    select:           { label: string; desc: string };
+    slider:           { label: string; desc: string };
+    displayObject:    { label: string; desc: string };
   };
 
   // ─── TabsBlock editor ───────────────────────────────────────────────────────
@@ -344,6 +382,16 @@ export interface Translations {
     // Background color
     bgColor: string;
     themeDefault: string;
+    // Typography & spacing
+    sectionTypography: string;
+    textColor: string;
+    fontFamily: string;
+    fontFamilyPlaceholder: string;
+    fontSize: string;
+    padding: string;
+    blockGap: string;
+    sizeDefault: string;
+    selectStringVar: string;
     // History nav + saves
     historyNav: string;
     saveLoadMenu: string;
@@ -361,6 +409,23 @@ export interface Translations {
     title: string;            // "System"
     createSidebar: string;    // "+ Sidebar scene"
     createSidebarTooltip: string; // hover hint
+    createTitle: string;      // "+ Title scene"
+    createTitleTooltip: string;
+    createMenu: string;       // "+ Menu scene"
+    createMenuTooltip: string;
+    createPassageHeader: string;  // "+ Passage header"
+    createPassageHeaderTooltip: string;
+    createPassageFooter: string;  // "+ Passage footer"
+    createPassageFooterTooltip: string;
+  };
+
+  // ─── Title (StoryTitle) systemConfig panel ──────────────────────────────────
+  titleConfig: {
+    sectionTitle: string;     // "Title (StoryTitle) settings"
+    sectionNote: string;      // explanation
+    textColor: string;
+    font: string;
+    fontPlaceholder: string;
   };
 
   pluginBlock: {
@@ -796,6 +861,8 @@ export interface Translations {
     deleteTitle: string;
     cellTextPlaceholder: string;
     cellCodePlaceholder: string;
+    cellEmpty: string;
+    cellBlockCount: (n: number) => string;
   };
 
   // ─── Shared: style editor (Panel + Table) ──────────────────────────────────
@@ -1176,6 +1243,23 @@ export interface Translations {
     navigateTitle: string;
   };
 
+  menuLinkBlock: {
+    hint: string;
+    labelField: string;
+    labelPlaceholder: string;
+    targetLabel: string;
+    targetScene: string;
+    targetBack: string;
+    targetSaves: string;
+    targetRestart: string;
+    targetSettings: string;
+    targetNone: string;
+    sceneLabel: string;
+    noScene: string;
+    builtinHint: string;
+    actionsTitle: string;
+  };
+
   buttonBlock: {
     styleTitle: string;
     bgLabel: string;
@@ -1240,6 +1324,87 @@ export interface Translations {
     thicknessSuffix: string;
     marginLabel: string;
     marginSuffix: string;
+  };
+
+  spacerBlock: {
+    heightLabel: string;
+  };
+
+  sectionBlock: {
+    titleLabel: string;
+    titlePlaceholder: string;
+    collapsible: string;
+    startCollapsed: string;
+    empty: string;
+  };
+
+  progressBlock: {
+    variableLabel: string;
+    heightLabel: string;
+    preview: string;
+  };
+
+  calloutBlock: {
+    variantLabel: string;
+    variants: { info: string; success: string; warning: string; danger: string; note: string };
+    iconLabel: string;
+    iconPlaceholder: string;
+    titleLabel: string;
+    titlePlaceholder: string;
+    contentLabel: string;
+    contentPlaceholder: string;
+  };
+
+  selectBlock: {
+    labelField: string;
+    labelPlaceholder: string;
+    variableLabel: string;
+    selectVariable: string;
+    optionsTitle: string;
+    addOption: string;
+    noOptions: string;
+    optionLabelPlaceholder: string;
+    optionValuePlaceholder: string;
+    deleteOption: string;
+  };
+
+  sliderBlock: {
+    labelField: string;
+    labelPlaceholder: string;
+    variableLabel: string;
+    selectVariable: string;
+    min: string;
+    max: string;
+    step: string;
+    showValue: string;
+  };
+
+  displayObjectBlock: {
+    sourceLabel: string;
+    sourceGroup: string;
+    sourceManual: string;
+    groupLabel: string;
+    selectGroup: string;
+    loadFields: string;
+    loadFieldsHint: string;
+    autoSync: string;
+    autoSyncHint: string;
+    autoSyncNotice: string;
+    dragField: string;
+    layoutLabel: string;
+    layouts: { list: string; inline: string; table: string; cards: string; grid: string; bars: string };
+    columns: string;
+    live: string;
+    fieldsTitle: string;
+    addField: string;
+    noFields: string;
+    selectField: string;
+    fieldLabelPlaceholder: string;
+    renders: { text: string; bar: string; bool: string; badge: string };
+    deleteField: string;
+    barMax: string;
+    barMaxOr: string;
+    barMaxVar: string;
   };
 
   blockEffects: {
@@ -1627,14 +1792,25 @@ export interface Translations {
     fieldDescPlaceholder:   string;
     sectionAppearance:      string;
     fieldBgColor:           string;
-    fieldSidebarColor:      string;
-    fieldTitleColor:        string;
-    fieldTitleFont:         string;
-    fieldTitleFontPlaceholder: string;
+    /** Hint that links to the sidebar scene's System tab for background/typography. */
+    sidebarStyleHint:       string;
+    /** Hint that links to the title scene's System tab for title color/font settings. */
+    titleStyleHint:         string;
     sectionAdvanced:        string;
     fieldAudioUnlockText:      string;
     fieldAudioUnlockTextPlaceholder: string;
     fieldAudioUnlockTextNote:  string;
+    sectionLifecycleHooks:     string;
+    lifecycleHooksNote:        string;
+    fieldCustomInit:                  string;
+    fieldCustomInitPlaceholder:       string;
+    fieldCustomInitNote:              string;
+    fieldPassageReadyScript:          string;
+    fieldPassageReadyScriptPlaceholder: string;
+    fieldPassageReadyScriptNote:      string;
+    fieldPassageDoneScript:           string;
+    fieldPassageDoneScriptPlaceholder:  string;
+    fieldPassageDoneScriptNote:       string;
     create:                 string;
     save:                   string;
     chooseFolder:           string;

@@ -1,8 +1,9 @@
 import type {
-  Project, Block, Character, Variable, ConditionBranch, ChoiceOption,
+  Project, ProjectSettings, Block, Character, Variable, ConditionBranch, ChoiceOption,
   SidebarCell, TableBlock,
-  Scene, ButtonStyle, CellProgress, CellButton, BlockDelay, BlockTypewriter, IncludeBlock,
-  ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, CellList, CellDateTime, DateTimeDisplayMode,
+  Scene, BlockDelay, BlockTypewriter, IncludeBlock,
+  ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, DateTimeDisplayMode,
+  AudioVolumeBlock, ProgressBlock, DateTimeBlock,
   Watcher, WatcherCondition, AudioBlock, AudioGenBlock, ContainerBlock, TimeManipulationBlock,
   VariableTreeNode, VariableGroup, ItemDefinition,
   PluginBlockDef, PluginBlock,
@@ -275,16 +276,40 @@ function wrapBlockEffects(
   return result;
 }
 
-export function blockToSC(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
-  const raw = blockToSCInner(block, chars, vars, nodes, indent, idToName, project);
+/**
+ * Special SugarCube passages need stripped-down block output:
+ *   - `'title'` (::StoryTitle): text blocks emit raw content, no `<div>` wrapper
+ *     (SugarCube renders the passage's processed text into `#story-title`).
+ *   - `'menu'`  (::StoryMenu):  link blocks emit just the `<<link>>` macro
+ *     on a single line, no `<span>` wrapper (SugarCube expects each `<<link>>`
+ *     on its own line to build a `<li>` menu).
+ * Other passage contexts (sidebar, header, footer, regular scenes) use the
+ * default wrapping behavior.
+ */
+export type PassageContext = 'title' | 'menu' | undefined;
+
+export function blockToSC(
+  block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[],
+  indent = '', idToName?: Map<string, string>, project?: Project,
+  passageCtx?: PassageContext,
+): string {
+  const raw = blockToSCInner(block, chars, vars, nodes, indent, idToName, project, passageCtx);
   if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation') return raw;
   const b = block as { delay?: BlockDelay; typewriter?: BlockTypewriter };
   return wrapBlockEffects(raw, b.delay, b.typewriter, indent, block.id);
 }
 
-function blockToSCInner(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
+function blockToSCInner(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project, passageCtx?: PassageContext): string {
   switch (block.type) {
     case 'text': {
+      // Title / menu passages: SugarCube renders ::StoryTitle straight into
+      // `#story-title` (via wiki()) and parses ::StoryMenu line-by-line into
+      // `<<link>>` items. The `<div class="tg-text">` wrapper would either
+      // become literal markup in the title or break menu line-parsing — strip
+      // it for these contexts and emit the user's raw content.
+      if (passageCtx === 'title' || passageCtx === 'menu') {
+        return `${indent}${block.content}`;
+      }
       const settings = project?.settings;
       const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
       const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
@@ -686,12 +711,153 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return `${spotPrefix}${indent}<hr class="${classes}"${bindAttr} style="--tg-div-color:${color};--tg-div-thickness:${thickness}px;--tg-div-margin:${marginV}px">`;
     }
 
+    case 'spacer': {
+      const size = (typeof block.size === 'number' && block.size >= 0) ? block.size : 8;
+      return `${indent}<div class="tg-spacer" style="height:${size}px"></div>`;
+    }
+
+    case 'progress': {
+      // Reuse the progress-bar renderer (CSS-class path). A standalone block needs an
+      // explicit height since `.tg-progress` is height:100% — wrap in a sized div.
+      const h = (typeof block.height === 'number' && block.height > 0) ? block.height : 16;
+      const inner = buildProgressBarSC(block, vars, nodes);
+      return `${indent}<div class="tg-progress-block" style="height:${h}px">${inner}</div>`;
+    }
+
+    case 'audio-volume':
+      return `${indent}${buildAudioVolumeBlockSC(block)}`;
+
+    case 'date-time': {
+      const v = vars.find(x => x.id === block.variableId);
+      const vname = v ? `$${varPath(v, nodes)}` : '$???';
+      return `${indent}${buildDateTimeCellSC(block, vname)}`;
+    }
+
+    case 'callout': {
+      const icon = (block.icon ?? '').trim();
+      const iconSpan = icon ? `<span class="tg-callout-icon">${icon}</span>` : '';
+      const title = (block.title ?? '').trim();
+      const titleDiv = title ? `<div class="tg-callout-title">${title}</div>` : '';
+      return `${indent}<div class="tg-callout tg-callout-${block.variant}">${iconSpan}<div class="tg-callout-body">${titleDiv}${block.content}</div></div>`;
+    }
+
+    case 'select': {
+      if (block.options.length === 0) return '';
+      const v = vars.find(x => x.id === block.variableId);
+      const vname = v ? `$${varPath(v, nodes)}` : '$???';
+      const opts = block.options.map(o => `<<option "${o.label}" "${o.value}">>`).join('');
+      const listbox = `<<listbox "${vname}" autoselect>>${opts}<</listbox>>`;
+      const label = block.label ? `${block.label} ` : '';
+      return `${indent}<span class="tg-select">${label}${listbox}</span>`;
+    }
+
+    case 'slider': {
+      // Plain range input (SugarCube has no range macro). A deferred <<script>> seeds
+      // it from the bound variable and writes back on input, refreshing live spans +
+      // watchers — same DOM-defer pattern as the audio-volume block.
+      const v = vars.find(x => x.id === block.variableId);
+      const vpath = v ? varPath(v, nodes) : '';
+      const ref = vpath ? buildJSRef(vpath) : 'State.variables.__tgSliderMissing';
+      const id = `tgsl${block.id.replace(/-/g, '').substring(0, 12)}`;
+      const vid = `${id}v`;
+      const step = (typeof block.step === 'number' && block.step > 0) ? block.step : 1;
+      const def = (v && /^-?\d+(\.\d+)?$/.test(v.defaultValue)) ? v.defaultValue : String(block.min);
+      const slider = `<input id="${id}" type="range" min="${block.min}" max="${block.max}" step="${step}" value="${def}" style="vertical-align:middle">`;
+      const valSpan = block.showValue ? `<span id="${vid}" class="tg-slider-val">${def}</span>` : '';
+      const label = block.label ? `${block.label} ` : '';
+      const script = [
+        '<<script>>',
+        'setTimeout(function(){',
+        `  var s=document.getElementById("${id}"); if(!s) return;`,
+        `  var cur=${ref};`,
+        '  if(cur!=null) s.value=cur;',
+        block.showValue ? `  var d=document.getElementById("${vid}"); if(d) d.textContent=s.value;` : '',
+        '  s.addEventListener("input", function(){',
+        '    var nv=Number(s.value);',
+        `    ${ref}=nv;`,
+        block.showValue ? `    var dd=document.getElementById("${vid}"); if(dd) dd.textContent=nv;` : '',
+        '    if(window.jQuery){window.jQuery(".tg-live[data-wiki]").each(function(){window.jQuery(this).empty().wiki(window.jQuery(this).attr("data-wiki"));});}',
+        '    if(window._tgCheckWatchers) window._tgCheckWatchers();',
+        '  });',
+        '},0);',
+        '<</script>>',
+      ].filter(Boolean).join('');
+      return `${indent}<span class="tg-slider">${label}${slider}${valSpan}</span>${script}`;
+    }
+
+    case 'display-object': {
+      if (block.fields.length === 0) return '';
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+
+      const cols = (typeof block.columns === 'number' && block.columns > 0) ? block.columns : 2;
+      const gridStyleAttr = block.layout === 'grid' ? ` style="--tg-do-cols:${cols}"` : '';
+      const classes = ['tg-do', `tg-do-${block.layout}`, ...extra].join(' ');
+
+      const rowsHtml = block.fields.map(f => {
+        const v = vars.find(x => x.id === f.variableId);
+        const vpath = v ? varPath(v, nodes) : '';
+        const sv = vpath ? `$${vpath}` : '$???';
+        const labelText = ((f.label ?? '').trim() || (v?.name ?? '?')).replace(/</g, '&lt;');
+        const render = f.render ?? 'text';
+
+        let valueMarkup: string;
+        if (render === 'bar') {
+          let maxExpr: string;
+          if (f.maxVariableId) {
+            const mv = vars.find(x => x.id === f.maxVariableId);
+            const mpath = mv ? varPath(mv, nodes) : '';
+            maxExpr = mpath ? `$${mpath}` : '1';
+          } else {
+            maxExpr = (typeof f.maxValue === 'number' && f.maxValue > 0) ? String(f.maxValue) : '1';
+          }
+          valueMarkup =
+            `<<set _tgP to Math.min(100,Math.max(0,${sv}/${maxExpr}*100))>>` +
+            `<<print '<span class="tg-do-bar"><span class="tg-do-bar-fill" style="width:'+_tgP+'%"></span></span>'>>` +
+            `<span class="tg-do-bar-text"><<print ${sv}>>/<<print ${maxExpr}>></span>`;
+        } else if (render === 'bool') {
+          valueMarkup = `<<if ${sv}>>✓<<else>>✗<</if>>`;
+        } else if (render === 'badge') {
+          valueMarkup = `<span class="tg-do-badge"><<print ${sv}>></span>`;
+        } else {
+          valueMarkup = `<<print ${sv}>>`;
+        }
+
+        const valueAttrs = block.live
+          ? ` class="tg-do-value tg-live" data-wiki="${htmlAttr(valueMarkup)}"`
+          : ` class="tg-do-value"`;
+        return `<span class="tg-do-row"><span class="tg-do-label">${labelText}</span><span${valueAttrs}>${valueMarkup}</span></span>`;
+      }).join('');
+
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}${gridStyleAttr}>${rowsHtml}</div>`;
+    }
+
+    case 'section': {
+      const inner = block.blocks
+        .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
+        .filter(Boolean)
+        .join('\n');
+      const title = (block.title ?? '').trim();
+      if (block.collapsible) {
+        // Native <details> disclosure — no JS needed. `open` unless defaultCollapsed.
+        const openAttr = block.defaultCollapsed ? '' : ' open';
+        const summary = `${indent}  <summary class="tg-section-title">${title}</summary>`;
+        return `${indent}<details class="tg-section"${openAttr}>\n${summary}\n${inner}\n${indent}</details>`;
+      }
+      const head = title ? `${indent}  <div class="tg-section-title">${title}</div>\n` : '';
+      return `${indent}<div class="tg-section">\n${head}${inner}\n${indent}</div>`;
+    }
+
     case 'note':
       // Developer note — never exported
       return '';
 
     case 'table':
-      return tableBlockToSC(block, vars, nodes, indent, idToName, chars, project?.items);
+      return tableBlockToSC(block, chars, vars, nodes, indent, idToName, project);
 
     case 'paperdoll': {
       const char = chars.find(ch => ch.id === block.charId);
@@ -748,22 +914,61 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const actionLines = block.actions
         .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
         .filter(Boolean);
+      const targetActions: string[] = [];
       if (block.target === 'back') {
-        actionLines.push(`${indent}  <<run Engine.backward()>>`);
+        targetActions.push(`<<run Engine.backward()>>`);
       } else {
         const rawTarget = block.targetSceneId ?? '';
         const gotoArg = rawTarget.startsWith('param:')
           ? `_${rawTarget.slice('param:'.length)}`          // temp-var ref, unquoted
           : `"${idToName?.get(rawTarget) ?? rawTarget}"`;   // scene name, quoted
-        actionLines.push(`${indent}  <<goto ${gotoArg}>>`);
+        targetActions.push(`<<goto ${gotoArg}>>`);
       }
-      actionLines.push(`${indent}  <<run UIBar.update()>>`);
+      targetActions.push(`<<run UIBar.update()>>`);
+      // StoryMenu: emit just the <<link>> macro on one line, no wrapper span.
+      // SugarCube parses ::StoryMenu line-by-line; each <<link>> becomes a <li>
+      // and gets standard menu styling.
+      if (passageCtx === 'menu') {
+        const inlineActions = block.actions
+          .map(a => actionToSC(a, vars, nodes, '', idToName).trim())
+          .filter(Boolean)
+          .join('');
+        return `${indent}<<link "${block.label}">>${inlineActions}${targetActions.join('')}<</link>>`;
+      }
+      actionLines.push(...targetActions.map(a => `${indent}  ${a}`));
       return (
         spotPrefix +
         `${indent}<span class="${classAttr}"${bindAttr}><<link "${block.label}">>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
+    }
+
+    case 'menu-link': {
+      // Bare <<link>> — no wrapper span, no styling. Single line so SugarCube's
+      // ::StoryMenu link-sifting recognizes the generated <a>. Built-in targets map
+      // to SugarCube UI dialogs; 'none' runs only the actions.
+      const inlineActions = block.actions
+        .map(a => actionToSC(a, vars, nodes, '', idToName).trim())
+        .filter(Boolean)
+        .join('');
+      let nav = '';
+      switch (block.target) {
+        case 'back':     nav = '<<run Engine.backward()>>'; break;
+        case 'saves':    nav = '<<run UI.saves()>>'; break;
+        case 'restart':  nav = '<<run UI.restart()>>'; break;
+        case 'settings': nav = '<<run UI.settings()>>'; break;
+        case 'scene': {
+          const rawTarget = block.targetSceneId ?? '';
+          const gotoArg = rawTarget.startsWith('param:')
+            ? `_${rawTarget.slice('param:'.length)}`
+            : `"${idToName?.get(rawTarget) ?? rawTarget}"`;
+          nav = `<<goto ${gotoArg}>>`;
+          break;
+        }
+        // 'none': nav stays empty — actions only
+      }
+      return `${indent}<<link "${block.label}">>${inlineActions}${nav}<</link>>`;
     }
 
     case 'function': {
@@ -1074,12 +1279,11 @@ function branchToSC(
 // It does NOT support `function`, `var`, `return`, or IIFEs.
 // <<script>>output.wiki()<</script>> also fails — `output` is a plain DOM node.
 
-function buildProgressBarSC(c: CellProgress, vars: Variable[], nodes: VariableTreeNode[], forTable: boolean): string {
+function buildProgressBarSC(c: ProgressBlock, vars: Variable[], nodes: VariableTreeNode[]): string {
   const v = vars.find(x => x.id === c.variableId);
   const vname = v ? varPath(v, nodes) : '???';
   const sv = `$${vname}`;  // TwineScript story variable
   const emptyColor = c.emptyColor ?? '#333';
-  const textColorCSS = c.textColor ? `color:${c.textColor};` : '';
 
   // Percentage stored in TwineScript temp var _tgP
   const setPct = `<<set _tgP to Math.min(100,Math.max(0,${sv}/${c.maxValue}*100))>>`;
@@ -1101,16 +1305,8 @@ function buildProgressBarSC(c: CellProgress, vars: Variable[], nodes: VariableTr
   const textRef = c.showText ? `${sv}+'/${c.maxValue}'` : "''";
   const vert = c.vertical ?? false;
 
-  if (forTable) {
-    // Table cells use fully inline styles (no CSS class deps)
-    const printExpr = vert
-      ? `'<span style="width:100%;height:100%;background:${emptyColor};border-radius:2px;overflow:hidden;display:flex;flex-direction:column-reverse;align-items:stretch;">'` +
-        `+'<span style="height:'+_tgP+'%;width:100%;background:'+${colorRef}+';display:flex;align-items:center;justify-content:center;font-size:0.75em;${textColorCSS}">'+${textRef}+'</span></span>'`
-      : `'<span style="width:100%;height:100%;background:${emptyColor};border-radius:2px;overflow:hidden;display:flex;align-items:center;">'` +
-        `+'<span style="width:'+_tgP+'%;background:'+${colorRef}+';height:100%;display:flex;align-items:center;justify-content:center;font-size:0.75em;${textColorCSS}">'+${textRef}+'</span></span>'`;
-    return `${setPct}${setColor}<<print ${printExpr}>>`;
-  } else {
-    // StoryCaption: CSS classes handle layout; colors via CSS custom properties
+  {
+    // CSS classes handle layout; colors via CSS custom properties
     const textColorVar = c.textColor ? `;--tg-bar-text:${c.textColor}` : '';
     const vertClass = vert ? ' tg-progress-vert' : '';
     const printExpr = vert
@@ -1122,84 +1318,43 @@ function buildProgressBarSC(c: CellProgress, vars: Variable[], nodes: VariableTr
   }
 }
 
-// ─── Cell button: <<link>> (behavior) + inline <<script>> (styles on <a>) ─────
+// ─── Audio-volume block: master-volume slider + optional mute toggle ─────────
+//
+// Plain HTML <input type="range"> with inline handlers (NO <<print>> inside
+// attributes — SugarCube misparses `>>`). A deferred <<script>> seeds the slider
+// from the saved $__tgMasterVol once the DOM node exists. DOM ids derive from the
+// block id so multiple sliders on one passage don't collide.
 
-/** Builds an inline style string for a CellButton. */
-function buildCellBtnStyleStr(s: ButtonStyle): string {
-  return [
-    `background:${s.bgColor}`,
-    `color:${s.textColor}`,
-    `border:1px solid ${s.borderColor}`,
-    `border-radius:${s.borderRadius}px`,
-    `padding:${s.paddingV}px ${s.paddingH}px`,
-    `font-size:${(s.fontSize / 10).toFixed(1)}em`,
-    `text-decoration:none`,
-    s.bold ? 'font-weight:bold' : '',
-    s.fullWidth
-      ? 'display:block;width:100%;text-align:center;box-sizing:border-box'
-      : 'display:inline-block',
-    'cursor:pointer',
-    'transition:filter 0.15s',
-  ].filter(Boolean).join(';');
-}
-
-/**
- * Generates <<link>> for a CellButton.
- * Behavior via SugarCube macros; inline styles applied immediately via <<script>>+setTimeout
- * so they override any SugarCube CSS regardless of specificity.
- */
-function buildCellButtonSC(c: CellButton, cellId: string, vars: Variable[], nodes: VariableTreeNode[], idToName?: Map<string, string>): string {
-  const domId = `tgcb${cellId.replace(/-/g, '').substring(0, 12)}`;
-  const styleStr = buildCellBtnStyleStr(c.style);
-
-  const macros: string[] = c.actions
-    .map(a => actionToSC(a, vars, nodes, '', idToName))
-    .filter(Boolean);
-
-  macros.push('<<run window._tgCheckWatchers && window._tgCheckWatchers()>>');
-  macros.push('<<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>');
-  macros.push('<<run UIBar.update()>>');
-
-  if (c.navigate?.type === 'back') {
-    macros.push('<<run Engine.backward()>>');
-  } else if (c.navigate?.type === 'scene' && c.navigate.sceneId) {
-    macros.push(`<<goto ${sceneTarget(c.navigate.sceneId, idToName)}>>`);
-  }
-
-  const label = c.label || '';
-  const esc = styleStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  // <<script>> runs during passage render; setTimeout(fn,0) defers until <a> is in DOM
-  const script =
-    `<<script>>setTimeout(function(){` +
-    `var e=document.getElementById('${domId}');` +
-    `if(e){var a=e.querySelector('a');` +
-    `if(a){a.style.cssText='${esc}';` +
-    `a.onmouseenter=function(){a.style.filter='brightness(1.2)';};` +
-    `a.onmouseleave=function(){a.style.filter='';};}}` +
-    `},0);<</script>>`;
-
-  return (
-    `<span id="${domId}"><<link "${label}">>${macros.join('')}<</link>></span>` +
-    script
-  );
-}
-
-// ─── Cell list (array) ────────────────────────────────────────────────────────
-
-function buildCellListSC(c: CellList, vars: Variable[], nodes: VariableTreeNode[]): string {
-  const v = vars.find(x => x.id === c.variableId);
-  const vname = v ? `$${varPath(v, nodes)}` : '$???';
-  const sep = (c.separator || ', ').replace(/"/g, '\\"');
-  const inner = `${c.prefix}<<print ${vname}.join("${sep}")>>${c.suffix}`;
-  if (c.emptyText) {
-    return `<<if ${vname}.length gt 0>>${inner}<<else>>${c.emptyText}<</if>>`;
-  }
-  return inner;
+function buildAudioVolumeBlockSC(b: AudioVolumeBlock): string {
+  const id = `tgvol${b.id.replace(/-/g, '').substring(0, 12)}`;
+  const muteId = `${id}m`;
+  const slider =
+    `<input id="${id}" type="range" min="0" max="100" value="100" style="flex:1;min-width:0" ` +
+    `oninput="var x=this.value/100;SugarCube.SimpleAudio.volume(x);SugarCube.State.variables.__tgMasterVol=x;` +
+    `document.querySelectorAll('video').forEach(function(el){el.volume=x;})" />`;
+  const mute = b.showMuteButton
+    ? `<button id="${muteId}" onclick="var S=SugarCube.SimpleAudio;S.mute(!S.mute());` +
+      `this.textContent=S.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A)" ` +
+      `style="border:none;background:none;cursor:pointer;font-size:1.2em">&#x1F50A;</button>`
+    : '';
+  const initScript = [
+    '<<script>>',
+    'setTimeout(function(){',
+    '  var v=State.variables.__tgMasterVol;',
+    `  var s=document.getElementById("${id}");`,
+    '  if(s&&v!=null)s.value=Math.round(v*100);',
+    b.showMuteButton
+      ? `  var m=document.getElementById("${muteId}");if(m)m.textContent=SugarCube.SimpleAudio.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A);`
+      : '',
+    '},0);',
+    '<</script>>',
+  ].filter(Boolean).join('');
+  return `<span class="tg-audio-volume" style="display:flex;align-items:center;gap:6px;width:100%">${mute}${slider}</span>${initScript}`;
 }
 
 // ─── Date-Time logic ─────────────────────────────────────────────────────────
 
-function buildDateTimeCellSC(c: CellDateTime, vname: string): string {
+function buildDateTimeCellSC(c: DateTimeBlock, vname: string): string {
   const mode: DateTimeDisplayMode = c.displayMode ?? 'text';
   const pre = c.prefix ?? '';
   const suf = c.suffix ?? '';
@@ -1325,82 +1480,16 @@ export function buildDateTimeScript(): string {
 
 // ─── Table block → inline HTML (fully self-contained, no class deps) ──────────
 
-function tableCellInnerToSC(cell: SidebarCell, vars: Variable[], nodes: VariableTreeNode[], idToName?: Map<string, string>, characters?: Character[], items?: ItemDefinition[]): string {
-  const c = cell.content;
-  switch (c.type) {
-    case 'text': return c.value;
-
-    case 'variable': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      return `${c.prefix}<<print ${vname}>>${c.suffix}`;
-    }
-
-    case 'progress':
-      return buildProgressBarSC(c, vars, nodes, true);
-
-    case 'image-static':
-      return `<img src="${c.src}" style="width:100%;height:100%;display:block;object-fit:${c.objectFit};" />`;
-
-    case 'image-gen':
-      return `<img src="${c.src}" style="width:100%;height:100%;display:block;object-fit:cover;" />`;
-
-    case 'image-from-var': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      return `<<if ${vname}>><img @src="${vname}" style="width:100%;height:100%;display:block;object-fit:${c.objectFit};" /><</if>>`;
-    }
-
-    case 'image-bound': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      const imgTag = (src: string) =>
-        `<img src="${src}" style="width:100%;height:100%;display:block;object-fit:${c.objectFit};" />`;
-      const cases = c.mapping.map((m, i) => {
-        const kw = i === 0 ? '<<if' : '<<elseif';
-        const mt = m.matchType ?? 'exact';
-        let cond: string;
-        if (mt === 'range') {
-          cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
-        } else {
-          const val = (v?.varType === 'string') ? `"${m.value}"` : m.value;
-          cond = `${vname} eq ${val}`;
-        }
-        return `${kw} ${cond}>>${imgTag(m.src)}`;
-      });
-      if (c.defaultSrc) cases.push(`<<else>>${imgTag(c.defaultSrc)}`);
-      if (cases.length > 0) cases.push('<</if>>');
-      return cases.join('');
-    }
-
-    case 'raw': return c.code;
-
-    case 'include':
-      return c.passageName ? `<<include "${c.passageName}">>` : '';
-
-    case 'button':
-      return buildCellButtonSC(c, cell.id, vars, nodes, idToName);
-
-    case 'list':
-      return buildCellListSC(c as CellList, vars, nodes);
-
-    case 'date-time': {
-      const v = vars.find(x => x.id === c.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      return buildDateTimeCellSC(c as CellDateTime, vname);
-    }
-
-    case 'paperdoll': {
-      const char = characters?.find(ch => ch.id === c.charId);
-      if (!char?.paperdoll || !char.varName) return '';
-      return buildPaperdollCellSC(char.varName, char.paperdoll, c.showLabels, vars, nodes, items);
-    }
-
-    default: return '';
-  }
+function tableCellInnerToSC(cell: SidebarCell, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], idToName?: Map<string, string>, project?: Project): string {
+  // A cell is a mini block-list — render each block through the standard pipeline.
+  // Joined with '' (no newlines) to avoid SugarCube inserting <p> between siblings.
+  return cell.blocks
+    .map(b => blockToSC(b, chars, vars, nodes, '', idToName, project))
+    .filter(Boolean)
+    .join('');
 }
 
-function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, characters?: Character[], items?: ItemDefinition[]): string {
+function tableBlockToSC(block: TableBlock, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
   if (block.rows.length === 0) return '';
   const s = block.style;
 
@@ -1434,7 +1523,7 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
       if (s.showCellBorders && ci > 0) {
         cellParts.push(`border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)`);
       }
-      return `<span style="${cellParts.join(';')}">${tableCellInnerToSC(cell, vars, nodes, idToName, characters, items)}</span>`;
+      return `<span style="${cellParts.join(';')}">${tableCellInnerToSC(cell, chars, vars, nodes, idToName, project)}</span>`;
     }).join('');
     return `<div style="${rowParts.join(';')}">${cellsHTML}</div>`;
   }).filter(Boolean).join('');
@@ -1445,33 +1534,30 @@ function tableBlockToSC(block: TableBlock, vars: Variable[], nodes: VariableTree
 
 // ─── Recursive walker: detect TableBlock with audio-volume / image cells ──────
 
-/** True when any descendant block is a TableBlock containing at least one
- *  `audio-volume` cell. Used to decide whether to emit master-volume init. */
+/** True when any descendant block is an AudioVolumeBlock (incl. inside table
+ *  cells). Used to decide whether to emit master-volume init. */
 export function hasAudioVolumeCell(blocks: Block[]): boolean {
   return blocks.some(b => {
-    if (b.type === 'table') {
-      return b.rows.some(r => r.cells.some(c => c.content.type === 'audio-volume'));
-    }
+    if (b.type === 'audio-volume') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasAudioVolumeCell(c.blocks)));
     if (b.type === 'condition') return b.branches.some(br => hasAudioVolumeCell(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasAudioVolumeCell(b.innerBlocks);
     if (b.type === 'tabs') return b.tabs.some(tab => hasAudioVolumeCell(tab.blocks));
+    if (b.type === 'section') return hasAudioVolumeCell(b.blocks);
     return false;
   });
 }
 
-/** True when any descendant block is a TableBlock containing at least one image-type cell.
- *  Used to gate emission of lightbox CSS + tgOpenLightbox global. */
+/** True when any descendant block is an image / image-gen block (incl. inside
+ *  table cells). Used to gate emission of lightbox CSS + tgOpenLightbox global. */
 function hasImageCell(blocks: Block[]): boolean {
   return blocks.some(b => {
-    if (b.type === 'table') {
-      return b.rows.some(r => r.cells.some(c =>
-        c.content.type === 'image-static' || c.content.type === 'image-bound' ||
-        c.content.type === 'image-gen'    || c.content.type === 'image-from-var'
-      ));
-    }
+    if (b.type === 'image' || b.type === 'image-gen') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasImageCell(c.blocks)));
     if (b.type === 'condition') return b.branches.some(br => hasImageCell(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasImageCell(b.innerBlocks);
     if (b.type === 'tabs') return b.tabs.some(tab => hasImageCell(tab.blocks));
+    if (b.type === 'section') return hasImageCell(b.blocks);
     return false;
   });
 }
@@ -1633,6 +1719,67 @@ export function buildSidebarSystemConfigOutput(
     }
   }
 
+  // ── textColor — static or bound ──────────────────────────────────────────
+  if (typeof cfg.textColor === 'string' && cfg.textColor) {
+    rules.push(`#ui-bar { color: ${cfg.textColor}; }`);
+  } else if (isBound(cfg.textColor)) {
+    const access = boundAccess(cfg.textColor);
+    if (access) {
+      syncBody.push(
+        `(function() { var c = ${access}; var bar = document.getElementById('ui-bar');` +
+        ` if (bar) bar.style.color = (typeof c === 'string' ? c : ''); })();`
+      );
+    }
+  }
+
+  // ── fontFamily — static only ─────────────────────────────────────────────
+  if (typeof cfg.fontFamily === 'string' && cfg.fontFamily.trim()) {
+    rules.push(`#ui-bar { font-family: ${cfg.fontFamily.trim()}; }`);
+  }
+
+  // ── fontSize — static or bound (unit em/px) ──────────────────────────────
+  const fontUnit = cfg.fontSizeUnit ?? 'em';
+  if (typeof cfg.fontSize === 'number' && cfg.fontSize > 0) {
+    rules.push(`#ui-bar { font-size: ${cfg.fontSize}${fontUnit}; }`);
+  } else if (isBound(cfg.fontSize)) {
+    const access = boundAccess(cfg.fontSize);
+    if (access) {
+      syncBody.push(
+        `(function() { var n = ${access}; var bar = document.getElementById('ui-bar');` +
+        ` if (bar) bar.style.fontSize = (typeof n === 'number' && n > 0 ? n + '${fontUnit}' : ''); })();`
+      );
+    }
+  }
+
+  // ── padding — static or bound (px), applied to #ui-bar-body ──────────────
+  if (typeof cfg.padding === 'number' && cfg.padding >= 0) {
+    rules.push(`#ui-bar-body { padding: ${cfg.padding}px; }`);
+  } else if (isBound(cfg.padding)) {
+    const access = boundAccess(cfg.padding);
+    if (access) {
+      syncBody.push(
+        `(function() { var n = ${access}; var b = document.getElementById('ui-bar-body');` +
+        ` if (b) b.style.padding = (typeof n === 'number' && n >= 0 ? n + 'px' : ''); })();`
+      );
+    }
+  }
+
+  // ── blockGap — vertical spacing between StoryCaption blocks (px) ──────────
+  // Uses a sibling-margin rule reading a CSS var, so bound updates only need to
+  // set the var (no layout-model change).
+  if (typeof cfg.blockGap === 'number' && cfg.blockGap >= 0) {
+    rules.push(`#story-caption > * + * { margin-top: ${cfg.blockGap}px; }`);
+  } else if (isBound(cfg.blockGap)) {
+    const access = boundAccess(cfg.blockGap);
+    if (access) {
+      rules.push('#story-caption > * + * { margin-top: var(--tg-sb-gap, 0px); }');
+      syncBody.push(
+        `(function() { var n = ${access}; var c = document.getElementById('story-caption');` +
+        ` if (c) c.style.setProperty('--tg-sb-gap', (typeof n === 'number' && n >= 0 ? n : 0) + 'px'); })();`
+      );
+    }
+  }
+
   // ── Compose output ──────────────────────────────────────────────────────
   const scriptParts: string[] = [];
   if (initLines.length > 0) {
@@ -1652,6 +1799,52 @@ export function buildSidebarSystemConfigOutput(
   const css    = rules.length > 0 ? `/* Sidebar systemConfig */\n${rules.join('\n')}` : '';
   const script = scriptParts.length > 0 ? scriptParts.join('\n') : '';
   return { css, script };
+}
+
+/**
+ * Wrap `passageReadyScript` and `passageDoneScript` from `ProjectSettings` as jQuery
+ * handlers on SugarCube's `:passagestart` (≈ PassageReady) and `:passageend`
+ * (≈ PassageDone) events. Returns empty string when both scripts are absent or blank.
+ */
+export function buildPassageLifecycleScript(settings: ProjectSettings | undefined): string {
+  const ready = (settings?.passageReadyScript ?? '').trim();
+  const done  = (settings?.passageDoneScript  ?? '').trim();
+  if (!ready && !done) return '';
+  const parts: string[] = [];
+  if (ready) {
+    parts.push(
+      '// Passage ready (SugarCube ::PassageReady analogue) — runs on every :passagestart',
+      '$(document).on(":passagestart", function(ev) {',
+      ready,
+      '});',
+    );
+  }
+  if (done) {
+    parts.push(
+      '// Passage done (SugarCube ::PassageDone analogue) — runs on every :passageend',
+      '$(document).on(":passageend", function(ev) {',
+      done,
+      '});',
+    );
+  }
+  return parts.join('\n');
+}
+
+/**
+ * CSS overrides from a title scene's `systemConfig` — `#story-title { color/font-family }`.
+ * Returns empty string when scene is null or has no relevant config.
+ * Used by both `.twee` and HTML export.
+ */
+export function buildTitleSystemConfigCSS(titleScene: Scene | undefined): string {
+  const cfg = (titleScene?.systemConfig && titleScene.systemConfig.kind === 'title')
+    ? titleScene.systemConfig
+    : null;
+  if (!cfg) return '';
+  const props: string[] = [];
+  if (cfg.textColor) props.push(`color: ${cfg.textColor}`);
+  if (cfg.font)      props.push(`font-family: ${cfg.font}`);
+  if (props.length === 0) return '';
+  return `/* Title systemConfig */\n#story-title { ${props.join('; ')}; }`;
 }
 
 export function buildPurlSignatureScript(): string {
@@ -1674,13 +1867,13 @@ export function buildPurlSignatureScript(): string {
 export function buildCellSharedCSS(scenes: Scene[]): string {
   const anyImage = scenes.some(s => hasImageCell(s.blocks));
   const anyTable = scenes.some(s => hasNestedTable(s.blocks));
-  if (!anyTable && !anyImage) return '';
+  const anyProgress = scenes.some(s => hasNestedProgress(s.blocks));
+  if (!anyTable && !anyImage && !anyProgress) return '';
 
   const lines: string[] = [
     '.tg-progress { width: 100%; height: 100%; background: var(--tg-bar-empty, #333); border-radius: 2px; overflow: hidden; display: flex; align-items: center; }',
     '.tg-progress-vert { flex-direction: column-reverse; align-items: stretch; }',
     '.tg-bar { height: 100%; background: var(--tg-bar-fill, #4a90d9); transition: width 0.3s, height 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--tg-bar-text, inherit); }',
-    '.tg-cell-img { width: 100%; height: 100%; display: block; }',
   ];
   if (anyImage) {
     lines.push(
@@ -1694,6 +1887,129 @@ export function buildCellSharedCSS(scenes: Scene[]): string {
     );
   }
   return lines.join('\n');
+}
+
+/** Recursive: does any descendant block contain a standalone ProgressBlock? */
+function hasNestedProgress(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'progress') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasNestedProgress(c.blocks)));
+    if (b.type === 'condition') return b.branches.some(br => hasNestedProgress(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasNestedProgress(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasNestedProgress(tab.blocks));
+    if (b.type === 'section') return hasNestedProgress(b.blocks);
+    return false;
+  });
+}
+
+/** Recursive: does any descendant block contain a SectionBlock? */
+function hasNestedSections(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'section') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasNestedSections(c.blocks)));
+    if (b.type === 'condition') return b.branches.some(br => hasNestedSections(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasNestedSections(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasNestedSections(tab.blocks));
+    return false;
+  });
+}
+
+/** Base CSS for SectionBlock (`.tg-section` / `.tg-section-title`). Emitted whenever
+ *  any scene contains a SectionBlock (top-level or nested). */
+export function buildSectionCSS(scenes: Scene[]): string {
+  if (!scenes.some(s => hasNestedSections(s.blocks))) return '';
+  return [
+    '.tg-section { margin: 6px 0; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }',
+    '.tg-section-title { font-weight: 600; font-size: 0.9em; opacity: 0.85; margin-bottom: 4px; }',
+    'details.tg-section > summary.tg-section-title { cursor: pointer; user-select: none; list-style: revert; margin-bottom: 0; }',
+    'details.tg-section[open] > summary.tg-section-title { margin-bottom: 4px; }',
+  ].join('\n');
+}
+
+/** Recursive: does any descendant block contain a CalloutBlock? */
+function hasCalloutBlock(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'callout') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasCalloutBlock(c.blocks)));
+    if (b.type === 'condition') return b.branches.some(br => hasCalloutBlock(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasCalloutBlock(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasCalloutBlock(tab.blocks));
+    if (b.type === 'section') return hasCalloutBlock(b.blocks);
+    return false;
+  });
+}
+
+/** Base CSS for CalloutBlock (`.tg-callout` + per-variant accent). Emitted whenever
+ *  any scene contains a CalloutBlock (top-level or nested). */
+export function buildCalloutCSS(scenes: Scene[]): string {
+  if (!scenes.some(s => hasCalloutBlock(s.blocks))) return '';
+  return [
+    '.tg-callout { display: flex; gap: 8px; margin: 8px 0; padding: 8px 10px; border-radius: 4px; border-left: 3px solid var(--tg-co-accent); background: var(--tg-co-bg); }',
+    '.tg-callout-icon { flex-shrink: 0; font-size: 1.1em; line-height: 1.5; }',
+    '.tg-callout-body { flex: 1; min-width: 0; }',
+    '.tg-callout-title { font-weight: 600; margin-bottom: 2px; }',
+    '.tg-callout-info    { --tg-co-accent: #3b82f6; --tg-co-bg: rgba(59,130,246,0.12); }',
+    '.tg-callout-success { --tg-co-accent: #22c55e; --tg-co-bg: rgba(34,197,94,0.12); }',
+    '.tg-callout-warning { --tg-co-accent: #f59e0b; --tg-co-bg: rgba(245,158,11,0.12); }',
+    '.tg-callout-danger  { --tg-co-accent: #ef4444; --tg-co-bg: rgba(239,68,68,0.12); }',
+    '.tg-callout-note    { --tg-co-accent: #94a3b8; --tg-co-bg: rgba(148,163,184,0.12); }',
+  ].join('\n');
+}
+
+/** Recursive: does any descendant block contain a DisplayObjectBlock? */
+function hasDisplayObject(blocks: Block[]): boolean {
+  return blocks.some(b => {
+    if (b.type === 'display-object') return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasDisplayObject(c.blocks)));
+    if (b.type === 'condition') return b.branches.some(br => hasDisplayObject(br.blocks));
+    if (b.type === 'dialogue' && b.innerBlocks) return hasDisplayObject(b.innerBlocks);
+    if (b.type === 'tabs') return b.tabs.some(tab => hasDisplayObject(tab.blocks));
+    if (b.type === 'section') return hasDisplayObject(b.blocks);
+    return false;
+  });
+}
+
+/** Structural CSS for DisplayObjectBlock — the six layout variants and
+ *  sub-element defaults. Per-instance + project-wide colors come from the
+ *  cascade system (`tg-do` is registered as a SimpleBlockType). */
+export function buildDisplayObjectCSS(scenes: Scene[]): string {
+  if (!scenes.some(s => hasDisplayObject(s.blocks))) return '';
+  return [
+    '/* DisplayObject — shared sub-elements */',
+    '.tg-do { display: block; }',
+    '.tg-do-row { display: flex; gap: 8px; align-items: baseline; }',
+    '.tg-do-label { opacity: 0.75; }',
+    '.tg-do-value { flex: 1; min-width: 0; }',
+    '.tg-do-bar { display: inline-block; vertical-align: middle; width: 100%; height: 10px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }',
+    '.tg-do-bar-fill { display: block; height: 100%; background: #4a90d9; transition: width 0.3s; }',
+    '.tg-do-bar-text { font-size: 0.85em; opacity: 0.8; margin-left: 4px; white-space: nowrap; }',
+    '.tg-do-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; background: rgba(255,255,255,0.1); font-size: 0.85em; }',
+    '/* list — vertical rows, label left / value right */',
+    '.tg-do-list { display: flex; flex-direction: column; gap: 4px; }',
+    '.tg-do-list .tg-do-row { justify-content: space-between; }',
+    '.tg-do-list .tg-do-value { flex: 0 1 auto; text-align: right; }',
+    '/* inline — flowing label:value · label:value */',
+    '.tg-do-inline { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }',
+    '.tg-do-inline .tg-do-row { display: inline-flex; gap: 4px; }',
+    '.tg-do-inline .tg-do-row:not(:last-child)::after { content: "·"; margin-left: 12px; opacity: 0.4; }',
+    '/* table — two aligned columns via display:contents */',
+    '.tg-do-table { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; row-gap: 4px; }',
+    '.tg-do-table .tg-do-row { display: contents; }',
+    '.tg-do-table .tg-do-label { text-align: right; }',
+    '/* cards — boxed tiles */',
+    '.tg-do-cards { display: flex; flex-wrap: wrap; gap: 8px; }',
+    '.tg-do-cards .tg-do-row { flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 5px; background: rgba(255,255,255,0.06); min-width: 60px; }',
+    '.tg-do-cards .tg-do-label { font-size: 0.78em; opacity: 0.7; }',
+    '.tg-do-cards .tg-do-value { font-size: 1.05em; flex: none; text-align: center; }',
+    '/* grid — N configurable columns via --tg-do-cols */',
+    '.tg-do-grid { display: grid; grid-template-columns: repeat(var(--tg-do-cols, 2), minmax(0, 1fr)); gap: 4px 12px; }',
+    '.tg-do-grid .tg-do-row { justify-content: space-between; }',
+    '/* bars — vertical list, each row is a labeled bar */',
+    '.tg-do-bars { display: flex; flex-direction: column; gap: 6px; }',
+    '.tg-do-bars .tg-do-row { flex-direction: column; align-items: stretch; gap: 2px; }',
+    '.tg-do-bars .tg-do-label { font-size: 0.85em; }',
+    '.tg-do-bars .tg-do-value { display: flex; align-items: center; gap: 6px; }',
+  ].join('\n');
 }
 
 /** Base CSS for the TabsBlock tab bar (`.tg-tabs-block`). Emitted whenever any
@@ -1736,6 +2052,8 @@ export function buildTabsBlockScript(scenes: Scene[]): string {
 function hasNestedTabs(blocks: Block[]): boolean {
   return blocks.some(b => {
     if (b.type === 'tabs') return true;  // includes nested tabs — no need to recurse deeper here
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasNestedTabs(c.blocks)));
+    if (b.type === 'section') return hasNestedTabs(b.blocks);
     if (b.type === 'condition') return b.branches.some(br => hasNestedTabs(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasNestedTabs(b.innerBlocks);
     return false;
@@ -1749,6 +2067,7 @@ function hasNestedTable(blocks: Block[]): boolean {
     if (b.type === 'condition') return b.branches.some(br => hasNestedTable(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasNestedTable(b.innerBlocks);
     if (b.type === 'tabs') return b.tabs.some(tab => hasNestedTable(tab.blocks));
+    if (b.type === 'section') return hasNestedTable(b.blocks);
     return false;
   });
 }
@@ -1787,9 +2106,11 @@ export function buildLightboxScript(scenes: Scene[]): string {
 function hasLiveBlocks(blocks: Block[]): boolean {
   return blocks.some(b => {
     if ('live' in b && (b as { live?: boolean }).live) return true;
+    if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasLiveBlocks(c.blocks)));
     if (b.type === 'condition') return b.branches.some(br => hasLiveBlocks(br.blocks));
     if (b.type === 'dialogue' && b.innerBlocks) return hasLiveBlocks(b.innerBlocks);
     if (b.type === 'tabs') return b.tabs.some(tab => hasLiveBlocks(tab.blocks));
+    if (b.type === 'section') return hasLiveBlocks(b.blocks);
     return false;
   });
 }
@@ -1994,9 +2315,11 @@ export function buildInputScript(scenes: Scene[]): string {
   function hasInput(blocks: Block[]): boolean {
     return blocks.some(b => {
       if (b.type === 'input-field') return true;
+      if (b.type === 'table') return b.rows.some(r => r.cells.some(c => hasInput(c.blocks)));
       if (b.type === 'condition') return b.branches.some(br => hasInput(br.blocks));
       if (b.type === 'dialogue' && b.innerBlocks) return hasInput(b.innerBlocks);
       if (b.type === 'tabs') return b.tabs.some(tab => hasInput(tab.blocks));
+      if (b.type === 'section') return hasInput(b.blocks);
       return false;
     });
   }
@@ -2123,6 +2446,10 @@ function collectAudioBlocks(scenes: Scene[]): { block: AudioLike; sceneName: str
         walk(b.innerBlocks, sceneName);
       } else if (b.type === 'tabs') {
         for (const tab of b.tabs) walk(tab.blocks, sceneName);
+      } else if (b.type === 'section') {
+        walk(b.blocks, sceneName);
+      } else if (b.type === 'table') {
+        for (const row of b.rows) for (const cell of row.cells) walk(cell.blocks, sceneName);
       }
     }
   }
@@ -2266,6 +2593,8 @@ function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): s
       }
     } else if (b.type === 'link') {
       if (b.target === 'scene' && b.targetSceneId) targets.push(resolve(b.targetSceneId));
+    } else if (b.type === 'menu-link') {
+      if (b.target === 'scene' && b.targetSceneId) targets.push(resolve(b.targetSceneId));
     } else if (b.type === 'function') {
       if (b.targetSceneId) targets.push(resolve(b.targetSceneId));
     } else if (b.type === 'condition') {
@@ -2277,6 +2606,12 @@ function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): s
     } else if (b.type === 'tabs') {
       for (const tab of b.tabs) {
         targets.push(...collectSceneTargets(tab.blocks, idToName));
+      }
+    } else if (b.type === 'section') {
+      targets.push(...collectSceneTargets(b.blocks, idToName));
+    } else if (b.type === 'table') {
+      for (const row of b.rows) for (const cell of row.cells) {
+        targets.push(...collectSceneTargets(cell.blocks, idToName));
       }
     } else if (b.type === 'plugin') {
       // Dive into plugin body so the Twine graph sees nav targets nested in plugins.
@@ -2301,10 +2636,33 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   // The scene is NOT emitted as a regular ::SceneName passage (its name is
   // editor-only — the SugarCube engine reads from `::StoryCaption` directly).
   const sidebarScene = scenes.find(s => s.tags.includes('sidebar'));
+  // Title-as-scene: a scene tagged `title` (singleton) becomes ::StoryTitle.
+  // Same passage-redirect pattern as sidebar. When absent, fall back to project.title.
+  const titleScene = scenes.find(s => s.tags.includes('title'));
+  // Other singleton system scenes that redirect to named SugarCube passages.
+  const menuScene          = scenes.find(s => s.tags.includes('menu'));
+  const passageHeaderScene = scenes.find(s => s.tags.includes('passage-header'));
+  const passageFooterScene = scenes.find(s => s.tags.includes('passage-footer'));
   const parts: string[] = [];
 
-  // StoryTitle
+  // StoryTitle — plain-text story title / storage ID. Per SugarCube docs it must be
+  // plain text (no markup/macros) because it seeds the save-storage ID; in Twine 2 it
+  // is unused (title comes from project metadata) but Twee import relies on it. Always
+  // the stable project title — never the (possibly rich) title scene.
   parts.push(`::StoryTitle\n${title}\n`);
+
+  // StoryDisplayTitle — the *displayed* title in the UI bar (#story-title) + browser
+  // titlebar. Unlike StoryTitle it renders markup/macros/images. Emitted from the
+  // title scene when present & non-empty; otherwise SugarCube falls back to StoryTitle.
+  // PassageContext 'title' strips the `<div class="tg-text">` wrapper from text blocks
+  // (keeps the inline title clean) while image/other blocks render normally.
+  const titleDisplayBody = titleScene
+    ? titleScene.blocks
+        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, 'title'))
+        .filter(Boolean)
+        .join('\n')
+    : '';
+  if (titleDisplayBody) parts.push(`::StoryDisplayTitle\n${titleDisplayBody}\n`);
 
   // StoryData
   const storyData = JSON.stringify({
@@ -2354,6 +2712,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
       inits.push(`<<run ${charPath}.inventory.push({ item: "${slot.itemVarName}", qty: ${slot.quantity}, equipped: ${isDefaultEquipped} })>>`);
     }
   }
+  // Custom init markup — user-supplied SugarCube macros appended at the very end of
+  // the autogenerated init lines. Must be SugarCube markup (<<run setup.X = …>>), NOT
+  // raw JS (no [script] tag on StoryInit).
+  const customInit = (project.settings?.customInit ?? '').trim();
+  if (customInit) inits.push(customInit);
   if (inits.length > 0) {
     // NOTE: StoryInit must NOT have [script] tag — its content is SugarCube
     // markup (<<set>>), not raw JavaScript. The [script] tag would cause Twine
@@ -2365,11 +2728,16 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   // Reads `sidebarScene.systemConfig` (kind 'sidebar') and emits both CSS and a
   // Config.ui.stowBarInitially line if needed.
   const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
+  // Title systemConfig — #story-title text color + font.
+  const titleCfgCSS = buildTitleSystemConfigCSS(titleScene);
 
   // StoryStylesheet
   const charCSS      = buildAllDialogueCss(characters);
   const cellCSS      = buildCellSharedCSS(scenes);  // progress bars, cell images, lightbox
   const tabsCSS      = buildTabsBlockCSS(scenes);    // TabsBlock tab bar
+  const sectionCSS   = buildSectionCSS(scenes);      // SectionBlock container
+  const calloutCSS   = buildCalloutCSS(scenes);      // CalloutBlock notice box
+  const doCSS        = buildDisplayObjectCSS(scenes); // DisplayObject layouts
   const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
   const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
   const animCSS      = buildAnimationCSS(scenes);
@@ -2377,7 +2745,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const generatedCSS = [charCSS, cellCSS, tabsCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
   const userCSS      = (project.customCss ?? '').trim();
   const allCSS       = userCSS
     ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
@@ -2387,6 +2755,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   // StoryScript (lightbox + input debounce) — single passage
   const storyScript = [
     sidebarCfgScript,
+    buildDateTimeScript(),
     buildLightboxScript(scenes),
     buildTabsBlockScript(scenes),
     buildInputScript(scenes),
@@ -2399,6 +2768,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
     buildPopupClassSyncScript(scenes),
+    buildPassageLifecycleScript(project.settings),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load',
       '$(document).on(":passagedisplay", function() {',
@@ -2423,9 +2793,31 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     : '';
   if (captionSC) parts.push(`::StoryCaption\n${captionSC}\n`);
 
+  // StoryMenu / PassageHeader / PassageFooter — singleton system scenes mapped to
+  // named SugarCube passages. Emit each only when its scene exists AND has non-empty body.
+  // `menu` context strips link/text wrappers because SugarCube parses ::StoryMenu line-by-line
+  // into `<li><<link>></li>` items. Header/footer render into the page like regular passages.
+  const systemPassagePairs: Array<[Scene | undefined, string, PassageContext]> = [
+    [menuScene,          'StoryMenu',     'menu'],
+    [passageHeaderScene, 'PassageHeader', undefined],
+    [passageFooterScene, 'PassageFooter', undefined],
+  ];
+  for (const [sc, passageName, ctx] of systemPassagePairs) {
+    if (!sc) continue;
+    const body = sc.blocks
+      .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, ctx))
+      .filter(Boolean)
+      .join('\n');
+    if (body) parts.push(`::${passageName}\n${body}\n`);
+  }
+
   // Scene passages
   for (const scene of scenes) {
     if (sidebarScene && scene.id === sidebarScene.id) continue; // sidebar scene → StoryCaption only
+    if (titleScene   && scene.id === titleScene.id)   continue; // title scene   → StoryTitle only
+    if (menuScene          && scene.id === menuScene.id)          continue; // → StoryMenu
+    if (passageHeaderScene && scene.id === passageHeaderScene.id) continue; // → PassageHeader
+    if (passageFooterScene && scene.id === passageFooterScene.id) continue; // → PassageFooter
     const exportTags = scene.tags.filter(t => t !== START_TAG);
     const tags = exportTags.length > 0 ? ` [${exportTags.join(' ')}]` : '';
 

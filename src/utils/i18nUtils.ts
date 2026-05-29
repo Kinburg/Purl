@@ -60,8 +60,32 @@ function extractBlocksStrings(blocks: Block[], map: TranslationMap) {
           if (tab.blocks) extractBlocksStrings(tab.blocks, map);
         }
         break;
+      case 'section':
+        if (block.title) map[`${block.id}.title`] = block.title;
+        if (block.blocks) extractBlocksStrings(block.blocks, map);
+        break;
+      case 'table':
+        for (const row of block.rows) for (const cell of row.cells) extractBlocksStrings(cell.blocks, map);
+        break;
+      case 'callout':
+        if (block.title) map[`${block.id}.title`] = block.title;
+        map[`${block.id}.content`] = block.content;
+        break;
+      case 'select':
+        if (block.label) map[`${block.id}.label`] = block.label;
+        for (const opt of block.options) map[`${opt.id}.label`] = opt.label;
+        break;
+      case 'slider':
+        if (block.label) map[`${block.id}.label`] = block.label;
+        break;
+      case 'display-object':
+        for (const f of block.fields) {
+          if (f.label) map[`${f.id}.label`] = f.label;
+        }
+        break;
       case 'button':
       case 'link':
+      case 'menu-link':
       case 'function': map[`${block.id}.label`] = block.label; break;
       case 'input-field':
         map[`${block.id}.label`] = block.label;
@@ -136,8 +160,32 @@ function applyBlocksTranslations(blocks: Block[], map: TranslationMap) {
           if (tab.blocks) applyBlocksTranslations(tab.blocks, map);
         }
         break;
+      case 'section':
+        if (block.title) block.title = t(block.id, 'title', block.title);
+        if (block.blocks) applyBlocksTranslations(block.blocks, map);
+        break;
+      case 'table':
+        for (const row of block.rows) for (const cell of row.cells) applyBlocksTranslations(cell.blocks, map);
+        break;
+      case 'callout':
+        if (block.title) block.title = t(block.id, 'title', block.title);
+        block.content = t(block.id, 'content', block.content);
+        break;
+      case 'select':
+        if (block.label) block.label = t(block.id, 'label', block.label);
+        for (const opt of block.options) opt.label = t(opt.id, 'label', opt.label);
+        break;
+      case 'slider':
+        if (block.label) block.label = t(block.id, 'label', block.label);
+        break;
+      case 'display-object':
+        for (const f of block.fields) {
+          if (f.label) f.label = t(f.id, 'label', f.label);
+        }
+        break;
       case 'button':
       case 'link':
+      case 'menu-link':
       case 'function':
         block.label = t(block.id, 'label', block.label);
         break;

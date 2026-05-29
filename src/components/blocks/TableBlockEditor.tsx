@@ -1,45 +1,28 @@
 import { useState, useRef } from 'react';
-import { useProjectStore, DEFAULT_PANEL_STYLE, redistributeWidths } from '../../store/projectStore';
-import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
-import { useT } from '../../i18n';
-import type {
-  TableBlock, SidebarRow, SidebarCell, CellContent, PanelStyle,
-  CellText, CellVariable, CellProgress, CellImageStatic, CellImageBound, CellRaw,
-  CellButton, CellList, CellAudioVolume, CellImageGen, CellImageFromVar, CellDateTime,
-  ButtonAction, ButtonStyle, VarOperator,
-  Variable, AssetTreeNode,
-} from '../../types';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useProjectStore, DEFAULT_PANEL_STYLE, redistributeWidths, deepCloneBlock } from '../../store/projectStore';
+import { useEditorStore } from '../../store/editorStore';
+import { useT, blockTypeLabel } from '../../i18n';
+import type { TableBlock, SidebarRow, SidebarCell, PanelStyle, Block } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
-import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEditor';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
-import { VariablePicker } from '../shared/VariablePicker';
-import { CellImageGenEditor } from '../shared/CellImageGenEditor';
+import { AddBlockMenu } from './AddBlockMenu';
+import { InnerBlockEditor } from './TabsBlockEditor';
 import NumericInput from '../shared/NumericInput';
-import { CellImageBoundGenModal } from '../shared/CellImageBoundGenModal';
-import { DateTimeCellEditor } from '../shared/DateTimeCellEditor';
-import { InventoryPopupShortcut } from './InventoryPopupShortcut';
-import { useVariableNodes, usePluginParams } from '../shared/VariableScope';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function makeDefaultContent(type: CellContent['type']): CellContent {
-  switch (type) {
-    case 'text':           return { type: 'text', value: '' } as CellText;
-    case 'variable':       return { type: 'variable', variableId: '', prefix: '', suffix: '' } as CellVariable;
-    case 'progress':       return { type: 'progress', variableId: '', maxValue: 100, color: '#4ade80', emptyColor: '#333333', textColor: '', colorRange: null, showText: false } as CellProgress;
-    case 'image-static':   return { type: 'image-static', src: '', objectFit: 'cover' } as CellImageStatic;
-    case 'image-bound':    return { type: 'image-bound', variableId: '', mapping: [], defaultSrc: '', objectFit: 'cover' } as CellImageBound;
-    case 'image-gen':      return { type: 'image-gen', promptMode: 'manual', prompt: '', seedMode: 'random', workflowFile: '', alt: '', src: '', width: 0 } as CellImageGen;
-    case 'image-from-var': return { type: 'image-from-var', variableId: '', objectFit: 'cover' } as CellImageFromVar;
-    case 'raw':            return { type: 'raw', code: '' } as CellRaw;
-    case 'include':        return { type: 'include', passageName: '' };
-    case 'button':         return { type: 'button', label: '', style: { bgColor: '#3b82f6', textColor: '#ffffff', borderColor: '#2563eb', borderRadius: 4, paddingV: 4, paddingH: 10, fontSize: 9, bold: false, fullWidth: false }, actions: [] };
-    case 'list':           return { type: 'list', variableId: '', separator: ', ', emptyText: '', prefix: '', suffix: '' };
-    case 'audio-volume':   return { type: 'audio-volume', showMuteButton: true } as CellAudioVolume;
-    case 'date-time':      return { type: 'date-time', variableId: '', format: 'DD.MM.YYYY HH:mm', prefix: '', suffix: '' } as CellDateTime;
-    case 'paperdoll':      return { type: 'paperdoll', charId: '', showLabels: false };
-  }
-}
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
@@ -53,10 +36,6 @@ export function TableBlockEditor({
   const t = useT();
   const updateBlock  = useProjectStore(s => s.updateBlock);
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
-  const project      = useProjectStore(s => s.project);
-  const variableNodes = useVariableNodes();
-  const vars = useFlatVariablesOf(variableNodes);
-  const assetNodes = project.assetNodes;
 
   const update = onUpdate ?? ((p: Partial<TableBlock>) => updateBlock(sceneId, block.id, p as never));
   const updateRows = (rows: SidebarRow[]) => update({ rows });
@@ -67,7 +46,7 @@ export function TableBlockEditor({
     const newRow: SidebarRow = {
       id: crypto.randomUUID(),
       height: 60,
-      cells: [{ id: crypto.randomUUID(), width: 100, content: { type: 'text', value: '' } as CellText }],
+      cells: [{ id: crypto.randomUUID(), width: 100, blocks: [] }],
     };
     updateRows([...block.rows, newRow]);
   };
@@ -84,10 +63,7 @@ export function TableBlockEditor({
     saveSnapshot();
     updateRows(block.rows.map(r => {
       if (r.id !== rowId) return r;
-      const newCell: SidebarCell = {
-        id: crypto.randomUUID(), width: 50,
-        content: { type: 'text', value: '' } as CellText,
-      };
+      const newCell: SidebarCell = { id: crypto.randomUUID(), width: 50, blocks: [] };
       return { ...r, cells: redistributeWidths([...r.cells, newCell]) };
     }));
   };
@@ -135,10 +111,10 @@ export function TableBlockEditor({
       r.id !== rowId ? r : { ...r, cells: redistributeWidths(r.cells) }
     ));
 
-  const updateCellContent = (rowId: string, cellId: string, content: CellContent) =>
+  const updateCellBlocks = (rowId: string, cellId: string, blocks: Block[]) =>
     updateRows(block.rows.map(r => {
       if (r.id !== rowId) return r;
-      return { ...r, cells: r.cells.map(c => c.id === cellId ? { ...c, content } : c) };
+      return { ...r, cells: r.cells.map(c => c.id === cellId ? { ...c, blocks } : c) };
     }));
 
   const style = block.style ?? DEFAULT_PANEL_STYLE;
@@ -173,7 +149,7 @@ export function TableBlockEditor({
             {/* Cells preview + controls */}
             <div className="p-2 flex flex-col gap-1.5">
               {/* Preview row with drag handles */}
-              <div className="flex" style={{ height: Math.max(40, row.height) }}>
+              <div className="flex" style={{ minHeight: Math.max(40, Math.min(row.height, 120)) }}>
                 {row.cells.flatMap((cell, idx) => [
                   idx > 0 ? (
                     <TDragDivider
@@ -186,10 +162,8 @@ export function TableBlockEditor({
                   <TCellEditor
                     key={cell.id}
                     cell={cell}
-                    vars={vars}
-                    assetNodes={assetNodes}
                     sceneId={sceneId}
-                    onUpdateContent={content => updateCellContent(row.id, cell.id, content)}
+                    onUpdateBlocks={blocks => updateCellBlocks(row.id, cell.id, blocks)}
                     onDelete={() => deleteCell(row.id, cell.id)}
                   />,
                 ]).filter(Boolean)}
@@ -381,16 +355,14 @@ function TCellWidthBar({
   );
 }
 
-// ─── Cell editor ──────────────────────────────────────────────────────────────
+// ─── Cell editor (preview chip stack + modal block-list) ────────────────────────
 
 function TCellEditor({
-  cell, vars, assetNodes, sceneId, onUpdateContent, onDelete,
+  cell, sceneId, onUpdateBlocks, onDelete,
 }: {
   cell: SidebarCell;
-  vars: Variable[];
-  assetNodes: AssetTreeNode[];
   sceneId: string;
-  onUpdateContent: (c: CellContent) => void;
+  onUpdateBlocks: (blocks: Block[]) => void;
   onDelete: () => void;
 }) {
   const t = useT();
@@ -398,12 +370,14 @@ function TCellEditor({
   return (
     <div
       className="relative flex flex-col border border-slate-600 rounded bg-slate-800/40 overflow-hidden cursor-pointer group/cell"
-      style={{ flex: cell.width, minWidth: 0, overflow: 'hidden' }}
+      style={{ flex: cell.width, minWidth: 0 }}
       onClick={() => setEditing(true)}
     >
-      <TCellPreview cell={cell} vars={vars} />
+      <TCellPreview cell={cell} />
       <div className="absolute inset-0 bg-slate-900/85 opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-center justify-center gap-1.5 px-1.5">
-        <span className="text-xs text-slate-400 truncate min-w-0">{cellTypeLabelFromT(t, cell.content.type)}</span>
+        <span className="text-xs text-slate-400 truncate min-w-0">
+          {cell.blocks.length > 0 ? t.rowsEditor.cellBlockCount(cell.blocks.length) : t.rowsEditor.cellEmpty}
+        </span>
         <button className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0 hover:bg-slate-700 rounded px-1 py-0.5"
           title={t.rowsEditor.editTitle}
           onClick={e => { e.stopPropagation(); setEditing(true); }}><EmojiIcon name="pencil" size={20} /></button>
@@ -413,9 +387,9 @@ function TCellEditor({
       </div>
       {editing && (
         <TCellEditModal
-          cell={cell} vars={vars} assetNodes={assetNodes}
+          cell={cell}
           sceneId={sceneId}
-          onUpdateContent={onUpdateContent}
+          onUpdateBlocks={onUpdateBlocks}
           onClose={() => setEditing(false)}
         />
       )}
@@ -423,456 +397,149 @@ function TCellEditor({
   );
 }
 
-// ─── Cell type label helper ────────────────────────────────────────────────────
+// ─── Cell preview — block-type chips ────────────────────────────────────────────
 
-function cellTypeLabelFromT(t: ReturnType<typeof useT>, type: CellContent['type']): string {
-  const m: Record<CellContent['type'], string> = {
-    text:             t.cellModal.typeText,
-    variable:         t.cellModal.typeVariable,
-    progress:         t.cellModal.typeProgress,
-    'image-static':   t.cellModal.typeImageStatic,
-    'image-bound':    t.cellModal.typeImageBoundShort,
-    'image-gen':      t.cellModal.typeImageGenShort,
-    'image-from-var': t.cellModal.typeImageFromVarShort,
-    raw:              t.cellModal.typeRaw,
-    include:          t.cellModal.typeInclude,
-    button:           t.cellModal.typeButton,
-    list:             t.cellModal.typeList,
-    'audio-volume':   t.cellModal.typeAudioVolume,
-    'date-time':      t.cellModal.typeDateTime,
-    paperdoll:        t.cellModal.typePaperdoll,
-  };
-  return m[type];
-}
-
-// ─── Cell preview ─────────────────────────────────────────────────────────────
-
-function TCellPreview({ cell, vars }: { cell: SidebarCell; vars: Variable[] }) {
+function TCellPreview({ cell }: { cell: SidebarCell }) {
   const t = useT();
-  const c = cell.content;
-  const v = 'variableId' in c ? vars.find(x => x.id === c.variableId) : undefined;
-  if (c.type === 'text') return (
-    <span className="text-xs text-slate-300 p-1 truncate flex-1">
-      {c.value || <em className="text-slate-600">{t.rowsEditor.cellTextPlaceholder}</em>}
-    </span>
-  );
-  if (c.type === 'variable') return (
-    <span className="text-xs text-sky-300 p-1 font-mono truncate flex-1">
-      {c.prefix}{v ? `$${v.name}` : '?'}{c.suffix}
-    </span>
-  );
-  if (c.type === 'progress') {
-    const previewColor = c.colorRange?.from ?? c.color;
-    if (c.vertical) return (
-      <div className="flex-1 p-1 flex justify-center items-stretch">
-        <div className="flex-1 rounded overflow-hidden flex flex-col-reverse" style={{ background: c.emptyColor ?? '#333' }}>
-          <div className="w-full rounded" style={{ height: '60%', background: previewColor }} />
-        </div>
-      </div>
-    );
+  if (cell.blocks.length === 0) {
     return (
-      <div className="flex-1 p-1 flex items-center">
-        <div className="w-full h-2 rounded overflow-hidden" style={{ background: c.emptyColor ?? '#333' }}>
-          <div className="h-full rounded" style={{ width: '60%', background: previewColor }} />
-        </div>
-      </div>
+      <span className="text-xs text-slate-600 italic p-1.5 flex-1">{t.rowsEditor.cellEmpty}</span>
     );
   }
-  if (c.type === 'image-static') {
-    const filename = c.src ? c.src.split('/').pop()! : '';
-    return (
-      <div className="flex-1 flex items-center gap-1 p-1 min-w-0">
-        <span className="text-slate-400 shrink-0 inline-flex"><EmojiIcon name="image" size={20} /></span>
-        <span className="text-xs text-slate-300 font-mono truncate flex-1">
-          {filename || <em className="text-slate-600 not-italic">—</em>}
+  return (
+    <div className="flex flex-wrap gap-1 p-1.5 content-start flex-1 overflow-hidden">
+      {cell.blocks.map(b => (
+        <span key={b.id} className="text-[10px] leading-tight px-1.5 py-0.5 rounded bg-slate-700/70 text-slate-300 truncate max-w-full">
+          {blockTypeLabel(t, b.type)}
         </span>
-      </div>
-    );
-  }
-  if (c.type === 'image-bound') return (
-    <div className="flex-1 flex items-center gap-1 p-1 min-w-0">
-      <span className="text-slate-400 shrink-0 inline-flex"><EmojiIcon name="image" size={20} /></span>
-      <span className="text-xs text-sky-300 font-mono truncate flex-1">{v ? `$${v.name}` : '?'}</span>
-      {c.mapping.length > 0 && <span className="text-xs text-slate-500 shrink-0">×{c.mapping.length}</span>}
+      ))}
     </div>
   );
-  if (c.type === 'image-gen') {
-    const filename = c.src ? c.src.split('/').pop()! : '';
-    return (
-      <div className="flex-1 flex items-center gap-1 p-1 min-w-0">
-        <span className="text-slate-400 shrink-0 inline-flex gap-0.5"><EmojiIcon name="image" size={20} /><EmojiIcon name="sparkle" size={20} /></span>
-        <span className="text-xs text-slate-300 truncate flex-1">
-          {filename || c.prompt || <em className="text-slate-600 not-italic">—</em>}
-        </span>
-      </div>
-    );
-  }
-  if (c.type === 'image-from-var') return (
-    <div className="flex-1 flex items-center gap-1 p-1 min-w-0">
-      <span className="text-slate-400 shrink-0 inline-flex"><EmojiIcon name="image" size={20} /></span>
-      <span className="text-xs text-sky-300 font-mono truncate flex-1">{v ? `$${v.name}` : '?'}</span>
-    </div>
-  );
-  if (c.type === 'raw') return (
-    <span className="text-xs text-zinc-400 font-mono p-1 truncate flex-1">
-      {c.code || <em className="text-slate-600 not-italic">{t.rowsEditor.cellCodePlaceholder}</em>}
-    </span>
-  );
-  if (c.type === 'button') return (
-    <div className="flex-1 p-1 flex items-center justify-center">
-      <span
-        className="text-xs truncate"
-        style={{
-          background: c.style.bgColor, color: c.style.textColor,
-          border: `1px solid ${c.style.borderColor}`,
-          borderRadius: `${c.style.borderRadius}px`,
-          padding: `2px 6px`,
-          fontWeight: c.style.bold ? 'bold' : 'normal',
-        }}
-      >
-        {c.label || <em className="opacity-50">btn</em>}
-      </span>
-    </div>
-  );
-  if (c.type === 'list') {
-    const v = vars.find(x => x.id === c.variableId);
-    return (
-      <span className="text-xs text-violet-300 p-1 font-mono truncate flex-1">
-        [{v ? `$${v.name}` : '?'}]
-      </span>
-    );
-  }
-  if (c.type === 'date-time') return (
-    <span className="text-xs text-orange-300 p-1 font-mono truncate flex-1">
-      {c.prefix}{v ? `$${v.name}` : '?'}{c.suffix}
-      <span className="text-[10px] text-slate-500 ml-1">({c.format})</span>
-    </span>
-  );
-  if (c.type === 'paperdoll') return (
-    <span className="text-xs text-violet-300 p-1 truncate flex-1">
-      <span className="inline-flex align-middle"><EmojiIcon name="puzzle" size={20} /></span> {c.charId || <em className="text-slate-600 not-italic">—</em>}
-    </span>
-  );
-  return null;
 }
 
-// ─── Cell edit modal ──────────────────────────────────────────────────────────
+// ─── Cell edit modal — nested block list ────────────────────────────────────────
 
 function TCellEditModal({
-  cell, vars, assetNodes, sceneId, onUpdateContent, onClose,
+  cell, sceneId, onUpdateBlocks, onClose,
 }: {
   cell: SidebarCell;
-  vars: Variable[];
-  assetNodes: AssetTreeNode[];
   sceneId: string;
-  onUpdateContent: (c: CellContent) => void;
+  onUpdateBlocks: (blocks: Block[]) => void;
   onClose: () => void;
 }) {
   const t = useT();
-  const project = useProjectStore(s => s.project);
-  const variableNodes = useVariableNodes();
-  const c = cell.content;
-  const [genModalOpen, setGenModalOpen] = useState(false);
+  const saveSnapshot    = useProjectStore(s => s.saveSnapshot);
+  const copyToClipboard = useEditorStore(s => s.copyToClipboard);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const CELL_TYPES: { value: CellContent['type']; label: string }[] = [
-    { value: 'text',           label: t.cellModal.typeText },
-    { value: 'variable',       label: t.cellModal.typeVariable },
-    { value: 'progress',       label: t.cellModal.typeProgress },
-    { value: 'image-static',   label: t.cellModal.typeImageStatic },
-    { value: 'image-bound',    label: t.cellModal.typeImageBound },
-    { value: 'image-gen',      label: t.cellModal.typeImageGen },
-    { value: 'image-from-var', label: t.cellModal.typeImageFromVar },
-    { value: 'raw',            label: t.cellModal.typeRaw },
-    { value: 'include',        label: t.cellModal.typeInclude },
-    { value: 'button',         label: t.cellModal.typeButton },
-    { value: 'list',           label: t.cellModal.typeList },
-    { value: 'date-time',      label: t.cellModal.typeDateTime },
-    { value: 'paperdoll',      label: t.cellModal.typePaperdoll },
-  ];
-
-  const changeType = (type: CellContent['type']) => {
-    if (type !== c.type) onUpdateContent(makeDefaultContent(type));
+  const blocks = cell.blocks;
+  const handleAdd = (nb: Block) => { saveSnapshot(); onUpdateBlocks([...blocks, nb]); };
+  const handleUpdateNested = (id: string, p: Partial<Block>) =>
+    onUpdateBlocks(blocks.map(b => b.id === id ? { ...b, ...p } as Block : b));
+  const handleDelete = (id: string) => { saveSnapshot(); onUpdateBlocks(blocks.filter(b => b.id !== id)); };
+  const handleDuplicate = (id: string) => {
+    const idx = blocks.findIndex(b => b.id === id);
+    if (idx < 0) return;
+    saveSnapshot();
+    const next = [...blocks];
+    next.splice(idx + 1, 0, deepCloneBlock(blocks[idx]));
+    onUpdateBlocks(next);
+  };
+  const handleCopy = (b: Block) => copyToClipboard(deepCloneBlock(b));
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = blocks.findIndex(b => b.id === active.id);
+    const newIdx = blocks.findIndex(b => b.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    saveSnapshot();
+    onUpdateBlocks(arrayMove(blocks, oldIdx, newIdx));
   };
 
   return (
-    <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => e.stopPropagation()}>
-      <div className="bg-slate-900 border border-slate-600 rounded-lg shadow-2xl w-96 max-h-[80vh] overflow-y-auto p-4 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { e.stopPropagation(); onClose(); }}>
+      <div className="bg-slate-900 border border-slate-600 rounded-lg shadow-2xl w-[30rem] max-h-[85vh] overflow-y-auto p-4 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-white">{t.cellModal.title}</span>
           <button className="text-slate-500 hover:text-white text-xs cursor-pointer" onClick={onClose}><EmojiIcon name="close" size={20} /></button>
         </div>
 
-        <TMField label={t.cellModal.contentType}>
-          <select
-            className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
-            value={c.type}
-            onChange={e => changeType(e.target.value as CellContent['type'])}
-          >
-            {CELL_TYPES.map(ct => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
-          </select>
-        </TMField>
-
-        {c.type === 'text' && (
-          <TMField label={t.cellModal.typeText}>
-            <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-              value={c.value} onChange={e => onUpdateContent({ ...c, value: e.target.value })} />
-          </TMField>
-        )}
-
-        {c.type === 'variable' && (
-          <>
-            <TVarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} />
-            <TMField label={t.cellModal.prefix}>
-              <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600"
-                value={c.prefix} onChange={e => onUpdateContent({ ...c, prefix: e.target.value })} />
-            </TMField>
-            <TMField label={t.cellModal.suffix}>
-              <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600"
-                value={c.suffix} onChange={e => onUpdateContent({ ...c, suffix: e.target.value })} />
-            </TMField>
-          </>
-        )}
-
-        {c.type === 'progress' && (
-          <>
-            <TVarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} />
-            <TMField label={t.cellModal.maximum}>
-              <NumericInput min={1}
-                className="w-24 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono"
-                value={c.maxValue} onChange={v => onUpdateContent({ ...c, maxValue: v })} />
-            </TMField>
-            {/* Colour range toggle */}
-            <TMField label={t.cellModal.colorRange}>
-              <input type="checkbox" className="accent-indigo-500 cursor-pointer"
-                checked={!!c.colorRange}
-                onChange={e => onUpdateContent({ ...c, colorRange: e.target.checked ? { from: c.color, to: c.color } : null })} />
-              <span className="text-xs text-slate-500 ml-1">{c.colorRange ? '0% → 100%' : t.cellModal.colorRangeOff}</span>
-            </TMField>
-            {/* Fill colour(s) */}
-            {c.colorRange ? (
-              <>
-                <TMField label={t.cellModal.colorAt0}>
-                  <input type="color" className="w-10 h-8 rounded cursor-pointer bg-transparent border border-slate-600"
-                    value={c.colorRange.from} onChange={e => onUpdateContent({ ...c, colorRange: { ...c.colorRange!, from: e.target.value } })} />
-                  <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono ml-2"
-                    value={c.colorRange.from} onChange={e => onUpdateContent({ ...c, colorRange: { ...c.colorRange!, from: e.target.value } })} />
-                </TMField>
-                <TMField label={t.cellModal.colorAt100}>
-                  <input type="color" className="w-10 h-8 rounded cursor-pointer bg-transparent border border-slate-600"
-                    value={c.colorRange.to} onChange={e => onUpdateContent({ ...c, colorRange: { ...c.colorRange!, to: e.target.value } })} />
-                  <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono ml-2"
-                    value={c.colorRange.to} onChange={e => onUpdateContent({ ...c, colorRange: { ...c.colorRange!, to: e.target.value } })} />
-                </TMField>
-              </>
-            ) : (
-              <TMField label={t.cellModal.fillColor}>
-                <input type="color" className="w-10 h-8 rounded cursor-pointer bg-transparent border border-slate-600"
-                  value={c.color} onChange={e => onUpdateContent({ ...c, color: e.target.value })} />
-                <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono ml-2"
-                  value={c.color} onChange={e => onUpdateContent({ ...c, color: e.target.value })} />
-              </TMField>
-            )}
-            {/* Empty-portion colour */}
-            <TMField label={t.cellModal.barBgColor}>
-              <input type="color" className="w-10 h-8 rounded cursor-pointer bg-transparent border border-slate-600"
-                value={c.emptyColor ?? '#333333'} onChange={e => onUpdateContent({ ...c, emptyColor: e.target.value })} />
-              <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono ml-2"
-                value={c.emptyColor ?? '#333333'} onChange={e => onUpdateContent({ ...c, emptyColor: e.target.value })} />
-            </TMField>
-            {/* Text colour */}
-            <TMField label={t.cellModal.textColor}>
-              <input type="checkbox" className="accent-indigo-500 cursor-pointer"
-                checked={!!c.textColor}
-                onChange={e => onUpdateContent({ ...c, textColor: e.target.checked ? '#ffffff' : '' })} />
-              {c.textColor ? (
-                <>
-                  <input type="color" className="w-8 h-7 rounded cursor-pointer bg-transparent border border-slate-600 ml-1"
-                    value={c.textColor} onChange={e => onUpdateContent({ ...c, textColor: e.target.value })} />
-                  <input className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono"
-                    value={c.textColor} onChange={e => onUpdateContent({ ...c, textColor: e.target.value })} />
-                </>
-              ) : (
-                <span className="text-xs text-slate-500 italic ml-1">{t.cellModal.inherited}</span>
-              )}
-            </TMField>
-            <TMField label={t.cellModal.vertical}>
-              <input type="checkbox" className="accent-indigo-500 cursor-pointer"
-                checked={!!c.vertical} onChange={e => onUpdateContent({ ...c, vertical: e.target.checked })} />
-            </TMField>
-            <TMField label={t.cellModal.showNumbers}>
-              <input type="checkbox" className="accent-indigo-500 cursor-pointer"
-                checked={c.showText} onChange={e => onUpdateContent({ ...c, showText: e.target.checked })} />
-            </TMField>
-          </>
-        )}
-
-        {c.type === 'image-static' && (
-          <>
-            <TMField label={t.cellModal.imageLabel}>
-              <ImageAssetPicker assetNodes={assetNodes} value={c.src} onChange={src => onUpdateContent({ ...c, src })} />
-            </TMField>
-            <TObjectFitSelect value={c.objectFit} onChange={v => onUpdateContent({ ...c, objectFit: v })} />
-          </>
-        )}
-
-        {c.type === 'image-bound' && (
-          <>
-            <TVarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} />
-            <TObjectFitSelect value={c.objectFit} onChange={v => onUpdateContent({ ...c, objectFit: v })} />
-            <ImageMappingEditor
-              mapping={c.mapping}
-              onChange={mapping => onUpdateContent({ ...c, mapping })}
-              defaultSrc={c.defaultSrc}
-              onDefaultSrcChange={defaultSrc => onUpdateContent({ ...c, defaultSrc })}
-              assetNodes={assetNodes}
-              hideDefault
-            />
-            <button
-              type="button"
-              className="self-start px-3 py-1.5 text-xs rounded bg-indigo-700 hover:bg-indigo-600 text-white cursor-pointer transition-colors"
-              onClick={() => setGenModalOpen(true)}
-            >{t.cellModal.openImageBoundGen}</button>
-          </>
-        )}
-
-        {c.type === 'image-gen' && (
-          <CellImageGenEditor
-            content={c}
-            cellId={cell.id}
-            sceneId={sceneId}
-            onUpdate={patch => onUpdateContent({ ...c, ...patch })}
-          />
-        )}
-
-        {c.type === 'image-from-var' && (
-          <>
-            <TVarSelect value={c.variableId} onChange={v => onUpdateContent({ ...c, variableId: v })} />
-            <TObjectFitSelect value={c.objectFit} onChange={v => onUpdateContent({ ...c, objectFit: v })} />
-          </>
-        )}
-
-        {c.type === 'raw' && (
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">{t.cellModal.rawCodeLabel}</label>
-            <textarea
-              className="w-full min-h-[100px] bg-slate-800 text-xs text-white font-mono rounded px-2 py-1.5 outline-none border border-slate-600 focus:border-indigo-500 resize-y leading-relaxed"
-              placeholder={"<<set $x to 1>>\n..."}
-              value={c.code} onChange={e => onUpdateContent({ ...c, code: e.target.value })} spellCheck={false} />
-          </div>
-        )}
-
-        {c.type === 'button' && (
-          <TCellButtonEditor c={c} vars={vars} onUpdateContent={onUpdateContent} />
-        )}
-
-        {c.type === 'list' && (
-          <>
-            <TMField label={t.cellModal.listVariableLabel}>
-              <select
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
-                value={c.variableId}
-                onChange={e => onUpdateContent({ ...(c as CellList), variableId: e.target.value })}
-              >
-                <option value="">— select —</option>
-                {vars.filter(v => v.varType === 'array').map(v => (
-                  <option key={v.id} value={v.id}>${v.name}</option>
+        <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-slate-700/60">
+          {blocks.length === 0 && (
+            <div className="text-xs text-slate-500 italic px-1">{t.sectionBlock.empty}</div>
+          )}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-col gap-1.5">
+                {blocks.map(b => (
+                  <SortableCellBlock
+                    key={b.id}
+                    block={b}
+                    sceneId={sceneId}
+                    onUpdate={p => handleUpdateNested(b.id, p)}
+                    onCopy={() => handleCopy(b)}
+                    onDuplicate={() => handleDuplicate(b.id)}
+                    onDelete={() => handleDelete(b.id)}
+                  />
                 ))}
-              </select>
-            </TMField>
-            <TMField label={t.cellModal.listSeparatorLabel}>
-              <input
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 font-mono"
-                value={(c as CellList).separator}
-                onChange={e => onUpdateContent({ ...(c as CellList), separator: e.target.value })}
-              />
-            </TMField>
-            <TMField label={t.cellModal.listEmptyTextLabel}>
-              <input
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600"
-                value={(c as CellList).emptyText}
-                onChange={e => onUpdateContent({ ...(c as CellList), emptyText: e.target.value })}
-              />
-            </TMField>
-            <TMField label={t.cellModal.listPrefixLabel}>
-              <input
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600"
-                value={(c as CellList).prefix}
-                onChange={e => onUpdateContent({ ...(c as CellList), prefix: e.target.value })}
-              />
-            </TMField>
-            <TMField label={t.cellModal.listSuffixLabel}>
-              <input
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600"
-                value={(c as CellList).suffix}
-                onChange={e => onUpdateContent({ ...(c as CellList), suffix: e.target.value })}
-              />
-            </TMField>
-          </>
-        )}
+              </div>
+            </SortableContext>
+          </DndContext>
+          <AddBlockMenu sceneId={sceneId} onAdd={handleAdd} />
+        </div>
 
-        {c.type === 'date-time' && (
-          <DateTimeCellEditor
-            c={c as CellDateTime}
-            nodes={variableNodes}
-            onChange={patch => onUpdateContent({ ...(c as CellDateTime), ...patch })}
-            Field={TMField}
-          />
-        )}
-
-        {c.type === 'paperdoll' && (
-          <>
-            <TMField label={t.cellModal.paperdollCharLabel}>
-              <select
-                className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
-                value={c.charId}
-                onChange={e => onUpdateContent({ ...c, charId: e.target.value })}
-              >
-                <option value="">{t.cellModal.paperdollNoChar}</option>
-                {project.characters.map(ch => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.name}{ch.paperdoll ? ` (${ch.paperdoll.slots.length})` : ''}
-                  </option>
-                ))}
-              </select>
-            </TMField>
-            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
-              <input type="checkbox" checked={c.showLabels ?? false}
-                onChange={e => onUpdateContent({ ...c, showLabels: e.target.checked })} />
-              {t.cellModal.paperdollShowLabels}
-            </label>
-          </>
-        )}
-
-        <button className="mt-2 px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium cursor-pointer self-end"
+        <button className="mt-1 px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium cursor-pointer self-end"
           onClick={onClose}>{t.cellModal.done}</button>
       </div>
     </div>
+  );
+}
 
-    {genModalOpen && c.type === 'image-bound' && (
-      <CellImageBoundGenModal
-        cell={c}
-        cellId={cell.id}
-        variableId={c.variableId}
-        sceneId={sceneId}
-        onSave={updated => onUpdateContent(updated)}
-        onClose={() => setGenModalOpen(false)}
-      />
-    )}
-    </>
+// ── Sortable wrapper for a nested block (mirrors SectionBlockEditor) ───────────
+
+function SortableCellBlock({
+  block, sceneId, onUpdate, onCopy, onDuplicate, onDelete,
+}: {
+  block: Block;
+  sceneId: string;
+  onUpdate: (patch: Partial<Block>) => void;
+  onCopy: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  const t = useT();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="rounded border border-slate-700 bg-slate-800/50 overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1 bg-slate-800/80 border-b border-slate-700">
+        <div className="flex items-center gap-1.5">
+          <span
+            {...listeners}
+            {...attributes}
+            className="drag-handle text-slate-600 hover:text-slate-400 text-xs select-none cursor-grab active:cursor-grabbing"
+            title={t.block.drag}
+          >⠿</span>
+          <span className="text-xs text-slate-400 uppercase tracking-wider">{blockTypeLabel(t, block.type)}</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <button className="text-slate-600 hover:text-slate-300 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.copy} onClick={onCopy}>
+            <EmojiIcon name="clipboard" size={20} />
+          </button>
+          <button className="text-slate-600 hover:text-indigo-400 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.duplicate} onClick={onDuplicate}>⧉</button>
+          <button className="text-slate-600 hover:text-red-400 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.delete} onClick={onDelete}>
+            <EmojiIcon name="close" size={20} />
+          </button>
+        </div>
+      </div>
+      <div className="p-2">
+        <InnerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate} />
+      </div>
+    </div>
   );
 }
 
 // ─── Reusable sub-components ──────────────────────────────────────────────────
-
-function TMField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2">
-      <label className="text-xs text-slate-400 w-28 shrink-0">{label}:</label>
-      <div className="flex-1 flex items-center gap-1">{children}</div>
-    </div>
-  );
-}
 
 function TSField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -913,282 +580,3 @@ function TCheckField({ label, checked, onChange }: {
     </label>
   );
 }
-
-function TVarSelect({ value, onChange }: {
-  value: string; onChange: (id: string) => void;
-}) {
-  const t = useT();
-  const variableNodes = useVariableNodes();
-  return (
-    <TMField label={t.cellModal.typeVariable}>
-      <VariablePicker
-        value={value}
-        onChange={onChange}
-        nodes={variableNodes}
-        placeholder={t.cellModal.selectVariable}
-        className="flex-1"
-      />
-    </TMField>
-  );
-}
-
-function TObjectFitSelect({ value, onChange }: {
-  value: 'cover' | 'contain'; onChange: (v: 'cover' | 'contain') => void;
-}) {
-  const t = useT();
-  return (
-    <TMField label={t.cellModal.objectFit}>
-      <select className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 cursor-pointer"
-        value={value} onChange={e => onChange(e.target.value as 'cover' | 'contain')}>
-        <option value="cover">{t.cellModal.fitCover}</option>
-        <option value="contain">{t.cellModal.fitContain}</option>
-      </select>
-    </TMField>
-  );
-}
-
-// ─── Cell button editor ───────────────────────────────────────────────────────
-
-const T_OPERATORS: { value: VarOperator; label: string }[] = [
-  { value: '=',  label: '=' },
-  { value: '+=', label: '+=' },
-  { value: '-=', label: '-=' },
-  { value: '*=', label: '*=' },
-  { value: '/=', label: '/=' },
-];
-
-function TCellButtonEditor({
-  c, vars, onUpdateContent,
-}: {
-  c: CellButton;
-  vars: Variable[];
-  onUpdateContent: (content: CellContent) => void;
-}) {
-  const t = useT();
-  const project = useProjectStore(s => s.project);
-  const variableNodes = useVariableNodes();
-  const pluginParams = usePluginParams();
-  const sceneParams = pluginParams.filter(p => p.kind === 'scene');
-  const scenes = project.scenes;
-
-  const patchStyle = (patch: Partial<ButtonStyle>) =>
-    onUpdateContent({ ...c, style: { ...c.style, ...patch } });
-
-  const patchAction = (actionId: string, patch: Partial<ButtonAction>) =>
-    onUpdateContent({ ...c, actions: c.actions.map(a => a.id === actionId ? { ...a, ...patch } : a) as ButtonAction[] });
-
-  const addAction = () =>
-    onUpdateContent({ ...c, actions: [...c.actions, { id: crypto.randomUUID(), variableId: '', operator: '=' as VarOperator, value: '' }] });
-
-  const removeAction = (id: string) =>
-    onUpdateContent({ ...c, actions: c.actions.filter(a => a.id !== id) });
-
-  const navType = c.navigate?.type ?? 'none';
-
-  const handleNavTypeChange = (type: string) => {
-    if (type === 'none') onUpdateContent({ ...c, navigate: undefined });
-    else if (type === 'back') onUpdateContent({ ...c, navigate: { type: 'back' } });
-    else onUpdateContent({ ...c, navigate: { type: 'scene', sceneId: '' } });
-  };
-
-  return (
-    <>
-      {/* Label */}
-      <TMField label={t.cellModal.buttonLabelField}>
-        <input
-          className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500"
-          value={c.label}
-          onChange={e => onUpdateContent({ ...c, label: e.target.value })}
-        />
-      </TMField>
-
-      {/* Style */}
-      <div className="flex flex-col gap-2 border border-slate-700 rounded p-2">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.buttonBlock.styleTitle}</span>
-
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-500">{t.buttonBlock.bgLabel}</span>
-            <input type="color" value={c.style.bgColor} onChange={e => patchStyle({ bgColor: e.target.value })}
-              className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent p-0.5" />
-            <input type="text" value={c.style.bgColor} onChange={e => patchStyle({ bgColor: e.target.value })}
-              className="w-20 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none font-mono" />
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-500">{t.buttonBlock.textColorLabel}</span>
-            <input type="color" value={c.style.textColor} onChange={e => patchStyle({ textColor: e.target.value })}
-              className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent p-0.5" />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-500">{t.buttonBlock.radiusLabel}</span>
-            <TNumInput value={c.style.borderRadius} min={0} max={50} onChange={v => patchStyle({ borderRadius: v })} suffix="px" />
-          </div>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input type="checkbox" checked={c.style.bold} onChange={e => patchStyle({ bold: e.target.checked })} className="accent-indigo-500" />
-            <span className="text-xs text-slate-300">{t.buttonBlock.bold}</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input type="checkbox" checked={c.style.fullWidth} onChange={e => patchStyle({ fullWidth: e.target.checked })} className="accent-indigo-500" />
-            <span className="text-xs text-slate-300">{t.buttonBlock.fullWidth}</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex flex-col gap-2 border border-slate-700 rounded p-2">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.cellModal.buttonNavigateTitle}</span>
-        <select
-          className="w-full bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
-          value={navType}
-          onChange={e => handleNavTypeChange(e.target.value)}
-        >
-          <option value="none">{t.cellModal.buttonTargetNone}</option>
-          <option value="scene">{t.cellModal.buttonTargetScene}</option>
-          <option value="back">{t.cellModal.buttonTargetBack}</option>
-        </select>
-
-        {navType === 'scene' && (
-          <TMField label={t.cellModal.buttonSceneLabel}>
-            <select
-              className="flex-1 bg-slate-800 text-sm text-white rounded px-2 py-1 outline-none border border-slate-600 focus:border-indigo-500 cursor-pointer"
-              value={c.navigate?.type === 'scene' ? c.navigate.sceneId : ''}
-              onChange={e => onUpdateContent({ ...c, navigate: { type: 'scene', sceneId: e.target.value } })}
-            >
-              <option value="">{t.linkBlock.noScene}</option>
-              {sceneParams.length > 0 ? (
-                <>
-                  <optgroup label="— params —">
-                    {sceneParams.map(p => (
-                      <option key={p.key} value={`param:${p.key}`}>_{p.key}{p.label ? ` (${p.label})` : ''}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="— scenes —">
-                    {scenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </optgroup>
-                </>
-              ) : (
-                scenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
-              )}
-            </select>
-          </TMField>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.buttonBlock.actionsTitle}</span>
-          <button className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer" onClick={addAction}>
-            {t.buttonBlock.addAction}
-          </button>
-        </div>
-        {c.actions.length === 0 && (
-          <span className="text-xs text-slate-500 italic">{t.buttonBlock.noActions}</span>
-        )}
-        {c.actions.map(a => {
-          if (a.type === 'open-popup') {
-            const popupScenes = project.scenes.filter(s => s.tags.includes('popup'));
-            return (
-              <div key={a.id} className="flex flex-col gap-1 bg-slate-800/60 border border-slate-700 rounded px-2 py-1.5">
-                <div className="flex items-center gap-1.5">
-                  <select
-                    className="w-24 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none cursor-pointer"
-                    value="open-popup"
-                    onChange={e => {
-                      if (e.target.value === 'set-variable') {
-                        patchAction(a.id, { type: undefined, variableId: '', operator: '=' as VarOperator, value: '' } as Partial<ButtonAction>);
-                      }
-                    }}
-                  >
-                    <option value="set-variable">{t.actionType.setVariable}</option>
-                    <option value="open-popup">{t.actionType.openPopup}</option>
-                  </select>
-                  {popupScenes.length === 0 && sceneParams.length === 0 ? (
-                    <span className="flex-1 text-xs text-slate-500 italic">{t.actionType.noPopupScenes}</span>
-                  ) : (
-                    <select
-                      className="flex-1 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none cursor-pointer"
-                      value={a.targetSceneId}
-                      onChange={e => patchAction(a.id, { targetSceneId: e.target.value } as Partial<ButtonAction>)}
-                    >
-                      <option value="">— select —</option>
-                      {sceneParams.length > 0 ? (
-                        <>
-                          <optgroup label="— params —">
-                            {sceneParams.map(p => (
-                              <option key={p.key} value={`param:${p.key}`}>_{p.key}{p.label ? ` (${p.label})` : ''}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="— popups —">
-                            {popupScenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                          </optgroup>
-                        </>
-                      ) : (
-                        popupScenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
-                      )}
-                    </select>
-                  )}
-                  <InventoryPopupShortcut onResolved={sceneId => patchAction(a.id, { targetSceneId: sceneId } as Partial<ButtonAction>)} />
-                  <button className="text-slate-600 hover:text-red-400 transition-colors text-sm cursor-pointer shrink-0"
-                    onClick={() => removeAction(a.id)}><EmojiIcon name="close" size={20} /></button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 w-24 shrink-0">{t.actionType.popupTitle}</span>
-                  <input
-                    className="flex-1 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none"
-                    placeholder={t.actionType.popupTitlePlaceholder}
-                    value={a.title ?? ''}
-                    onChange={e => patchAction(a.id, { title: e.target.value } as Partial<ButtonAction>)}
-                  />
-                </div>
-              </div>
-            );
-          }
-          const selVar = vars.find(v => v.id === a.variableId);
-          return (
-            <div key={a.id} className="flex items-center gap-1.5 bg-slate-800/60 border border-slate-700 rounded px-2 py-1.5">
-              <select
-                className="w-24 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 outline-none cursor-pointer"
-                value="set-variable"
-                onChange={e => {
-                  if (e.target.value === 'open-popup') {
-                    patchAction(a.id, { type: 'open-popup', variableId: undefined, operator: undefined, value: undefined, accessor: undefined, targetSceneId: '', title: '' } as unknown as Partial<ButtonAction>);
-                  }
-                }}
-              >
-                <option value="set-variable">{t.actionType.setVariable}</option>
-                <option value="open-popup">{t.actionType.openPopup}</option>
-              </select>
-              <VariablePicker
-                value={a.variableId}
-                onChange={id => patchAction(a.id, { variableId: id })}
-                nodes={variableNodes}
-                placeholder={t.buttonBlock.selectVariable}
-                className="flex-1 min-w-0"
-              />
-              <select
-                className="w-14 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 focus:border-indigo-500 outline-none cursor-pointer font-mono"
-                value={a.operator}
-                onChange={e => patchAction(a.id, { operator: e.target.value as VarOperator })}
-              >
-                {T_OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
-              </select>
-              <input
-                className="w-20 bg-slate-800 text-xs text-white rounded px-1.5 py-1 border border-slate-600 focus:border-indigo-500 outline-none font-mono"
-                placeholder={selVar?.varType === 'string' ? t.buttonBlock.textPlaceholder : selVar?.varType === 'boolean' ? 'true' : '1'}
-                value={a.value}
-                onChange={e => patchAction(a.id, { value: e.target.value })}
-              />
-              <button className="text-slate-600 hover:text-red-400 transition-colors text-sm cursor-pointer shrink-0"
-                onClick={() => removeAction(a.id)}><EmojiIcon name="close" size={20} /></button>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
