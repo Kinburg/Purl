@@ -49,6 +49,9 @@ export function blockSearchText(block: Block, vars: Variable[]): string {
       case 'callout':
         return [block.title ?? '', block.content ?? ''].filter(Boolean).join(' ');
 
+      case 'save':
+        return [block.title ?? '', block.notifyText ?? ''].filter(Boolean).join(' ');
+
       case 'select':
         return [
           block.label ?? '',

@@ -628,6 +628,7 @@ export interface NoteBlock {
   id: string;
   type: 'note';
   text: string;
+  generationHistory?: GenerationHistoryEntry[];
 }
 
 /** Inline HTML table with rows, cells and per-block border/gap style. */
@@ -981,6 +982,7 @@ export interface CalloutBlock {
   content: string;
   icon?: string;
   delay?: BlockDelay;
+  generationHistory?: GenerationHistoryEntry[];
 }
 
 export interface SelectOption {
@@ -1080,6 +1082,22 @@ export interface DisplayObjectBlock {
   customStyle?: BlockStyleOverride;
 }
 
+/**
+ * Save block — silently autosaves the player's progress (SugarCube autosave slot) when the
+ * passage renders. Drop it into a scene as a checkpoint; works inside IF branches for
+ * conditional checkpoints. Requires saving to be allowed (Config.saves.isAllowed).
+ */
+export interface SaveBlock {
+  id: string;
+  type: 'save';
+  /** Optional title shown for this save in the Saves menu (default: the passage name). */
+  title?: string;
+  /** Show a brief on-screen confirmation when the save happens. */
+  notify?: boolean;
+  /** Text for the confirmation (default '✓'). Only used when `notify` is on. */
+  notifyText?: string;
+}
+
 export type Block =
   | TextBlock
   | DialogueBlock
@@ -1120,6 +1138,7 @@ export type Block =
   | ContainerBlock
   | TimeManipulationBlock
   | TabsBlock
+  | SaveBlock
   | PluginBlock;
 
 export type BlockType = Block['type'];
@@ -1680,6 +1699,10 @@ export interface PanelStyle {
 // ─── Project ─────────────────────────────────────────────────────────────────
 
 export interface ProjectSettings {
+  /** Target language for AI translation (English name, e.g. "English", "French", "Russian"). Empty → "English". */
+  storyLanguage?: string;
+  /** Auto-resume the player from the last autosave when the published story is reopened (Config.saves.autoload). */
+  autoloadSave?: boolean;
   bgColor?:        string;   // story background color
   /** Text shown on the click-to-begin overlay when audio autoplay is blocked */
   audioUnlockText?: string;

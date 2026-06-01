@@ -34,9 +34,9 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
     llmSystemPrompt,
     llmFilterThought,
     llmGenerationHistory,
-    llmTranslationLanguage,
   } = useEditorPrefsStore();
   const project      = useProjectStore(s => s.project);
+  const storyLanguage = project.settings.storyLanguage || 'English';
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const updateBlock  = useProjectStore(s => s.updateBlock);
   const memHistory = useGenerationHistoryStore();
@@ -135,7 +135,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
     } else if (llmGenerationHistory === 'project') {
       const scene = project.scenes.find(s => s.id === sceneId);
       const block = scene?.blocks.find(b => b.id === blockId);
-      if (block && (block.type === 'text' || block.type === 'dialogue')) {
+      if (block && (block.type === 'text' || block.type === 'dialogue' || block.type === 'callout' || block.type === 'note')) {
         const existing = (block as any).generationHistory ?? [];
         const updated = [...existing, entry].slice(-MAX_PROJECT_HISTORY);
         updateBlock(sceneId, blockId, { generationHistory: updated });
@@ -207,7 +207,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
           maxTokens: llmMaxTokens,
           temperature,
           filterThought: llmFilterThought,
-          translationLanguage: llmTranslationLanguage,
+          translationLanguage: storyLanguage,
         },
         mode,
         controller.signal,
@@ -309,7 +309,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
           />
           <MenuOption
             icon={<TranslateIcon />}
-            label={llmT.translateTo(llmTranslationLanguage || 'English')}
+            label={llmT.translateTo(storyLanguage)}
             disabled={!currentValue.trim()}
             onClick={() => handleGenerate('translate')}
             colorClass="text-sky-400"

@@ -253,6 +253,13 @@ window.PURL_BLOCKS = [
     svg: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4 H22 L28 10 V30 H4 Z" stroke="var(--accent)" stroke-width="1.8" fill="var(--accent)" fill-opacity=".08"/><path d="M22 4 L22 10 H28" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="8" y="15" width="13" height="2" rx="1" fill="var(--accent)" opacity=".6"/><rect x="8" y="20" width="10" height="2" rx="1" fill="var(--accent)" opacity=".45"/><rect x="8" y="25" width="12" height="2" rx="1" fill="var(--accent)" opacity=".3"/><circle cx="10" cy="9" r="2" fill="var(--accent)" opacity=".4"/></svg>`
   },
   {
+    id: 'save', kind: 'system', name_en: 'Save', name_uk: 'Збереження',
+    desc_en: 'Autosaves the player\'s progress when reached — a checkpoint. Works inside IF branches for conditional saves; optional on-screen confirmation.',
+    desc_uk: 'Автоматично зберігає прогрес гравця при досягненні — чекпоінт. Працює всередині IF-гілок для умовних збережень; за бажанням показує підтвердження.',
+    tags: ['save', 'checkpoint', 'autosave'],
+    svg: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 4 H22 L27 9 V26 A2 2 0 0 1 25 28 H7 A2 2 0 0 1 5 26 V6 A2 2 0 0 1 7 4 Z" stroke="var(--accent)" stroke-width="1.8" fill="var(--accent)" fill-opacity=".08"/><path d="M10 4 V11 H21 V4" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="16" width="14" height="9" rx="1" stroke="var(--accent)" stroke-width="1.6" fill="none"/><rect x="17" y="5.5" width="3" height="4" rx="0.5" fill="var(--accent)" opacity=".7"/></svg>`
+  },
+  {
     id: 'inventory', kind: 'game', name_en: 'Inventory', name_uk: 'Інвентар',
     desc_en: 'Displays a character\'s inventory in the scene. Supports picking up, dropping, equipping and transferring items between containers.',
     desc_uk: 'Відображає інвентар персонажа в сцені. Підтримує підбір, видачу, екіпірування та передачу предметів між контейнерами.',

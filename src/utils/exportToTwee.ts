@@ -294,7 +294,7 @@ export function blockToSC(
   passageCtx?: PassageContext,
 ): string {
   const raw = blockToSCInner(block, chars, vars, nodes, indent, idToName, project, passageCtx);
-  if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation') return raw;
+  if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation' || block.type === 'save') return raw;
   const b = block as { delay?: BlockDelay; typewriter?: BlockTypewriter };
   return wrapBlockEffects(raw, b.delay, b.typewriter, indent, block.id);
 }
@@ -855,6 +855,16 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     case 'note':
       // Developer note — never exported
       return '';
+
+    case 'save': {
+      // Autosave the player's progress (SugarCube autosave slot) when the passage renders.
+      const sTitle = (block.title ?? '').trim();
+      const saveCall = `${indent}<<run Save.autosave.save(${sTitle ? JSON.stringify(sTitle) : ''})>>`;
+      if (!block.notify) return saveCall;
+      const msg = (block.notifyText ?? '').trim() || '✓';
+      const notify = `<<script>>(function(){var n=$('<div>').text(${JSON.stringify(msg)}).css({position:'fixed',bottom:'1.2em',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.82)',color:'#fff',padding:'.4em .9em',borderRadius:'.4em',zIndex:99999,fontSize:'.9em',opacity:0,transition:'opacity .3s',pointerEvents:'none'}).appendTo('body');setTimeout(function(){n.css('opacity',1);},16);setTimeout(function(){n.css('opacity',0);setTimeout(function(){n.remove();},320);},1500);})();<</script>>`;
+      return `${saveCall}${notify}`;
+    }
 
     case 'table':
       return tableBlockToSC(block, chars, vars, nodes, indent, idToName, project);
@@ -1806,6 +1816,15 @@ export function buildSidebarSystemConfigOutput(
  * handlers on SugarCube's `:passagestart` (≈ PassageReady) and `:passageend`
  * (≈ PassageDone) events. Returns empty string when both scripts are absent or blank.
  */
+/** Run-once Config.saves.* lines at script load (currently: autoload). */
+export function buildSavesConfigScript(settings: ProjectSettings | undefined): string {
+  if (!settings?.autoloadSave) return '';
+  return [
+    '// Autosave: resume from the last autosave when the story is reopened',
+    'Config.saves.autoload = true;',
+  ].join('\n');
+}
+
 export function buildPassageLifecycleScript(settings: ProjectSettings | undefined): string {
   const ready = (settings?.passageReadyScript ?? '').trim();
   const done  = (settings?.passageDoneScript  ?? '').trim();
@@ -2769,6 +2788,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
     buildPopupClassSyncScript(scenes),
     buildPassageLifecycleScript(project.settings),
+    buildSavesConfigScript(project.settings),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load',
       '$(document).on(":passagedisplay", function() {',

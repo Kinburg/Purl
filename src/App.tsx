@@ -13,9 +13,10 @@ const ProjectSettingsModal = lazy(() => import('./components/project/ProjectSett
 const EditorPrefsModal     = lazy(() => import('./components/editor/EditorPrefsModal').then(m => ({ default: m.EditorPrefsModal })));
 const AISettingsModal      = lazy(() => import('./components/editor/LLMSettingsModal').then(m => ({ default: m.AISettingsModal })));
 const PluginEditorModal    = lazy(() => import('./components/plugins/PluginEditorModal').then(m => ({ default: m.PluginEditorModal })));
+const ReplaceModal         = lazy(() => import('./components/editor/ReplaceModal').then(m => ({ default: m.ReplaceModal })));
 
 import { useAutosave } from './hooks/useAutosave';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { useT } from './i18n';
 import { fsApi, joinPath, safeName } from './lib/fsApi';
 import { injectPreviewCSS } from './utils/previewCss';
@@ -27,8 +28,6 @@ export default function App() {
   // which forced the whole shell (Header + WorkspaceLayout) to re-render on
   // every keystroke. Action references are stable, project is split per-field.
   const fixVariableNames = useProjectStore(s => s.fixVariableNames);
-  const undo             = useProjectStore(s => s.undo);
-  const redo             = useProjectStore(s => s.redo);
   const projectDir       = useProjectStore(s => s.projectDir);
   const project          = useProjectStore(s => s.project);
   const setProjectDir    = useProjectStore(s => s.setProjectDir);
@@ -39,6 +38,7 @@ export default function App() {
   const setEditorPrefsOpen     = useEditorStore(s => s.setEditorPrefsOpen);
   const llmSettingsOpen        = useEditorStore(s => s.llmSettingsOpen);
   const setLLMSettingsOpen     = useEditorStore(s => s.setLLMSettingsOpen);
+  const replaceOpen            = useEditorStore(s => s.replaceOpen);
   // PluginEditorModal manages its own visibility via this target — render it
   // only while target is set so the chunk loads on-demand AND the React tree
   // unmounts when the editor closes (frees its draft state).
@@ -128,17 +128,88 @@ export default function App() {
     await handleSaveAndExit();
   }
 
-  // Global keyboard shortcuts: Ctrl+Z = undo, Ctrl+Shift+Z / Ctrl+Y = redo
+  // Global keyboard shortcuts (see Editor Preferences → Shortcuts). Store access goes
+  // through getState() so the listener never needs re-subscribing on project changes.
   useEffect(() => {
+    const saveProject = async () => {
+      const { project: p, projectDir: savedDir, setProjectDir: setDir } = useProjectStore.getState();
+      try {
+        let dir = savedDir;
+        if (!dir) {
+          dir = await fsApi.openFolderDialog();
+          if (!dir) return;
+          setDir(dir);
+        }
+        await fsApi.mkdir(joinPath(dir, 'release', 'assets'));
+        await fsApi.writeFile(joinPath(dir, `${safeName(p.title)}.purl`), JSON.stringify(p, null, 2));
+        toast.success(t.header.successSave);
+      } catch (err) {
+        toast.error(t.header.errorSave(String(err)));
+      }
+    };
+
+    // Ctrl+F → focus the scene-list search (the app's "find"). Switch to the
+    // Scenes tab first, then poll briefly for the (possibly lazy-mounted) input.
+    const focusSceneSearch = () => {
+      useProjectStore.getState().setSidebarTab('scenes');
+      let tries = 0;
+      const tryFocus = () => {
+        const el = document.getElementById('purl-scene-search') as HTMLInputElement | null;
+        if (el) { el.focus(); el.select(); return; }
+        if (tries++ < 20) setTimeout(tryFocus, 25);
+      };
+      setTimeout(tryFocus, 0);
+    };
+
     const handler = (e: KeyboardEvent) => {
-      if (!e.ctrlKey) return;
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      if (e.key === 'z' &&  e.shiftKey) { e.preventDefault(); redo(); }
-      if (e.key === 'y' && !e.shiftKey) { e.preventDefault(); redo(); }
+      if (!(e.ctrlKey || e.metaKey)) return;
+
+      // Ctrl+Tab / Ctrl+Shift+Tab — cycle to the next / previous scene.
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const ps = useProjectStore.getState();
+        const list = ps.project.scenes;
+        if (!list.length) return;
+        const idx = list.findIndex(sc => sc.id === ps.activeSceneId);
+        const next = e.shiftKey
+          ? (idx <= 0 ? list.length - 1 : idx - 1)
+          : (idx === list.length - 1 ? 0 : idx + 1);
+        ps.setActiveScene(list[next].id);
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case 'z':
+          e.preventDefault();
+          if (e.shiftKey) useProjectStore.getState().redo();
+          else useProjectStore.getState().undo();
+          break;
+        case 'y':
+          e.preventDefault();
+          useProjectStore.getState().redo();
+          break;
+        case 's':
+          e.preventDefault();
+          void saveProject();
+          break;
+        case ',':
+          e.preventDefault();
+          useEditorStore.getState().setEditorPrefsOpen(true);
+          break;
+        case 'p':
+          if (e.shiftKey) { e.preventDefault(); useEditorStore.getState().setProjectSettingsOpen(true); }
+          break;
+        case 'f':
+          if (!e.shiftKey) { e.preventDefault(); focusSceneSearch(); }
+          break;
+        case 'r':
+          if (!e.shiftKey) { e.preventDefault(); useEditorStore.getState().setReplaceOpen(true); }
+          break;
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo]);
+  }, [t]);
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden${compactMode ? ' compact' : ''}`}>
@@ -158,6 +229,7 @@ export default function App() {
           <AISettingsModal onClose={() => setLLMSettingsOpen(false)} />
         )}
         {pluginEditorTarget !== null && <PluginEditorModal />}
+        {replaceOpen && <ReplaceModal />}
       </Suspense>
 
       {/* Close confirmation modal */}

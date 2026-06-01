@@ -2,7 +2,7 @@ import type { Project, ProjectSettings, PluginBlockDef } from '../types';
 import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
 import type { PassageContext } from './exportToTwee';
-import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, hasAudioVolumeCell } from './exportToTwee';
+import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, buildSavesConfigScript, hasAudioVolumeCell } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
 import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
@@ -278,6 +278,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     hasStyleBindings(project) ? buildStyleBindScript(project) : '',
     buildPopupClassSyncScript(scenes),
     buildPassageLifecycleScript(project.settings),
+    buildSavesConfigScript(project.settings),
     buildPurlSignatureScript(),
     hasAudioVolume ? [
       '// Audio volume: restore from saved state on load (audio + video)',

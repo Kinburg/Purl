@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,11 @@ import { SYSTEM_TAGS, SYSTEM_TAG_COLORS, START_TAG, START_TAG_COLOR } from '../.
 import type { Block, SystemTag } from '../../types';
 
 import { EmojiIcon } from '../shared/EmojiIcons';
+import { toast } from 'sonner';
+import { useConfirm } from '../shared/ConfirmModal';
+import { useEditorPrefsStore } from '../../store/editorPrefsStore';
+import { extractSceneStrings, translateSceneBlocks } from '../../utils/i18nUtils';
+import { translateString } from '../../utils/llm';
 export function SceneEditor() {
   // Subscribe to the active scene via a derived selector: re-renders only when
   // the active scene's reference actually changes (immutable updates preserve
@@ -32,6 +37,15 @@ export function SceneEditor() {
   const t = useT();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+  const llmEnabled = useEditorPrefsStore(s => s.llmEnabled);
+  const [translating, setTranslating] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const { ask, modal } = useConfirm();
+  // Count of non-empty translatable strings in the active scene (drives button visibility).
+  const translatableCount = useMemo(
+    () => (scene ? Object.values(extractSceneStrings(scene)).filter(v => v.trim()).length : 0),
+    [scene],
+  );
 
   const toggleBlock = useCallback((blockId: string) => {
     setCollapsedBlocks(prev => {
@@ -71,6 +85,65 @@ export function SceneEditor() {
     }
   };
 
+  // Translate every text/dialogue/label in the scene into the project's story language.
+  // In-place: applied atomically via reorderBlocks (single undo step). Cancel → nothing applied.
+  const runTranslateScene = async () => {
+    if (!scene) return;
+    const map = extractSceneStrings(scene);
+    const entries = Object.entries(map).filter(([, v]) => v.trim().length > 0);
+    const total = entries.length;
+    if (total === 0) { toast.info(t.scene.translateSceneEmpty); return; }
+
+    const prefs = useEditorPrefsStore.getState();
+    const project = useProjectStore.getState().project;
+    const language = project.settings.storyLanguage || 'English';
+
+    let urlOrApiKey = prefs.llmUrl;
+    let model = prefs.llmGeminiModel;
+    if (prefs.llmProvider === 'gemini') {
+      urlOrApiKey = prefs.llmGeminiApiKey;
+    } else if (prefs.llmProvider === 'openai') {
+      urlOrApiKey = prefs.llmOpenaiUrl;
+      model = prefs.llmOpenaiModel;
+    }
+    const apiKey = prefs.llmProvider === 'openai' ? prefs.llmOpenaiApiKey : undefined;
+    const params = { maxTokens: prefs.llmMaxTokens, temperature: prefs.llmTemperature, filterThought: prefs.llmFilterThought };
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setTranslating(true);
+    const toastId = toast.loading(t.scene.translating(0, total));
+
+    const out: Record<string, string> = {};
+    try {
+      for (let i = 0; i < entries.length; i++) {
+        const [key, value] = entries[i];
+        const result = await translateString(
+          prefs.llmProvider, urlOrApiKey, model, prefs.llmSystemPrompt,
+          project, scene, value, language, params, controller.signal, apiKey,
+        );
+        out[key] = result.trim() || value;
+        toast.loading(t.scene.translating(i + 1, total), { id: toastId });
+      }
+      reorderBlocks(scene.id, translateSceneBlocks(scene.blocks, out));
+      toast.success(t.scene.translateDone(total), { id: toastId });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(t.scene.translateFailed, { id: toastId });
+      }
+    } finally {
+      setTranslating(false);
+      abortRef.current = null;
+    }
+  };
+
+  const handleTranslateClick = () => {
+    if (translating) { abortRef.current?.abort(); return; }
+    ask(t.scene.translateSceneConfirm, runTranslateScene);
+  };
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {settingsOpen && (
@@ -83,6 +156,7 @@ export function SceneEditor() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+      {modal}
 
       {/* Scene header */}
       <div className="scene-header px-4 bg-slate-800/50 border-b border-slate-700 flex items-center gap-3 shrink-0 h-9">
@@ -141,6 +215,30 @@ export function SceneEditor() {
                 </svg>
               )}
               <span>{allCollapsed ? t.scene.expandAll : t.scene.collapseAll}</span>
+            </button>
+          )}
+          {llmEnabled && translatableCount > 0 && (
+            <button
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border transition-colors cursor-pointer shrink-0 ml-1 ${
+                translating
+                  ? 'text-sky-300 bg-sky-900/40 border-sky-700'
+                  : 'text-slate-300 bg-slate-700/50 hover:bg-slate-700 hover:text-white border-slate-600/60 hover:border-slate-500'
+              }`}
+              title={translating ? t.scene.stopTranslate : t.scene.translateScene}
+              onClick={handleTranslateClick}
+            >
+              {translating ? (
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="6" width="12" height="12" rx="1" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                </svg>
+              )}
+              <span>{translating ? t.scene.stopTranslate : t.scene.translateScene}</span>
             </button>
           )}
         </div>

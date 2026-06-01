@@ -7,6 +7,7 @@ import { useT } from '../../i18n';
 import { BLOCK_SVG_ICONS } from './BlockIcons';
 import type { Block, BlockType, PluginBlock, PluginBlockDef } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
+import { BLOCK_CATEGORIES, CAT_COLORS } from '../../utils/blockPalette';
 
 /** Render a plugin's user-supplied icon emoji, falling back to the puzzle SVG. */
 function PluginGlyph({ icon, size }: { icon?: string; size: number }) {
@@ -102,6 +103,7 @@ export function makeBlock(type: BlockType): Block {
     case 'select':       return { id, type, variableId: '', options: [] };
     case 'slider':       return { id, type, variableId: '', min: 0, max: 100, step: 1, showValue: true };
     case 'display-object': return { id, type, source: 'group' as const, fields: [], layout: 'list' as const, live: true, autoSync: true };
+    case 'save':         return { id, type };
     case 'plugin':       return { id, type, pluginId: '', values: {} };
   }
 }
@@ -112,40 +114,7 @@ export function makePluginBlock(def: PluginBlockDef): PluginBlock {
   return { id: crypto.randomUUID(), type: 'plugin', pluginId: def.id, values };
 }
 
-// ── Categories ────────────────────────────────────────────────────────────────
-
-type CategoryKey = 'narrative' | 'media' | 'layout' | 'game' | 'data' | 'interaction' | 'logic' | 'system';
-
-const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
-  { key: 'narrative',   types: ['text', 'dialogue', 'callout'] },
-  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen', 'audio-volume'] },
-  // layout = blocks that space / arrange / compose content (rather than being content). No logic, no own player input.
-  //   divider/spacer space; tabs/section/table group inline blocks; include embeds another passage's content.
-  { key: 'layout',      types: ['divider', 'spacer', 'tabs', 'section', 'table', 'include'] },
-  // game = entities that need the Characters / Items systems.
-  { key: 'game',        types: ['paperdoll', 'inventory', 'container'] },
-  // data = blocks that read OR write story variables (genre-agnostic; useful for debug too).
-  //   read/display: progress, date-time, display-object — author-side writes: variable-set, set-object, time-manipulation.
-  //   (player-input writers like input-field/select/slider stay under `interaction`.)
-  { key: 'data',        types: ['progress', 'date-time', 'display-object', 'variable-set', 'set-object', 'time-manipulation'] },
-  // interaction = blocks the player acts on (click / type / toggle). `function` is a clickable button (like button/link).
-  { key: 'interaction', types: ['choice', 'button', 'link', 'menu-link', 'input-field', 'checkbox', 'radio', 'select', 'slider', 'popup', 'function'] },
-  // logic = control-flow primitives.
-  { key: 'logic',       types: ['condition', 'for'] },
-  { key: 'system',      types: ['raw', 'note'] },
-];
-
-const CAT_COLORS: Record<string, { color: string; bg: string; ring: string }> = {
-  narrative:   { color: '#818cf8', bg: 'rgba(99,102,241,0.14)',  ring: 'rgba(99,102,241,0.5)'  },
-  media:       { color: '#2dd4bf', bg: 'rgba(45,212,191,0.14)',  ring: 'rgba(45,212,191,0.5)'  },
-  layout:      { color: '#f472b6', bg: 'rgba(244,114,182,0.14)', ring: 'rgba(244,114,182,0.5)' },
-  game:        { color: '#fb923c', bg: 'rgba(251,146,60,0.14)',  ring: 'rgba(251,146,60,0.5)'  },
-  data:        { color: '#38bdf8', bg: 'rgba(56,189,248,0.14)',  ring: 'rgba(56,189,248,0.5)'  },
-  interaction: { color: '#34d399', bg: 'rgba(16,185,129,0.14)',  ring: 'rgba(16,185,129,0.5)'  },
-  logic:       { color: '#a78bfa', bg: 'rgba(167,139,250,0.14)', ring: 'rgba(167,139,250,0.5)' },
-  system:      { color: '#94a3b8', bg: 'rgba(100,116,139,0.14)', ring: 'rgba(100,116,139,0.5)' },
-  plugins:     { color: '#c084fc', bg: 'rgba(168,85,247,0.14)',  ring: 'rgba(168,85,247,0.5)'  },
-};
+// Block categories + colours moved to ../../utils/blockPalette (BLOCK_CATEGORIES, CAT_COLORS).
 
 // ── Entry types ───────────────────────────────────────────────────────────────
 
@@ -215,6 +184,7 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('include',           t.addBlock.include.label,          t.addBlock.include.desc,          'layout'),
     make('raw',               t.addBlock.raw.label,              t.addBlock.raw.desc,              'system'),
     make('note',              t.addBlock.note.label,             t.addBlock.note.desc,             'system'),
+    make('save',              t.addBlock.save.label,             t.addBlock.save.desc,             'system'),
   ];
 }
 
