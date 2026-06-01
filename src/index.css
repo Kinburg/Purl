@@ -51,6 +51,26 @@ textarea {
 .preview-scrollbar::-webkit-scrollbar-thumb { background: #45475a; border-radius: 4px; }
 .preview-scrollbar::-webkit-scrollbar-thumb:hover { background: #585b70; }
 
+/* ── Knit theme (echoes the app name "Purl"): static, GPU-composited, gated by .knit ── */
+/* Block left accent → braided cord. Colour comes from the block's category (--block-accent);
+   the twist is a diagonal repeating gradient with a highlight + groove (color-mix). */
+.block-cord { position: relative; }
+.knit .block-cord::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--block-accent, #64748b), #ffffff 28%) 0 2px,
+    var(--block-accent, #64748b)                                  2px 4px,
+    color-mix(in srgb, var(--block-accent, #64748b), #000000 34%) 4px 6px,
+    var(--block-accent, #64748b)                                  6px 8px
+  );
+}
+
 /* Compact mode */
 .compact .block-header { padding: 2px 8px; }
 .compact .block-body   { padding: 6px 8px; }

@@ -45,6 +45,7 @@ export default function App() {
   const pluginEditorTarget     = useEditorStore(s => s.pluginEditorTarget);
 
   const compactMode = useEditorPrefsStore(s => s.compactMode);
+  const knitTheme   = useEditorPrefsStore(s => s.knitTheme);
   const saveOnExit  = useEditorPrefsStore(s => s.saveOnExit);
 
   const t = useT();
@@ -212,7 +213,7 @@ export default function App() {
   }, [t]);
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden${compactMode ? ' compact' : ''}`}>
+    <div className={`app-shell flex flex-col h-screen overflow-hidden${compactMode ? ' compact' : ''}${knitTheme ? ' knit' : ''}`}>
       <Header />
       <WorkspaceLayout />
       <Suspense fallback={null}>

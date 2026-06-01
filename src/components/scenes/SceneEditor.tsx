@@ -23,6 +23,7 @@ import type { Block, SystemTag } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { toast } from 'sonner';
 import { useConfirm } from '../shared/ConfirmModal';
+import { YarnBall } from '../shared/YarnArt';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { extractSceneStrings, translateSceneBlocks } from '../../utils/i18nUtils';
 import { translateString } from '../../utils/llm';
@@ -38,6 +39,7 @@ export function SceneEditor() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
   const llmEnabled = useEditorPrefsStore(s => s.llmEnabled);
+  const knitTheme  = useEditorPrefsStore(s => s.knitTheme);
   const [translating, setTranslating] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const { ask, modal } = useConfirm();
@@ -59,7 +61,8 @@ export function SceneEditor() {
 
   if (!scene) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-500 text-sm">
+        {knitTheme && <YarnBall className="w-12 h-12 text-slate-600" />}
         {t.scene.selectPrompt}
       </div>
     );
@@ -282,7 +285,8 @@ export function SceneEditor() {
               </DndContext>
             ) : (
               <>
-                <div className="text-slate-600 text-sm text-center py-8">
+                <div className="text-slate-600 text-sm text-center py-8 flex flex-col items-center gap-2.5">
+                  {knitTheme && <YarnBall className="w-10 h-10 text-slate-700" />}
                   {t.scene.empty}
                 </div>
                 <InsertZone sceneId={scene.id} insertIndex={0} isLast />

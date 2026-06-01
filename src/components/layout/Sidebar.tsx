@@ -13,9 +13,17 @@ const ItemManager      = lazy(() => import('../items/ItemManager').then(m => ({ 
 const ContainerManager = lazy(() => import('../containers/ContainerManager').then(m => ({ default: m.ContainerManager })));
 const PluginManager    = lazy(() => import('../plugins/PluginManager').then(m => ({ default: m.PluginManager })));
 import { SIDEBAR_SVG_ICONS } from './SidebarIcons';
+import { useEditorPrefsStore } from '../../store/editorPrefsStore';
+import { YarnSpinner } from '../shared/YarnArt';
 
 function TabFallback() {
-  return <div className="px-3 py-4 text-slate-500 text-xs italic">Loading…</div>;
+  const knit = useEditorPrefsStore(s => s.knitTheme);
+  return (
+    <div className="flex items-center gap-2 px-3 py-4 text-slate-500 text-xs italic">
+      {knit && <YarnSpinner className="w-4 h-4" />}
+      Loading…
+    </div>
+  );
 }
 
 type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins';

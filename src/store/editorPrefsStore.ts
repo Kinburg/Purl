@@ -34,6 +34,8 @@ export interface EditorPrefs {
 
   // ── Appearance ────────────────────────────────────────────────────────────
   compactMode: boolean;
+  /** Subtle knit / yarn texture across the UI (echoes the app name "Purl"). Cosmetic. */
+  knitTheme: boolean;
 
   // ── Confirm on delete ─────────────────────────────────────────────────────
   confirmDeleteScene:     boolean;
@@ -93,6 +95,7 @@ const DEFAULTS: EditorPrefs = {
   saveOnExit:       false,
 
   compactMode: false,
+  knitTheme: true,
 
   confirmDeleteScene:     true,
   confirmDeleteGroup:     true,
