@@ -1,4 +1,4 @@
-import type { Project, Block } from '../types';
+import type { Project, Block, Scene } from '../types';
 
 /**
  * A flat map of translatable strings.
@@ -70,6 +70,10 @@ function extractBlocksStrings(blocks: Block[], map: TranslationMap) {
       case 'callout':
         if (block.title) map[`${block.id}.title`] = block.title;
         map[`${block.id}.content`] = block.content;
+        break;
+      case 'save':
+        if (block.title) map[`${block.id}.title`] = block.title;
+        if (block.notifyText) map[`${block.id}.notifyText`] = block.notifyText;
         break;
       case 'select':
         if (block.label) map[`${block.id}.label`] = block.label;
@@ -171,6 +175,10 @@ function applyBlocksTranslations(blocks: Block[], map: TranslationMap) {
         if (block.title) block.title = t(block.id, 'title', block.title);
         block.content = t(block.id, 'content', block.content);
         break;
+      case 'save':
+        if (block.title) block.title = t(block.id, 'title', block.title);
+        if (block.notifyText) block.notifyText = t(block.id, 'notifyText', block.notifyText);
+        break;
       case 'select':
         if (block.label) block.label = t(block.id, 'label', block.label);
         for (const opt of block.options) opt.label = t(opt.id, 'label', opt.label);
@@ -209,4 +217,27 @@ function applyBlocksTranslations(blocks: Block[], map: TranslationMap) {
         break;
     }
   }
+}
+
+// ── Scene-scoped helpers (used by the "Translate scene" action) ──────────────
+
+/**
+ * Extracts translatable strings from a single scene's blocks (incl. nested).
+ * Deliberately EXCLUDES scene.name/notes: a scene's name is its passage name, and
+ * navigation targets (targetSceneId) store that name — translating it would break links.
+ */
+export function extractSceneStrings(scene: Scene): TranslationMap {
+  const map: TranslationMap = {};
+  extractBlocksStrings(scene.blocks, map);
+  return map;
+}
+
+/**
+ * Returns a deep-cloned copy of `blocks` with all strings found in `map` replaced.
+ * Pass the result to a store action (e.g. reorderBlocks) to apply atomically.
+ */
+export function translateSceneBlocks(blocks: Block[], map: TranslationMap): Block[] {
+  const clone = JSON.parse(JSON.stringify(blocks)) as Block[];
+  applyBlocksTranslations(clone, map);
+  return clone;
 }

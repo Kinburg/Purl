@@ -26,7 +26,7 @@ import type {
   ConditionBlock, ConditionBranch, ConditionBranchType, ConditionOperator, Block, ArrayAccessor,
   TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, SetObjectBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, ProgressBlock,
   AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
-  ForBlock,
+  ForBlock, SaveBlock,
 } from '../../types';
 import { AddBlockMenu } from './AddBlockMenu';
 import { TextBlockEditor } from './TextBlockEditor';
@@ -49,6 +49,7 @@ import { CalloutBlockEditor } from './CalloutBlockEditor';
 import { SelectBlockEditor } from './SelectBlockEditor';
 import { SliderBlockEditor } from './SliderBlockEditor';
 import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
+import { SaveBlockEditor } from './SaveBlockEditor';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
 
 /**
@@ -160,6 +161,7 @@ function NestedBlockEditor({
     case 'audio-volume': return <AudioVolumeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
     case 'date-time':    return <DateTimeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
     case 'callout':      return <CalloutBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
+    case 'save':         return <SaveBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SaveBlock>) => void} />;
     case 'select':       return <SelectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
     case 'slider':       return <SliderBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
     case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;

@@ -1,13 +1,8 @@
-import { useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { useDraftValue } from '../../utils/useDraftValue';
 import { useT } from '../../i18n';
 import type { TextBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
-import { TextInsertToolbar } from '../shared/TextInsertToolbar';
-import { LLMGenerateButton } from '../shared/LLMGenerateButton';
-import { useMemo } from 'react';
-import { useFlatVariablesOf, useFlatAssetsOf } from '../../hooks/useFlatVariables';
+import { RichTextArea } from '../shared/RichTextArea';
 import { useVariableNodes } from '../shared/VariableScope';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import {
@@ -28,20 +23,10 @@ export function TextBlockEditor({
   // Selector-based subscriptions — don't re-render this editor when an
   // UNRELATED part of the project changes (e.g. typing in another block).
   const updateBlock   = useProjectStore(s => s.updateBlock);
-  const saveSnapshot  = useProjectStore(s => s.saveSnapshot);
-  const assetNodes    = useProjectStore(s => s.project.assetNodes);
   const settings      = useProjectStore(s => s.project.settings);
-  const projectScenes = useProjectStore(s => s.project.scenes);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<TextBlock>) => updateBlock(sceneId, block.id, p as never));
-  // Debounced draft of the textarea content — store commit on blur or after
-  // 300 ms of idle; eliminates per-keystroke project re-renders.
-  const contentDraft = useDraftValue(block.content, v => update({ content: v }));
-  const vars = useFlatVariablesOf(variableNodes);
-  const allAssets = useFlatAssetsOf(assetNodes);
-  const imgAssets = useMemo(() => allAssets.filter(a => a.assetType === 'image'), [allAssets]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cascadeClasses = ['tg-text', ...simpleBlockCascadeClasses(block, settings)].join(' ');
   // Show preview only when a style override / default actually affects this block —
   // otherwise the textarea above already shows the literal content.
@@ -51,35 +36,13 @@ export function TextBlockEditor({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="relative">
-        <div className="absolute top-1 right-1 z-10 flex gap-0.5">
-          <LLMGenerateButton
-            sceneId={sceneId}
-            blockId={block.id}
-            currentValue={block.content}
-            onGenerated={text => update({ content: text })}
-            onStreaming={text => update({ content: text })}
-          />
-          <TextInsertToolbar
-            targetRef={textareaRef}
-            value={block.content}
-            onChange={content => update({ content })}
-            vars={vars}
-            imageAssets={imgAssets}
-            variableNodes={variableNodes}
-            scenes={projectScenes}
-          />
-        </div>
-        <textarea
-          ref={textareaRef}
-          className="w-full bg-slate-800 text-slate-200 text-sm rounded px-2 py-1.5 pr-20 outline-none border border-slate-600 focus:border-indigo-500 min-h-[80px]"
-          placeholder={t.textBlock.placeholder}
-          value={contentDraft.value}
-          onFocus={() => { saveSnapshot(); contentDraft.onFocus(); }}
-          onBlur={contentDraft.onBlur}
-          onChange={e => contentDraft.set(e.target.value)}
-        />
-      </div>
+      <RichTextArea
+        sceneId={sceneId}
+        blockId={block.id}
+        value={block.content}
+        onChange={content => update({ content })}
+        placeholder={t.textBlock.placeholder}
+      />
       <label className="flex items-center gap-2 cursor-pointer select-none mt-0.5">
         <input
           type="checkbox"

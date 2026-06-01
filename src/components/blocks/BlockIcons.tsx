@@ -260,6 +260,13 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <path d="M31 16 L28 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".4"/>
   </>, p),
 
+  save: (p) => svg(<>
+    <path d="M7 4 H22 L27 9 V26 A2 2 0 0 1 25 28 H7 A2 2 0 0 1 5 26 V6 A2 2 0 0 1 7 4 Z" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity=".08"/>
+    <path d="M10 4 V11 H21 V4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="9" y="16" width="14" height="9" rx="1" stroke="currentColor" strokeWidth="1.6" fill="none"/>
+    <rect x="17" y="5.5" width="3" height="4" rx="0.5" fill="currentColor" opacity=".7"/>
+  </>, p),
+
   plugin: (p) => svg(<>
     <rect x="6" y="10" width="20" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".1"/>
     <rect x="10" y="4" width="4" height="8" rx="1" fill="currentColor" fillOpacity=".5" stroke="currentColor" strokeWidth="1.3"/>

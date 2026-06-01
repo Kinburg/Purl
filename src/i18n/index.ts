@@ -88,6 +88,7 @@ export function blockTypeLabel(t: Translations, type: Block['type']): string {
     'audio-volume':      t.block.audioVolume,
     'date-time':         t.block.dateTime,
     'callout':           t.block.callout,
+    'save':              t.block.save,
     'select':            t.block.select,
     'slider':            t.block.slider,
     'display-object':    t.block.displayObject,

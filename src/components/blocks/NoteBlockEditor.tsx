@@ -1,6 +1,7 @@
 import { useProjectStore } from '../../store/projectStore';
 import { useT } from '../../i18n';
 import type { NoteBlock } from '../../types';
+import { RichTextArea } from '../shared/RichTextArea';
 
 export function NoteBlockEditor({
   block,
@@ -11,19 +12,18 @@ export function NoteBlockEditor({
   sceneId: string;
   onUpdate?: (patch: Partial<NoteBlock>) => void;
 }) {
-  const updateBlock  = useProjectStore(s => s.updateBlock);
-  const saveSnapshot = useProjectStore(s => s.saveSnapshot);
+  const updateBlock = useProjectStore(s => s.updateBlock);
   const t = useT();
   const update = onUpdate ?? ((p: Partial<NoteBlock>) => updateBlock(sceneId, block.id, p as never));
 
   return (
-    <textarea
-      className="w-full bg-transparent text-sm text-amber-200/80 placeholder-amber-800 resize-none outline-none leading-relaxed"
-      rows={3}
-      placeholder={t.scene.notePlaceholder}
+    <RichTextArea
+      sceneId={sceneId}
+      blockId={block.id}
       value={block.text}
-      onFocus={saveSnapshot}
-      onChange={e => update({ text: e.target.value })}
+      onChange={text => update({ text })}
+      placeholder={t.scene.notePlaceholder}
+      className="bg-transparent text-sm text-amber-200/80 placeholder-amber-800 resize-none outline-none leading-relaxed min-h-[60px]"
     />
   );
 }

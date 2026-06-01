@@ -3,6 +3,7 @@ import type {LLMProvider, LLMProviderImpl, ProviderConfig, GenerationParams, LLM
 import {koboldcppProvider} from './koboldcppProvider';
 import {geminiProvider} from './geminiProvider';
 import {openaiProvider} from './openaiProvider';
+import {buildTranslatePrompt} from './promptBuilder';
 
 // --- Provider Registry ---
 
@@ -45,6 +46,41 @@ export async function generateText(
 }
 
 /**
+ * Translates a single string to `language` via the active provider.
+ * Sets params.rawUserPrompt so providers skip scene-context construction entirely —
+ * `project`/`scene` are passed only to satisfy generateText's signature (unused here).
+ */
+export async function translateString(
+    provider: LLMProvider,
+    urlOrApiKey: string,
+    model: string,
+    systemPrompt: string,
+    project: Project,
+    scene: Scene,
+    text: string,
+    language: string,
+    params: GenerationParams,
+    signal?: AbortSignal,
+    apiKey?: string
+): Promise<string> {
+    return generateText(
+        provider,
+        urlOrApiKey,
+        model,
+        systemPrompt,
+        project,
+        scene,
+        '',
+        '',
+        {...params, rawUserPrompt: buildTranslatePrompt(text, language)},
+        'translate',
+        signal,
+        undefined,
+        apiKey,
+    );
+}
+
+/**
  * Sends a stop/abort request to the specified LLM provider.
  */
 export async function abortGeneration(provider: LLMProvider, genUrl: string) {
@@ -59,4 +95,4 @@ export type {LLMMode, LLMProvider, GeminiModel, GenerationParams, ProviderConfig
 export {fetchGeminiModels, classifyModel} from './geminiProvider';
 export type {GeminiModelWithTier, GeminiModelTier} from './geminiProvider';
 export {filterThought} from './utils';
-export {buildSceneContext} from './promptBuilder';
+export {buildSceneContext, buildTranslatePrompt} from './promptBuilder';

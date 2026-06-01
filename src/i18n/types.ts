@@ -23,6 +23,23 @@ export interface Translations {
     plugins: string;
   };
 
+  replace: {
+    title:              string;
+    find:               string;
+    replaceWith:        string;
+    findPlaceholder:    string;
+    replacePlaceholder: string;
+    regexLabel:         string;
+    caseLabel:          string;
+    scopeScene:         string;
+    scopeProject:       string;
+    invalidRegex:       string;
+    matchCount:         (n: number, fields: number) => string;
+    noMatches:          string;
+    replaceBtn:         string;
+    done:               (n: number) => string;
+  };
+
   scene: {
     add: string;
     drag: string;
@@ -37,6 +54,13 @@ export interface Translations {
     editTagsTitle: string;
     collapseAll: string;
     expandAll: string;
+    translateScene: string;
+    stopTranslate: string;
+    translateSceneConfirm: string;
+    translateSceneEmpty: string;
+    translating: (n: number, total: number) => string;
+    translateDone: (n: number) => string;
+    translateFailed: string;
     empty: string;
     /** Hint banner: ::StoryMenu renders only <<link>> items. */
     menuSceneHint: string;
@@ -272,6 +296,7 @@ export interface Translations {
     audioVolume: string;
     dateTime: string;
     callout: string;
+    save: string;
     select: string;
     slider: string;
     displayObject: string;
@@ -339,6 +364,7 @@ export interface Translations {
     audioVolume:      { label: string; desc: string };
     dateTime:         { label: string; desc: string };
     callout:          { label: string; desc: string };
+    save:             { label: string; desc: string };
     select:           { label: string; desc: string };
     slider:           { label: string; desc: string };
     displayObject:    { label: string; desc: string };
@@ -1346,6 +1372,15 @@ export interface Translations {
     preview: string;
   };
 
+  saveBlock: {
+    hint: string;
+    titleLabel: string;
+    titlePlaceholder: string;
+    notifyLabel: string;
+    notifyTextLabel: string;
+    notifyTextPlaceholder: string;
+  };
+
   calloutBlock: {
     variantLabel: string;
     variants: { info: string; success: string; warning: string; danger: string; note: string };
@@ -1639,10 +1674,7 @@ export interface Translations {
     shortcutsEditor: string;
     find: string;
     replace: string;
-    toggleComment: string;
-    moveLine: string;
     shortcutsNavigation: string;
-    switchWorkspaceTab: string;
     nextScene: string;
     previousScene: string;
     closeModalCancel: string;
@@ -1763,9 +1795,6 @@ export interface Translations {
 
     comfyUi: string;
     pollinationsAi: string;
-    translationLanguageLabel: string;
-    translationLanguagePlaceholder: string;
-    translationLanguageHint: string;
   };
 
   // ─── LLM Generate Button ─────────────────────────────────────────────────────
@@ -1792,6 +1821,9 @@ export interface Translations {
     fieldAuthorPlaceholder: string;
     fieldDescription:       string;
     fieldDescPlaceholder:   string;
+    fieldStoryLanguage:            string;
+    fieldStoryLanguageNote:        string;
+    fieldStoryLanguagePlaceholder: string;
     sectionAppearance:      string;
     fieldBgColor:           string;
     /** Hint that links to the sidebar scene's System tab for background/typography. */
@@ -1802,6 +1834,8 @@ export interface Translations {
     fieldAudioUnlockText:      string;
     fieldAudioUnlockTextPlaceholder: string;
     fieldAudioUnlockTextNote:  string;
+    fieldAutoloadSave:         string;
+    fieldAutoloadSaveNote:     string;
     sectionLifecycleHooks:     string;
     lifecycleHooksNote:        string;
     fieldCustomInit:                  string;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
@@ -7,7 +7,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore } from '../../store/projectStore';
-import { useDraftValue } from '../../utils/useDraftValue';
 import { useT } from '../../i18n';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 import type {
@@ -24,11 +23,9 @@ import { RawBlockEditor } from './RawBlockEditor';
 import { TableBlockEditor } from './TableBlockEditor';
 import { NoteBlockEditor } from './NoteBlockEditor';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
-import { TextInsertToolbar } from '../shared/TextInsertToolbar';
-import { LLMGenerateButton } from '../shared/LLMGenerateButton';
+import { RichTextArea } from '../shared/RichTextArea';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import { DIALOGUE_FIELD_SCHEMA, DIALOGUE_RAW_CSS_HELP } from '../../utils/styleCascade';
-import { useFlatVariablesOf, useFlatAssetsOf } from '../../hooks/useFlatVariables';
 import { useVariableNodes } from '../shared/VariableScope';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { dialogueElementClasses, buildDialogueSpotStyleBlock } from '../../utils/styleCascade';
@@ -226,17 +223,9 @@ export function DialogueBlockEditor({
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const projectDir   = useProjectStore(s => s.projectDir);
   const characters   = useProjectStore(s => s.project.characters);
-  const assetNodes   = useProjectStore(s => s.project.assetNodes);
-  const projectScenes = useProjectStore(s => s.project.scenes);
   const t = useT();
   const variableNodes = useVariableNodes();
   const update = onUpdate ?? ((p: Partial<DialogueBlock>) => updateBlock(sceneId, block.id, p as never));
-  // Debounced draft for the dialogue text — same pattern as TextBlock.
-  const textDraft = useDraftValue(block.text, v => update({ text: v }));
-  const vars = useFlatVariablesOf(variableNodes);
-  const allAssets = useFlatAssetsOf(assetNodes);
-  const imgAssets = useMemo(() => allAssets.filter(a => a.assetType === 'image'), [allAssets]);
-  const dialogueRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedChar = characters.find(c => c.id === block.characterId);
   const align = block.align ?? 'left';
@@ -381,32 +370,13 @@ export function DialogueBlockEditor({
               {selectedChar.name}{block.nameSuffix ? ` (${block.nameSuffix})` : ''}
             </span>
           )}
-          <div className={`absolute top-0.5 z-10 flex gap-0.5 ${isRight ? 'left-0.5' : 'right-0.5'}`}>
-            <LLMGenerateButton
-              sceneId={sceneId}
-              blockId={block.id}
-              currentValue={block.text}
-              onGenerated={text => update({ text })}
-              onStreaming={text => update({ text })}
-            />
-            <TextInsertToolbar
-              targetRef={dialogueRef}
-              value={block.text}
-              onChange={text => update({ text })}
-              vars={vars}
-              imageAssets={imgAssets}
-              variableNodes={variableNodes}
-              scenes={projectScenes}
-            />
-          </div>
-          <textarea
-            ref={dialogueRef}
-            className={`char-text w-full bg-transparent rounded outline-none min-h-[60px] placeholder-slate-500 ${isRight ? 'pl-20' : 'pr-20'}`}
+          <RichTextArea
+            sceneId={sceneId}
+            blockId={block.id}
+            value={block.text}
+            onChange={text => update({ text })}
             placeholder={t.dialogueBlock.linePlaceholder}
-            value={textDraft.value}
-            onFocus={() => { saveSnapshot(); textDraft.onFocus(); }}
-            onBlur={textDraft.onBlur}
-            onChange={e => textDraft.set(e.target.value)}
+            className="char-text bg-transparent rounded outline-none min-h-[60px] placeholder-slate-500"
           />
         </div>
       </div>

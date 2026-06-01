@@ -8,6 +8,7 @@ import { useConfirm } from '../shared/ConfirmModal';
 import { useT, blockTypeLabel } from '../../i18n';
 import type { Block } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
+import { blockPalette } from '../../utils/blockPalette';
 
 // ── Eager editors ────────────────────────────────────────────────────────────
 // Common, lightweight blocks bundled with the main chunk. Loading them is
@@ -26,6 +27,7 @@ import { MenuLinkBlockEditor } from './MenuLinkBlockEditor';
 import { InputFieldBlockEditor } from './InputFieldBlockEditor';
 import { RawBlockEditor } from './RawBlockEditor';
 import { NoteBlockEditor } from './NoteBlockEditor';
+import { SaveBlockEditor } from './SaveBlockEditor';
 import { DividerBlockEditor } from './DividerBlockEditor';
 import { SpacerBlockEditor } from './SpacerBlockEditor';
 import { SectionBlockEditor } from './SectionBlockEditor';
@@ -87,6 +89,7 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'input-field':       InputFieldBlockEditor       as never,
   'raw':               RawBlockEditor              as never,
   'note':              NoteBlockEditor             as never,
+  'save':              SaveBlockEditor             as never,
   'spacer':            SpacerBlockEditor           as never,
   'section':           SectionBlockEditor          as never,
   'progress':          ProgressBlockEditor         as never,
@@ -117,48 +120,7 @@ function BlockEditorFallback() {
   return <div className="text-slate-500 text-xs italic py-2">Loading editor…</div>;
 }
 
-const BLOCK_COLORS: Record<Block['type'], string> = {
-  'text':              'bg-slate-700',
-  'dialogue':          'bg-indigo-900/40',
-  'choice':            'bg-emerald-900/40',
-  'condition':         'bg-amber-900/40',
-  'variable-set':      'bg-purple-900/40',
-  'set-object':        'bg-purple-900/40',
-  'for':               'bg-amber-900/40',
-  'button':            'bg-blue-900/40',
-  'link':              'bg-emerald-900/40',
-  'menu-link':         'bg-emerald-900/40',
-  'input-field':       'bg-teal-900/40',
-  'image':             'bg-pink-900/40',
-  'image-gen':         'bg-fuchsia-900/30',
-  'video':             'bg-red-900/40',
-  'raw':               'bg-zinc-700/60',
-  'note':              'bg-amber-950/60',
-  'table':             'bg-cyan-900/40',
-  'include':           'bg-sky-900/40',
-  'divider':           'bg-slate-700/40',
-  'spacer':            'bg-slate-700/40',
-  'progress':          'bg-cyan-900/40',
-  'audio-volume':      'bg-amber-900/40',
-  'date-time':         'bg-sky-900/40',
-  'callout':           'bg-amber-800/30',
-  'select':            'bg-teal-900/40',
-  'slider':            'bg-teal-900/40',
-  'display-object':    'bg-cyan-900/40',
-  'checkbox':          'bg-violet-900/40',
-  'radio':             'bg-fuchsia-900/40',
-  'function':          'bg-purple-900/40',
-  'popup':             'bg-blue-900/40',
-  'audio':             'bg-amber-900/40',
-  'audio-gen':         'bg-amber-800/30',
-  'container':         'bg-teal-900/40',
-  'time-manipulation': 'bg-indigo-950/50',
-  'paperdoll':         'bg-violet-900/40',
-  'inventory':         'bg-teal-900/40',
-  'tabs':              'bg-amber-900/40',
-  'section':           'bg-amber-900/40',
-  'plugin':            'bg-indigo-900/40',
-};
+// Per-block card colours are derived from the block's category — see blockPalette().
 
 /** Convert "#rrggbb" → "rgba(r,g,b,a)". Returns the input unchanged if it's not a 6-digit hex. */
 function hexWithAlpha(hex: string, alpha: number): string {
@@ -211,16 +173,15 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
     style.borderColor = hexWithAlpha(pluginDef.color, 0.6);
   }
 
-  const color = pluginDef ? '' : BLOCK_COLORS[block.type];
+  const pal = blockPalette(block.type);
   const label = pluginDef?.name ?? blockTypeLabel(t, block.type);
-  const border = pluginDef ? '' : (block.type === 'note' ? 'border-amber-800/50' : 'border-slate-700');
 
   return (
     <>
     <div
       ref={setNodeRef}
-      style={style}
-      className={`rounded border ${border} ${color} overflow-hidden`}
+      style={{ ...style, borderLeftColor: pal.accent, borderLeftWidth: '3px', background: pal.fill }}
+      className="rounded border border-slate-700 overflow-hidden"
     >
       {/* Block header */}
       <div className="block-header flex items-center justify-between px-3 py-1.5 border-b border-slate-700/50">

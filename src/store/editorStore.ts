@@ -26,6 +26,10 @@ interface EditorState {
   llmSettingsOpen: boolean;
   setLLMSettingsOpen: (open: boolean) => void;
 
+  /** Whether the Find & Replace modal is open. */
+  replaceOpen: boolean;
+  setReplaceOpen: (open: boolean) => void;
+
   /** Currently open plugin editor (null = closed). Either a plugin id (edit existing) or 'new' (create). */
   pluginEditorTarget: string | null;
   openPluginEditor: (id: string | 'new') => void;
@@ -48,6 +52,9 @@ export const useEditorStore = create<EditorState>()((set) => ({
 
   llmSettingsOpen: false,
   setLLMSettingsOpen: (open) => set({ llmSettingsOpen: open }),
+
+  replaceOpen: false,
+  setReplaceOpen: (open) => set({ replaceOpen: open }),
 
   pluginEditorTarget: null,
   openPluginEditor: (id) => set({ pluginEditorTarget: id }),

@@ -1,4 +1,4 @@
-import {useState, type ReactNode} from 'react';
+import {useState, useEffect, type ReactNode} from 'react';
 
 // ─── Shared modal primitives ─────────────────────────────────────────────────
 //
@@ -18,6 +18,10 @@ import {useState, type ReactNode} from 'react';
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Stack of open ModalShell close handlers, so Escape closes only the TOPMOST dialog
+// (stacked dialog-over-dialog collapses one layer at a time).
+const escStack: Array<() => void> = [];
+
 interface ShellProps {
     onClose?: () => void,
     width?: number | string,
@@ -30,6 +34,24 @@ interface ShellProps {
 }
 
 export function ModalShell({onClose, width = 520, z = 50, dismissOnBackdrop = false, children, height}: ShellProps) {
+    // Close on Escape — only the topmost open ModalShell responds.
+    useEffect(() => {
+        if (!onClose) return;
+        escStack.push(onClose);
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && escStack[escStack.length - 1] === onClose) {
+                e.stopPropagation();
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            const i = escStack.lastIndexOf(onClose);
+            if (i >= 0) escStack.splice(i, 1);
+        };
+    }, [onClose]);
+
     return (
         <div className="fixed inset-0 flex items-center justify-center" style={{zIndex: z}}>
             <div

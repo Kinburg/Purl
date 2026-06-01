@@ -26,7 +26,7 @@ import type {
   ImageBlock, VideoBlock, ButtonBlock, LinkBlock, MenuLinkBlock, FunctionBlock, PopupBlock,
   AudioBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, SectionBlock, ProgressBlock,
   AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
-  CheckboxBlock, RadioBlock, InputFieldBlock, NoteBlock,
+  CheckboxBlock, RadioBlock, InputFieldBlock, NoteBlock, SaveBlock,
 } from '../../types';
 import { AddBlockMenu } from './AddBlockMenu';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
@@ -69,6 +69,7 @@ import { CheckboxBlockEditor } from './CheckboxBlockEditor';
 import { RadioBlockEditor } from './RadioBlockEditor';
 import { InputFieldBlockEditor } from './InputFieldBlockEditor';
 import { NoteBlockEditor } from './NoteBlockEditor';
+import { SaveBlockEditor } from './SaveBlockEditor';
 
 // ── Nested editor switch ────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ export function InnerBlockEditor({
     case 'audio-volume': return <AudioVolumeBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
     case 'date-time':    return <DateTimeBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
     case 'callout':      return <CalloutBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
+    case 'save':         return <SaveBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SaveBlock>) => void} />;
     case 'select':       return <SelectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
     case 'slider':       return <SliderBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
     case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;

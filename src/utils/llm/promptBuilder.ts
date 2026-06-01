@@ -2,6 +2,16 @@ import type {Scene, Character, Project} from '../../types';
 import type {LLMMode, StructuredPrompt} from './types';
 
 /**
+ * Builds the user prompt for a translation request.
+ * Shared by constructGenerationPrompt (per-field translate) and the standalone
+ * translateString helper (whole-scene translate, sent via rawUserPrompt).
+ */
+export function buildTranslatePrompt(text: string, language?: string): string {
+    const lang = language?.trim() || 'English';
+    return `Translate the following text to ${lang}. Return ONLY the translated text, preserving the original formatting.\n\nText to translate:\n${text.trim()}\n`;
+}
+
+/**
  * Builds context from scene blocks up to the specified target block.
  * Concatenates text and dialogue content.
  */
@@ -80,8 +90,7 @@ export function constructGenerationPrompt(
     let continuationPrefix = "";
 
     if (mode === 'translate') {
-        const lang = translationLanguage?.trim() || 'English';
-        userPrompt += `Translate the following text to ${lang}. Return ONLY the translated text, preserving the original formatting.\n\nText to translate:\n${currentValue.trim()}\n`;
+        userPrompt += buildTranslatePrompt(currentValue, translationLanguage);
     } else if (mode === 'rephrase') {
         userPrompt += `Rephrase, improve, and enrich the following text — add vivid details where appropriate. `;
         if (targetBlock?.type === 'dialogue') {

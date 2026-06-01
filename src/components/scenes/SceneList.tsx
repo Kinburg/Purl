@@ -465,6 +465,7 @@ export function SceneList() {
           <EmojiIcon name="search" size={20} />
         </span>
         <input
+          id="purl-scene-search"
           className="w-full bg-slate-800 text-white text-xs pl-7 pr-6 py-1.5 rounded border border-slate-600 outline-none focus:border-indigo-500 placeholder-slate-500 transition-colors"
           placeholder={t.header.searchPlaceholder}
           value={searchQuery}

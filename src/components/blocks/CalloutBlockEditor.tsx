@@ -2,6 +2,7 @@ import { useProjectStore } from '../../store/projectStore';
 import type { CalloutBlock, CalloutVariant } from '../../types';
 import { useT } from '../../i18n';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
+import { RichTextArea } from '../shared/RichTextArea';
 
 const VARIANTS: CalloutVariant[] = ['info', 'success', 'warning', 'danger', 'note'];
 const VARIANT_ACCENT: Record<CalloutVariant, string> = {
@@ -69,11 +70,13 @@ export function CalloutBlockEditor({
       {/* Content */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-slate-400">{cb.contentLabel}</label>
-        <textarea
-          className="w-full min-h-[64px] bg-slate-800 text-sm text-white rounded px-2 py-1.5 border border-slate-600 focus:border-indigo-500 outline-none resize-y leading-relaxed"
+        <RichTextArea
+          sceneId={sceneId}
+          blockId={block.id}
           value={block.content}
-          onFocus={saveSnapshot}
-          onChange={e => update({ content: e.target.value })}
+          onChange={content => update({ content })}
+          placeholder={cb.contentPlaceholder}
+          className="min-h-[64px] bg-slate-800 text-sm text-white rounded px-2 py-1.5 border border-slate-600 focus:border-indigo-500 outline-none resize-y leading-relaxed"
         />
       </div>
 

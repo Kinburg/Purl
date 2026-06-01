@@ -6,6 +6,7 @@ import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT } from '../../i18n';
 import { fsApi, joinPath, safeName } from '../../lib/fsApi';
 import { toast } from 'sonner';
+import { PRESET_TRANSLATION_LANGUAGES } from '../../utils/translationLanguages';
 import type {
   Project, ProjectSettings,
   BlockStyleOverride, VariableTreeNode,
@@ -92,12 +93,14 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
   // Appearance
   const existing = mode === 'edit' ? project.settings : DEFAULT_PROJECT_SETTINGS;
   const [bgColor,      setBgColor]      = useState(existing.bgColor      ?? '');
+  const [storyLanguage, setStoryLanguage] = useState(existing.storyLanguage ?? '');
   // sidebarColor moved to the sidebar scene's systemConfig.bgColor (System tab).
   // titleColor / titleFont moved to the title scene's systemConfig (kind 'title').
   // Edit both via the System tab in SceneModal on the respective system scene.
 
   // Advanced
   const [audioUnlockText,  setAudioUnlockText]  = useState(existing.audioUnlockText  ?? '');
+  const [autoloadSave,     setAutoloadSave]     = useState(existing.autoloadSave ?? false);
   const [customInit,         setCustomInit]         = useState(existing.customInit         ?? '');
   const [passageReadyScript, setPassageReadyScript] = useState(existing.passageReadyScript ?? '');
   const [passageDoneScript,  setPassageDoneScript]  = useState(existing.passageDoneScript  ?? '');
@@ -176,8 +179,10 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 
   function buildSettings(): ProjectSettings {
     const s: ProjectSettings = {};
+    if (storyLanguage.trim()) s.storyLanguage = storyLanguage.trim();
     if (bgColor.trim())      s.bgColor      = bgColor.trim();
     if (audioUnlockText.trim())  s.audioUnlockText  = audioUnlockText.trim();
+    if (autoloadSave)            s.autoloadSave     = true;
     if (customInit.trim())         s.customInit         = customInit.trim();
     if (passageReadyScript.trim()) s.passageReadyScript = passageReadyScript.trim();
     if (passageDoneScript.trim())  s.passageDoneScript  = passageDoneScript.trim();
@@ -390,6 +395,19 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
                   {busyGenerateLore ? ps.aiGenerateLoreBusy : <AiLabel>{ps.aiGenerateLore}</AiLabel>}
                 </button>
               </ModalField>
+
+              <ModalField label={ps.fieldStoryLanguage} note={ps.fieldStoryLanguageNote}>
+                <input
+                  className={INPUT_CLS}
+                  list="purl-story-langs"
+                  placeholder={ps.fieldStoryLanguagePlaceholder}
+                  value={storyLanguage}
+                  onChange={e => setStoryLanguage(e.target.value)}
+                />
+                <datalist id="purl-story-langs">
+                  {PRESET_TRANSLATION_LANGUAGES.map(l => <option key={l} value={l} />)}
+                </datalist>
+              </ModalField>
             </>
           )}
 
@@ -433,6 +451,19 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
                     onChange={e => setAudioUnlockText(e.target.value)}
                   />
                 </ModalField>
+
+                <div className="flex flex-col gap-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={autoloadSave}
+                      onChange={e => setAutoloadSave(e.target.checked)}
+                      className="accent-indigo-500 cursor-pointer"
+                    />
+                    {ps.fieldAutoloadSave}
+                  </label>
+                  <p className="text-[10px] text-slate-500">{ps.fieldAutoloadSaveNote}</p>
+                </div>
               </ModalSection>
 
               <ModalSection title={ps.sectionLifecycleHooks}>

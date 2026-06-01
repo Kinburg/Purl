@@ -228,15 +228,12 @@ const SHORTCUT_GROUPS: { titleKey: keyof Translations['editorPrefs']; items: [st
     titleKey: 'shortcutsEditor',
     items: [
       ['Ctrl+F',       'find'],
-      ['Ctrl+H',       'replace'],
-      ['Ctrl+/',       'toggleComment'],
-      ['Alt+↑ / Alt+↓', 'moveLine'],
+      ['Ctrl+R',       'replace'],
     ],
   },
   {
     titleKey: 'shortcutsNavigation',
     items: [
-      ['Ctrl+1..4',    'switchWorkspaceTab'],
       ['Ctrl+Tab',     'nextScene'],
       ['Ctrl+Shift+Tab','previousScene'],
       ['Esc',          'closeModalCancel'],
@@ -580,7 +577,7 @@ function AiTab() {
     llmGeminiApiKey, llmGeminiModel, llmGeminiModelsList,
     llmOpenaiUrl, llmOpenaiApiKey, llmOpenaiModel,
     llmMaxTokens, llmTemperature, llmSystemPrompt,
-    llmFilterThought, llmGenerationHistory, llmTranslationLanguage,
+    llmFilterThought, llmGenerationHistory,
     imageGenProvider, comfyUiUrl, comfyUiWorkflowsDir,
     pollinationsModel, pollinationsToken,
   } = prefs;
@@ -819,16 +816,6 @@ function AiTab() {
               <option value="project">{llm.generationHistoryProject}</option>
               <option value="disabled">{llm.generationHistoryDisabled}</option>
             </select>
-          </ModalField>
-
-          <ModalField label={llm.translationLanguageLabel} note={llm.translationLanguageHint}>
-            <input
-              type="text"
-              value={llmTranslationLanguage}
-              onChange={e => setPrefs({ llmTranslationLanguage: e.target.value })}
-              placeholder={llm.translationLanguagePlaceholder}
-              className={INPUT_CLS}
-            />
           </ModalField>
 
           <ModalField label={llm.imageGenProviderLabel}>
