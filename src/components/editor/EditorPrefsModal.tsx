@@ -136,7 +136,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function AppearanceTab() {
   const t  = useT();
   const ep = t.editorPrefs;
-  const { compactMode, setPrefs } = useEditorPrefsStore();
+  const { compactMode, knitTheme, setPrefs } = useEditorPrefsStore();
   const { locale, setLocale } = useLocaleStore();
   const locales = getLocales();
 
@@ -161,6 +161,19 @@ function AppearanceTab() {
             { value: 'comfortable', label: ep.densityComfortable },
           ]}
         />
+      </Section>
+
+      {/* Knit texture — echoes the app name "Purl" */}
+      <Section title={ep.sectionTexture}>
+        <Segmented
+          value={knitTheme ? 'on' : 'off'}
+          onChange={v => setPrefs({ knitTheme: v === 'on' })}
+          options={[
+            { value: 'on',  label: ep.textureOn },
+            { value: 'off', label: ep.textureOff },
+          ]}
+        />
+        <p className="text-[11px] text-slate-500 mt-1.5">{ep.textureHint}</p>
       </Section>
 
       {/* Interface language */}

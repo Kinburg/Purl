@@ -9,6 +9,7 @@ import { useT, blockTypeLabel } from '../../i18n';
 import type { Block } from '../../types';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { blockPalette } from '../../utils/blockPalette';
+import { YarnSpinner } from '../shared/YarnArt';
 
 // ── Eager editors ────────────────────────────────────────────────────────────
 // Common, lightweight blocks bundled with the main chunk. Loading them is
@@ -117,7 +118,13 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
 };
 
 function BlockEditorFallback() {
-  return <div className="text-slate-500 text-xs italic py-2">Loading editor…</div>;
+  const knit = useEditorPrefsStore(s => s.knitTheme);
+  return (
+    <div className="flex items-center gap-2 text-slate-500 text-xs italic py-2">
+      {knit && <YarnSpinner className="w-4 h-4" />}
+      Loading editor…
+    </div>
+  );
 }
 
 // Per-block card colours are derived from the block's category — see blockPalette().
@@ -180,8 +187,8 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
     <>
     <div
       ref={setNodeRef}
-      style={{ ...style, borderLeftColor: pal.accent, borderLeftWidth: '3px', background: pal.fill }}
-      className="rounded border border-slate-700 overflow-hidden"
+      style={{ ...style, borderLeftColor: pal.accent, borderLeftWidth: '3px', background: pal.fill, '--block-accent': pal.accent } as React.CSSProperties}
+      className="block-cord rounded border border-slate-700 overflow-hidden"
     >
       {/* Block header */}
       <div className="block-header flex items-center justify-between px-3 py-1.5 border-b border-slate-700/50">

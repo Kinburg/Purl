@@ -1658,6 +1658,10 @@ export interface Translations {
     themeWarm: string;
     soon: string;
 
+    sectionTexture: string;
+    textureOn: string;
+    textureOff: string;
+    textureHint: string;
     sectionDensity: string;
     densityCompact: string;
     densityComfortable: string;
