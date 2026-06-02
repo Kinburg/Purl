@@ -21,6 +21,30 @@ export interface Translations {
     items: string;
     containers: string;
     plugins: string;
+    validate: string;
+  };
+
+  validate: {
+    allGood: string;
+    errors: string;
+    warnings: string;
+    notices: string;
+    run: string;
+    rerun: string;
+    notRun: string;
+    stale: string;
+    messages: {
+      noStart: string;
+      multipleStart: (names: string) => string;
+      duplicateName: (name: string) => string;
+      danglingTarget: (label: string) => string;
+      unreachable: string;
+      deadEnd: string;
+      emptyScene: string;
+      choiceNoTarget: string;
+      choiceNoLabel: string;
+      emptyBranch: string;
+    };
   };
 
   replace: {
@@ -625,6 +649,19 @@ export interface Translations {
     dialogImportTwee: string;
     errorImport: (e: unknown) => string;
     successImport: string;
+  };
+
+  graphView: {
+    legendTitle: string;
+    kinds: {
+      choice: string;
+      link: string;
+      menuLink: string;
+      function: string;
+      popup: string;
+      openPopup: string;
+      include: string;
+    };
   };
 
   importSummary: {
@@ -1702,6 +1739,11 @@ export interface Translations {
     deleteGroupWithScenes: string;
     sectionExport: string;
     confirmOpenFolderAfterExport: string;
+    sectionValidator: string;
+    validationModeLabel: string;
+    validationModeLive: string;
+    validationModeManual: string;
+    validationModeHint: string;
     titleBarStyleLabel: string;
     titleBarStyleCustom: string;
     titleBarStyleNative: string;

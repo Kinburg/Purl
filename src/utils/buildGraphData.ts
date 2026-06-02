@@ -1,5 +1,6 @@
 import type { Project, Block } from '../types';
-import { SYSTEM_TAGS, START_TAG } from '../types';
+import { START_TAG } from '../types';
+import { collectNavRefs, type NavKind } from './navTargets';
 
 // ─── Shared types (used by both main app and graph window) ───────────────────
 
@@ -8,6 +9,8 @@ export interface GraphEdge {
   sourceId: string;
   targetId: string;
   label:    string;
+  /** Which kind of navigation produced this edge — drives per-kind styling. */
+  kind:     NavKind;
 }
 
 export interface GraphScene {
@@ -26,50 +29,22 @@ export interface GraphData {
 
 // ─── Edge collection ─────────────────────────────────────────────────────────
 
-// ChoiceOption.targetSceneId stores the scene UUID.
-function collectEdges(
-  sourceId: string,
-  blocks: Block[],
-): GraphEdge[] {
-  const result: GraphEdge[] = [];
-  for (const block of blocks) {
-    if (block.type === 'choice') {
-      for (const opt of block.options) {
-        if (opt.targetSceneId) {
-          result.push({
-            edgeId:   `${sourceId}-${opt.id}`,
-            sourceId,
-            targetId: opt.targetSceneId,
-            label:    opt.label,
-          });
-        }
-      }
-    }
-    if (block.type === 'condition') {
-      for (const branch of block.branches) {
-        result.push(...collectEdges(sourceId, branch.blocks));
-      }
-    }
-    if (block.type === 'dialogue' && block.innerBlocks) {
-      result.push(...collectEdges(sourceId, block.innerBlocks));
-    }
-    if (block.type === 'tabs') {
-      for (const tab of block.tabs) {
-        result.push(...collectEdges(sourceId, tab.blocks));
-      }
-    }
-    if (block.type === 'section') {
-      result.push(...collectEdges(sourceId, block.blocks));
-    }
-    if (block.type === 'table') {
-      for (const row of block.rows) {
-        for (const cell of row.cells) {
-          result.push(...collectEdges(sourceId, cell.blocks));
-        }
-      }
-    }
-  }
-  return result;
+// Chrome system tags whose scenes are kept OFF the graph (presentation, not
+// navigation). Everything in SYSTEM_TAGS except `func` + `popup` — those two are
+// real navigation destinations and DO get edges.
+const ISOLATED_TAGS = ['sidebar', 'title', 'menu', 'passage-header', 'passage-footer'] as const;
+
+// targetSceneId everywhere stores the scene UUID (see migrateSceneLinks). The
+// unified collectNavRefs walks every nav kind + container arm; here we just stamp
+// the source id + a stable edge id onto each discovered reference.
+function collectEdges(sourceId: string, blocks: Block[]): GraphEdge[] {
+  return collectNavRefs(blocks).map(r => ({
+    edgeId:   `${sourceId}-${r.viaId}`,
+    sourceId,
+    targetId: r.targetId,
+    label:    r.label,
+    kind:     r.kind,
+  }));
 }
 
 // ─── Main builder ─────────────────────────────────────────────────────────────
@@ -85,15 +60,15 @@ export function buildGraphData(project: Project, activeSceneId: string | null): 
     isStart:       s.tags.includes(START_TAG),
   }));
 
-  // System-tagged scenes are isolated — no navigation arrows to/from them
-  const isSystemTagged = (sceneId: string) => {
+  // Chrome scenes stay isolated; func + popup keep their edges (see ISOLATED_TAGS).
+  const isIsolated = (sceneId: string) => {
     const s = scenes.find(sc => sc.id === sceneId);
-    return s?.tags.some(t => (SYSTEM_TAGS as readonly string[]).includes(t)) ?? false;
+    return s?.tags.some(t => (ISOLATED_TAGS as readonly string[]).includes(t)) ?? false;
   };
 
   const edges: GraphEdge[] = project.scenes
     .flatMap(s => collectEdges(s.id, s.blocks))
-    .filter(e => sceneSet.has(e.targetId) && !isSystemTagged(e.sourceId) && !isSystemTagged(e.targetId));
+    .filter(e => sceneSet.has(e.targetId) && !isIsolated(e.sourceId) && !isIsolated(e.targetId));
 
   return { scenes, edges, activeSceneId };
 }

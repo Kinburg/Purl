@@ -549,6 +549,21 @@ function BehaviorTab() {
           </Row>
         </div>
       </Section>
+
+      {/* Validator */}
+      <Section title={ep.sectionValidator}>
+        <Row label={ep.validationModeLabel}>
+          <Segmented
+            value={prefs.validationMode}
+            options={[
+              { value: 'live',   label: ep.validationModeLive },
+              { value: 'manual', label: ep.validationModeManual },
+            ]}
+            onChange={v => setPrefs({ validationMode: v as 'live' | 'manual' })}
+          />
+        </Row>
+        <p className="text-[10px] text-slate-500 mt-1.5">{ep.validationModeHint}</p>
+      </Section>
     </>
   );
 }

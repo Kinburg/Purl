@@ -37,6 +37,11 @@ export interface EditorPrefs {
   /** Subtle knit / yarn texture across the UI (echoes the app name "Purl"). Cosmetic. */
   knitTheme: boolean;
 
+  // ── Validator ───────────────────────────────────────────────────────────────
+  /** 'live' = the Validate panel recomputes automatically (debounced); 'manual' =
+   *  it runs only when the panel's Run button is pressed (better for huge stories). */
+  validationMode: 'live' | 'manual';
+
   // ── Confirm on delete ─────────────────────────────────────────────────────
   confirmDeleteScene:     boolean;
   confirmDeleteGroup:     boolean;
@@ -96,6 +101,8 @@ const DEFAULTS: EditorPrefs = {
 
   compactMode: false,
   knitTheme: true,
+
+  validationMode: 'live',
 
   confirmDeleteScene:     true,
   confirmDeleteGroup:     true,
