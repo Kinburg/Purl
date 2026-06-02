@@ -71,6 +71,36 @@ textarea {
   );
 }
 
+/* ── Knit theme — Scene graph: fabric-patch nodes, yarn cords, woven canvas ── */
+/* Woven canvas wash behind the flow (React Flow's cross-stitch grid sits on top). */
+.sg-knit {
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(203, 166, 247, 0.045) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(90deg, rgba(166, 227, 161, 0.040) 0 1px, transparent 1px 7px);
+}
+
+/* Fabric-patch node — "clean swatch": NO surface hatch. Identity = a yarn-coloured
+   BLANKET-STITCH edging drawn as an inline SVG overlay inside the node (a rail +
+   perpendicular legs that wrap the edge — see SceneNode) + soft padded volume (inset
+   highlight/shadow) + a drop shadow lifting the patch off the woven canvas.
+   --node-yarn is set inline per node (category / start / active colour). */
+.scene-knit-node {
+  position: relative;
+  /* knit-row texture — calm horizontal ridges (a light crest + a dark groove between
+     rows) with faint vertical stitch columns. Low contrast (~3-4%) so it reads as
+     fabric, not noise, and never touches text legibility. Coexists with the inline
+     backgroundColor (separate property). Remove this background-image to revert. */
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 4px, rgba(0, 0, 0, 0.05) 4px 5px, transparent 5px 8px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.03) 0 1px, transparent 1px 7px);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.30),               /* patch lifts off the canvas      */
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),     /* faint top highlight (woolly)     */
+    inset 0 -3px 7px rgba(0, 0, 0, 0.18);        /* soft bottom shade (padded depth) */
+}
+/* keep the label/content above the stitch overlay (the svg sits at z-index 0) */
+.scene-knit-node > div { position: relative; z-index: 1; }
+
 /* Compact mode */
 .compact .block-header { padding: 2px 8px; }
 .compact .block-body   { padding: 6px 8px; }
