@@ -512,7 +512,7 @@ export interface VarSetAction {
 export interface OpenPopupAction {
   id: string;
   type: 'open-popup';
-  /** Scene NAME (must be tagged 'popup'). */
+  /** Scene id (UUID) of the 'popup'-tagged scene to open. */
   targetSceneId: string;
   /** Optional dialog title bar text. Empty string = no title bar. */
   title?: string;
@@ -586,7 +586,7 @@ export interface MenuLinkBlock {
   type: 'menu-link';
   label: string;
   target: MenuLinkTarget;
-  targetSceneId?: string;   // used when target === 'scene' (scene NAME)
+  targetSceneId?: string;   // used when target === 'scene' (stores the scene id / UUID)
   actions: ButtonAction[];  // optional — run before the target action
   delay?: BlockDelay;
 }
@@ -879,7 +879,7 @@ export const START_TAG_COLOR = '#22c55e'; // green
 export interface PopupBlock {
   id: string;
   type: 'popup';
-  /** Scene NAME — must be tagged 'popup'. */
+  /** Scene id (UUID) — must reference a 'popup'-tagged scene. */
   targetSceneId: string;
   /** Optional dialog title bar text. Empty string = no title bar. */
   title?: string;
@@ -897,7 +897,7 @@ export interface FunctionBlock {
   id: string;
   type: 'function';
   label: string;
-  targetSceneId: string;   // scene NAME — must be a func-tagged scene
+  targetSceneId: string;   // scene id (UUID) — must be a func-tagged scene
   actions: ButtonAction[];
   style: ButtonStyle;
   delay?: BlockDelay;

@@ -33,6 +33,13 @@ const watchers = (p?: IconProps) => svg(<>
   <path d="M17 11 L14 17 L17 17 L15 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
 </>, p);
 
+// Shield + check — story health / validation.
+const validate = (p?: IconProps) => svg(<>
+  <path d="M16 3 L27 7 V15 C27 22 22 27 16 29 C10 27 5 22 5 15 V7 Z"
+    stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".1" strokeLinejoin="round"/>
+  <path d="M11 16 L15 20 L21 11" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+</>, p);
+
 export const SIDEBAR_SVG_ICONS = {
   scenes,
   characters: BLOCK_SVG_ICONS.paperdoll,
@@ -43,4 +50,5 @@ export const SIDEBAR_SVG_ICONS = {
   assets: BLOCK_SVG_ICONS.image,
   panel,
   watchers,
+  validate,
 };

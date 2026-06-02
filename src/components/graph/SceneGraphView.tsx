@@ -1,9 +1,10 @@
-import { useEffect, useRef, useCallback, memo, useState, createContext, useContext } from 'react';
+import { useEffect, useRef, useCallback, memo, useState, useMemo, createContext, useContext } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
   type Node,
@@ -23,9 +24,11 @@ import dagre from '@dagrejs/dagre';
 import type { GraphData, GraphScene, GraphEdge } from '../../utils/buildGraphData';
 import { SYSTEM_TAG_COLORS } from '../../types';
 import type { SystemTag } from '../../types';
+import type { NavKind } from '../../utils/navTargets';
 
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
+import { useT } from '../../i18n';
 import type { CSSProperties } from 'react';
 // ─── Layout / geometry constants ──────────────────────────────────────────────
 
@@ -305,6 +308,23 @@ const ARROW_NORMAL   = 'tc-arrow-normal';
 const ARROW_SELECTED = 'tc-arrow-selected';
 const ARROW_DIM      = 'tc-arrow-dim';
 
+/**
+ * Per nav-kind edge appearance: line colour, a glyph shown in the node's outgoing
+ * list, and an optional dash pattern. `choice` keeps the original neutral solid
+ * look so existing graphs are visually unchanged; the other kinds are additive.
+ * func/popup colours match their node tint (SYSTEM_TAG_COLORS).
+ */
+const KIND_META: Record<NavKind, { color: string; glyph: string; dash?: string }> = {
+  choice:       { color: '#585b70', glyph: '▸' },
+  link:         { color: '#74c7ec', glyph: '↪' },
+  'menu-link':  { color: '#f5c2e7', glyph: '☰' },
+  function:     { color: '#a855f7', glyph: 'ƒ', dash: '6 4' },
+  popup:        { color: '#3b82f6', glyph: '⊙', dash: '2 5' },
+  'open-popup': { color: '#3b82f6', glyph: '⊙', dash: '2 5' },
+  include:      { color: '#9399b2', glyph: '⊂', dash: '5 4' },
+};
+const NAV_KINDS = Object.keys(KIND_META) as NavKind[];
+
 function SceneEdge({
   id,
   source,
@@ -340,6 +360,9 @@ function SceneEdge({
 
   const opacity   = isDimmed ? 0.2 : 1;
   const showLabel = isSelected;
+
+  const kind = (data?.kind as NavKind | undefined) ?? 'choice';
+  const meta = KIND_META[kind];
 
   // Label — opaque background hides the line underneath it. Always in DOM; fades
   // in only when this specific edge is selected. Shared by both render modes.
@@ -409,6 +432,20 @@ function SceneEdge({
           strokeLinecap="round"
           style={{ opacity, pointerEvents: 'none' }}
         />
+        {/* kind thread — a thin coloured marker thread laid OVER the yarn so the link
+            KIND is legible in knit mode (the cord itself keeps its source-scene yarn
+            colour). choice = no thread (pure yarn); others use the legend colour + dash.
+            A dark casing underneath makes the thread pop against the bright twisted cord. */}
+        {kind !== 'choice' && (
+          <>
+            <path d={edgePath} fill="none" stroke="rgba(0,0,0,0.45)" strokeWidth={3.4}
+              strokeLinecap="round" strokeDasharray={meta.dash}
+              style={{ opacity, pointerEvents: 'none' }} />
+            <path d={edgePath} fill="none" stroke={meta.color} strokeWidth={2}
+              strokeLinecap="round" strokeDasharray={meta.dash}
+              style={{ opacity, pointerEvents: 'none' }} />
+          </>
+        )}
         {/* loop where the yarn meets the target node */}
         <path
           d={yarnLoopPath(targetX, targetY)}
@@ -423,10 +460,10 @@ function SceneEdge({
     );
   }
 
-  // ── Default (clean) edge ──
-  const stroke      = isActive ? '#cba6f7' : '#585b70';
-  const strokeWidth = isActive ? 2.5 : 1.5;
-  const markerId    = isActive ? ARROW_SELECTED : (isDimmed ? ARROW_DIM : ARROW_NORMAL);
+  // ── Default (clean) edge ── colour / dash / arrow-head vary per nav kind
+  const stroke      = isActive ? '#cba6f7' : meta.color;
+  const strokeWidth = isActive ? 2.5 : (meta.dash ? 1.6 : 1.5);
+  const markerId    = isActive ? ARROW_SELECTED : (isDimmed ? ARROW_DIM : `arrow-${kind}`);
 
   return (
     <>
@@ -436,6 +473,7 @@ function SceneEdge({
         style={{
           stroke,
           strokeWidth,
+          strokeDasharray: isActive ? undefined : meta.dash,
           opacity,
           transition: 'stroke 0.15s, stroke-width 0.15s, opacity 0.15s',
         }}
@@ -455,7 +493,8 @@ function buildOutMap(edges: GraphEdge[], scenes: GraphScene[]): Map<string, stri
   const nameById = new Map(scenes.map(s => [s.id, s.name]));
   const out      = new Map<string, string[]>();
   for (const e of edges) {
-    const display = e.label || nameById.get(e.targetId) || e.targetId;
+    const base    = e.label || nameById.get(e.targetId) || e.targetId;
+    const display = `${KIND_META[e.kind].glyph} ${base}`;
     const list    = out.get(e.sourceId) ?? [];
     list.push(display);
     out.set(e.sourceId, list);
@@ -510,7 +549,7 @@ function toFlowEdges(data: GraphData): Edge[] {
     sourceHandle: `out-${handleMap.get(e.edgeId) ?? 0}`,
     label:        e.label.length > MAX_LABEL ? e.label.slice(0, MAX_LABEL) + '…' : e.label,
     type:         'scene',
-    data:         { yarnColor: yarnFor(e.sourceId) },
+    data:         { yarnColor: yarnFor(e.sourceId), kind: e.kind },
   }));
 }
 
@@ -527,6 +566,22 @@ function SceneGraphViewImpl({ graphData, onNodeDragStop, onNodeNavigate }: Scene
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const isDragging = useRef(false);
   const knit = useEditorPrefsStore(s => s.knitTheme);
+  const t = useT();
+
+  // Kinds actually present in the current graph — drives the legend (none → no legend).
+  const presentKinds = useMemo(
+    () => NAV_KINDS.filter(k => graphData.edges.some(e => e.kind === k)),
+    [graphData],
+  );
+  const kindLabel = (k: NavKind): string => ({
+    'choice':     t.graphView.kinds.choice,
+    'link':       t.graphView.kinds.link,
+    'menu-link':  t.graphView.kinds.menuLink,
+    'function':   t.graphView.kinds.function,
+    'popup':      t.graphView.kinds.popup,
+    'open-popup': t.graphView.kinds.openPopup,
+    'include':    t.graphView.kinds.include,
+  })[k];
 
   const [activeEdgeId, setActiveEdgeId] = useState<string | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -589,6 +644,12 @@ function SceneGraphViewImpl({ graphData, onNodeDragStop, onNodeNavigate }: Scene
             <marker id={ARROW_DIM}      viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#313244" />
             </marker>
+            {/* per nav-kind coloured arrow heads (choice/link/menu-link/function/popup/open-popup/include) */}
+            {NAV_KINDS.map(k => (
+              <marker key={k} id={`arrow-${k}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={KIND_META[k].color} />
+              </marker>
+            ))}
           </defs>
         </svg>
 
@@ -618,6 +679,22 @@ function SceneGraphViewImpl({ graphData, onNodeDragStop, onNodeNavigate }: Scene
             gap={knit ? 22 : 20}
             size={knit ? 4 : 1.5}
           />
+          {presentKinds.length > 0 && (
+            <Panel position="top-left">
+              <div style={{ background: '#181825', border: '1px solid #313244', borderRadius: 6, padding: '6px 8px', fontSize: 11, color: '#bac2de', fontFamily: 'system-ui, sans-serif', userSelect: 'none' }}>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: '#cdd6f4' }}>{t.graphView.legendTitle}</div>
+                {presentKinds.map(k => (
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: '16px' }}>
+                    <svg width={22} height={8} style={{ flexShrink: 0 }} aria-hidden="true">
+                      <line x1={1} y1={4} x2={21} y2={4} stroke={KIND_META[k].color} strokeWidth={2} strokeDasharray={KIND_META[k].dash} strokeLinecap="round" />
+                    </svg>
+                    <span style={{ width: 12, textAlign: 'center', color: KIND_META[k].color }}>{KIND_META[k].glyph}</span>
+                    <span>{kindLabel(k)}</span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
           <Controls style={{ background: '#181825', border: '1px solid #313244', borderRadius: 6 }} />
           <MiniMap
             nodeColor={n => {
