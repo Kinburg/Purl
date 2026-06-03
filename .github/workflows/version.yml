@@ -62,7 +62,7 @@ jobs:
             elif [[ "$FIRST_LINE" =~ ^fix(\(.+\))?: ]]; then
               PATCH=$((PATCH + 1))
               echo "  apply: patch → $MAJOR.$MINOR.$PATCH"
-            elif [[ "$FIRST_LINE" =~ ^(site|chore)(\(.+\))?: ]]; then
+            elif [[ "$FIRST_LINE" =~ ^(site|chore|test)(\(.+\))?: ]]; then
               echo "  skip: no version change"
             else
               INVALID="$INVALID\n  - $FIRST_LINE"
@@ -79,6 +79,7 @@ jobs:
             echo "  fix: описание    ->  patch (1.2.x) — баг-фикс или улучшение"
             echo "  site: описание   ->  без изменения версии (лендинг)"
             echo "  chore: описание  ->  без изменения версии (тулинг, deps, рефакторинг)"
+            echo "  test: описание   ->  без изменения версии (тесты)"
             echo ""
             echo "Найдены некорректные коммиты:"
             echo -e "$INVALID"

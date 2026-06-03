@@ -1,0 +1,24 @@
+name: Tests
+
+# Server-side safety net for the test suite (the .husky/pre-push hook is the
+# local first line; CI catches pushes made with --no-verify or fresh clones
+# where hooks aren't installed yet).
+on:
+  push:
+    branches: [pre-release, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
