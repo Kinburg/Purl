@@ -579,6 +579,36 @@ function BehaviorTab() {
         </Row>
         <p className="text-[10px] text-slate-500 mt-1.5">{ep.compileModeHint}</p>
       </Section>
+
+      {/* Statistics */}
+      <Section title={ep.sectionStats}>
+        <Row label={ep.statsModeLabel}>
+          <Segmented
+            value={prefs.statsMode}
+            options={[
+              { value: 'live',   label: ep.statsModeLive },
+              { value: 'manual', label: ep.statsModeManual },
+            ]}
+            onChange={v => setPrefs({ statsMode: v as 'live' | 'manual' })}
+          />
+        </Row>
+        <p className="text-[10px] text-slate-500 mt-1.5">{ep.statsModeHint}</p>
+      </Section>
+
+      {/* Scene graph */}
+      <Section title={ep.sectionGraph}>
+        <Row label={ep.graphModeLabel}>
+          <Segmented
+            value={prefs.graphMode}
+            options={[
+              { value: 'live',   label: ep.graphModeLive },
+              { value: 'manual', label: ep.graphModeManual },
+            ]}
+            onChange={v => setPrefs({ graphMode: v as 'live' | 'manual' })}
+          />
+        </Row>
+        <p className="text-[10px] text-slate-500 mt-1.5">{ep.graphModeHint}</p>
+      </Section>
     </>
   );
 }

@@ -13,6 +13,7 @@ const ItemManager      = lazy(() => import('../items/ItemManager').then(m => ({ 
 const ContainerManager = lazy(() => import('../containers/ContainerManager').then(m => ({ default: m.ContainerManager })));
 const PluginManager    = lazy(() => import('../plugins/PluginManager').then(m => ({ default: m.PluginManager })));
 const ValidatePanel    = lazy(() => import('../validate/ValidatePanel').then(m => ({ default: m.ValidatePanel })));
+const StatsPanel       = lazy(() => import('../stats/StatsPanel').then(m => ({ default: m.StatsPanel })));
 import { SIDEBAR_SVG_ICONS } from './SidebarIcons';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { YarnSpinner } from '../shared/YarnArt';
@@ -27,7 +28,7 @@ function TabFallback() {
   );
 }
 
-type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate';
+type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate' | 'stats';
 
 export function Sidebar() {
   const activeSidebarTab = useProjectStore(s => s.activeSidebarTab);
@@ -45,6 +46,7 @@ export function Sidebar() {
     { id: 'assets',     label: t.sidebar.assets },
     { id: 'watchers',   label: t.sidebar.watchers },
     { id: 'validate',   label: t.sidebar.validate },
+    { id: 'stats',      label: t.sidebar.stats },
   ], [t]);
 
   return (
@@ -89,6 +91,7 @@ export function Sidebar() {
           {activeSidebarTab === 'assets'      && <AssetManager />}
           {activeSidebarTab === 'watchers'    && <WatcherManager />}
           {activeSidebarTab === 'validate'    && <ValidatePanel />}
+          {activeSidebarTab === 'stats'       && <StatsPanel />}
         </Suspense>
       </div>
     </aside>

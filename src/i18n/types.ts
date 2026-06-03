@@ -22,6 +22,7 @@ export interface Translations {
     containers: string;
     plugins: string;
     validate: string;
+    stats: string;
   };
 
   validate: {
@@ -62,6 +63,37 @@ export interface Translations {
     noErrors: string;
     noState: string;
     passage: string;
+  };
+
+  stats: {
+    sectionOverview: string;
+    sectionFlow: string;
+    sectionEntities: string;
+    sectionBlocks: string;
+    words: string;
+    readingTime: string;
+    minutes: (n: number) => string;
+    scenes: string;
+    systemScenes: string;
+    groups: string;
+    totalBlocks: string;
+    choices: string;
+    links: string;
+    endings: string;
+    unreachable: string;
+    branching: string;
+    characters: string;
+    items: string;
+    containers: string;
+    variables: string;
+    watchers: string;
+    plugins: string;
+    assets: string;
+    perScene: string;
+    empty: string;
+    refresh: string;
+    notComputed: string;
+    stale: string;
   };
 
   replace: {
@@ -673,6 +705,8 @@ export interface Translations {
 
   graphView: {
     legendTitle: string;
+    refresh: string;
+    stale: string;
     kinds: {
       choice: string;
       link: string;
@@ -1769,6 +1803,16 @@ export interface Translations {
     compileModeLive: string;
     compileModeManual: string;
     compileModeHint: string;
+    sectionStats: string;
+    statsModeLabel: string;
+    statsModeLive: string;
+    statsModeManual: string;
+    statsModeHint: string;
+    sectionGraph: string;
+    graphModeLabel: string;
+    graphModeLive: string;
+    graphModeManual: string;
+    graphModeHint: string;
     titleBarStyleLabel: string;
     titleBarStyleCustom: string;
     titleBarStyleNative: string;
