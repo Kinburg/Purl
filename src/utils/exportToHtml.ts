@@ -300,8 +300,14 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
 
 // ─── Standalone HTML generator ────────────────────────────────────────────────
 
-export function generateStandaloneHtml(project: Project, scTemplate: string, plugins: PluginBlockDef[] = []): { html: string; css: string } {
+export function generateStandaloneHtml(project: Project, scTemplate: string, plugins: PluginBlockDef[] = [], startPassageName?: string): { html: string; css: string } {
   const { passages, startPid, combinedCSS, scriptContent } = buildPassages(project, plugins);
+
+  // Optional override: start the story at a specific passage (used by the in-app
+  // Play panel's "from current scene"). Falls back to the normal start passage
+  // when the name isn't found (e.g. a system/chrome scene).
+  const startTarget = startPassageName ? passages.find(p => p.name === startPassageName) : undefined;
+  const effectiveStart = startTarget ? startTarget.pid : startPid;
 
   // `<tw-storydata name="…">` feeds `Story.title` / `document.title` and seeds the
   // save-storage ID in SugarCube 2 + Twine 2. It must stay STABLE plain text, so it's
@@ -309,8 +315,13 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
   // *displayed* title via the StoryDisplayTitle passage built in buildPassages().
   const storyDataName = project.title;
 
+  // "Play from current scene": force the start passage by name — SugarCube's
+  // documented mechanism, more reliable than the startnode pid alone. Empty for
+  // normal exports (Header callers don't pass startPassageName), so disk output
+  // is unchanged.
+  const startOverrideScript = startTarget ? `\n;Config.passages.start = ${JSON.stringify(startTarget.name)};` : '';
   const styleBlock  = `<style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style>`;
-  const scriptBlock = `<script role="script" id="twine-user-script" type="text/twine-javascript">${scriptContent}</script>`;
+  const scriptBlock = `<script role="script" id="twine-user-script" type="text/twine-javascript">${scriptContent}${startOverrideScript}</script>`;
 
   const passageBlocks = passages.map(p =>
     `<tw-passagedata pid="${p.pid}" name="${escAttr(p.name)}" tags="${escAttr(p.tags)}" position="${p.x},${p.y}" size="100,100">${esc(p.content)}</tw-passagedata>`
@@ -320,7 +331,7 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
 
   const authorAttr = project.author ? ` author="${escAttr(project.author)}"` : '';
   const storyDataElement =
-    `<tw-storydata name="${escAttr(storyDataName)}" startnode="${startPid}" ` +
+    `<tw-storydata name="${escAttr(storyDataName)}" startnode="${effectiveStart}" ` +
     `creator="Purl" creator-version="1.0.0"${authorAttr} ` +
     `format="SugarCube" format-version="2.36.1" ` +
     `ifid="${escAttr(project.ifid)}" zoom="1" options="" hidden>\n` +
@@ -331,7 +342,7 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
 
   html = html.replace(/\{\{STORY_DATA}}/g, storyDataElement);
   html = html.replace(/\{\{STORY_NAME}}/g,           escAttr(storyDataName));
-  html = html.replace(/\{\{STORY_START}}/g,          String(startPid));
+  html = html.replace(/\{\{STORY_START}}/g,          String(effectiveStart));
   html = html.replace(/\{\{STORY_IFID}}/g,           project.ifid);
   html = html.replace(/\{\{CREATOR_NAME}}/g,         'Purl');
   html = html.replace(/\{\{CREATOR_VERSION}}/g,      '1.0.0');
@@ -342,7 +353,7 @@ export function generateStandaloneHtml(project: Project, scTemplate: string, plu
 
   html = html.replace(
     /(<tw-storydata\b[^>]*?\bstartnode=")[^"]*"/,
-    `$1${startPid}"`,
+    `$1${effectiveStart}"`,
   );
 
   const cssLinks = [

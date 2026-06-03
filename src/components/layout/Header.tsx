@@ -55,6 +55,7 @@ export function Header() {
   const panelLayout                  = useEditorPrefsStore(s => s.panelLayout);
   const togglePreviewPanel           = useEditorPrefsStore(s => s.togglePreviewPanel);
   const toggleGraphPanel             = useEditorPrefsStore(s => s.toggleGraphPanel);
+  const togglePlayPanel              = useEditorPrefsStore(s => s.togglePlayPanel);
 
   const t = useT();
 
@@ -243,6 +244,7 @@ export function Header() {
 
   const handleTogglePreview = () => togglePreviewPanel();
   const handleToggleGraph   = () => toggleGraphPanel();
+  const handleTogglePlay    = () => togglePlayPanel();
 
   // ─── SC Runtime ───────────────────────────────────────────────────────────
 
@@ -550,6 +552,20 @@ export function Header() {
         >
           <Icon.network className="w-3.5 h-3.5" />
           <span>{t.header.graph}</span>
+        </button>
+
+        {/* Playable preview panel toggle */}
+        <button
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
+            panelLayout.playVisible
+              ? 'bg-emerald-700 hover:bg-emerald-600 text-emerald-100'
+              : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+          }`}
+          onClick={handleTogglePlay}
+          title={panelLayout.playVisible ? t.header.playClose : t.header.playTitle}
+        >
+          <Icon.play className="w-3.5 h-3.5" />
+          <span>{t.header.play}</span>
         </button>
 
         <span className="text-slate-700 select-none hidden sm:inline px-1">|</span>

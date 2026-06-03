@@ -4,6 +4,8 @@ import { usePluginStore } from '../../store/pluginStore';
 import { blockToSC, setPluginRegistry } from '../../utils/exportToTwee';
 import { flattenVariables } from '../../utils/treeUtils';
 import { useDebouncedValue } from '../../utils/useDebouncedValue';
+import { useEditorPrefsStore } from '../../store/editorPrefsStore';
+import type { Project, PluginBlockDef } from '../../types';
 
 // ── Syntax highlighting (ported from preview.html) ──────────────────────────
 
@@ -86,37 +88,54 @@ function highlight(code: string): string {
 
 // ── Component ───────────────────────────────────────────────────────────────
 
+/** Serialize one scene to its `.twee` source. Pure — shared by live + manual modes. */
+function compileScene(
+  project: Project,
+  sceneId: string | null,
+  plugins: PluginBlockDef[],
+): { code: string; sceneName: string } {
+  const scene = project.scenes.find(s => s.id === sceneId);
+  if (!scene) return { code: '', sceneName: '' };
+  setPluginRegistry(plugins);
+  const vars = flattenVariables(project.variableNodes);
+  const idToName = new Map(project.scenes.map(s => [s.id, s.name]));
+  const tags = scene.tags.length > 0 ? ` [${scene.tags.join(' ')}]` : '';
+  const body = scene.blocks
+    .map(b => blockToSC(b, project.characters, vars, project.variableNodes, '', idToName, project))
+    .filter(Boolean)
+    .join('\n');
+  return { code: `::${scene.name}${tags}\n${body || '(empty scene)'}`, sceneName: scene.name };
+}
+
 export function PreviewPanel() {
   const project       = useProjectStore(s => s.project);
   const activeSceneId = useProjectStore(s => s.activeSceneId);
   const plugins       = usePluginStore(s => s.plugins);
+  const compileMode   = useEditorPrefsStore(s => s.compileMode);
   const [copied, setCopied] = useState(false);
 
-  // Debounce project/activeScene so we don't re-serialize the whole active
-  // scene on every keystroke — typing into a TextBlock previously triggered
-  // blockToSC for every block in the scene + syntax highlight per char.
-  // 200ms is short enough to feel "live" but cuts work by ~10–20× on rapid input.
+  // Live mode: debounce so we don't re-serialize the active scene on every keystroke.
   const debouncedProject       = useDebouncedValue(project, 200);
   const debouncedActiveSceneId = useDebouncedValue(activeSceneId, 200);
 
-  const { code, sceneName } = useMemo(() => {
-    const scene = debouncedProject.scenes.find(s => s.id === debouncedActiveSceneId);
-    if (!scene) return { code: '', sceneName: '' };
+  // Live: recompute (debounced). Manual: the memo short-circuits to null so
+  // compileScene never runs on edits.
+  const live = useMemo(
+    () => (compileMode === 'live' ? compileScene(debouncedProject, debouncedActiveSceneId, plugins) : null),
+    [compileMode, debouncedProject, debouncedActiveSceneId, plugins],
+  );
 
-    setPluginRegistry(plugins);
-    const vars = flattenVariables(debouncedProject.variableNodes);
-    const idToName = new Map(debouncedProject.scenes.map(s => [s.id, s.name]));
-    const tags = scene.tags.length > 0 ? ` [${scene.tags.join(' ')}]` : '';
-    const body = scene.blocks
-      .map(b => blockToSC(b, debouncedProject.characters, vars, debouncedProject.variableNodes, '', idToName, debouncedProject))
-      .filter(Boolean)
-      .join('\n');
+  // Manual: snapshot captured on Compile; remember its source to flag staleness.
+  const [snap, setSnap] = useState<{ code: string; sceneName: string; project: Project; sceneId: string | null } | null>(null);
+  const compile = useCallback(() => {
+    setSnap({ ...compileScene(project, activeSceneId, plugins), project, sceneId: activeSceneId });
+  }, [project, activeSceneId, plugins]);
 
-    return {
-      code: `::${scene.name}${tags}\n${body || '(empty scene)'}`,
-      sceneName: scene.name,
-    };
-  }, [debouncedProject, debouncedActiveSceneId, plugins]);
+  const ranManual = compileMode === 'manual' && snap !== null;
+  const stale     = compileMode === 'manual' && snap !== null && (snap.project !== project || snap.sceneId !== activeSceneId);
+  const showCode  = compileMode === 'live' || ranManual;
+  const code      = compileMode === 'live' ? (live?.code ?? '') : (snap?.code ?? '');
+  const sceneName = compileMode === 'live' ? (live?.sceneName ?? '') : (snap?.sceneName ?? '');
 
   const highlighted = useMemo(() => highlight(code), [code]);
 
@@ -136,6 +155,17 @@ export function PreviewPanel() {
         <span className="text-[11px] text-[#6c7086] flex-1 truncate">
           {sceneName || 'Code Preview'}
         </span>
+        {compileMode === 'manual' && (
+          <button
+            onClick={compile}
+            title={stale ? 'Story changed — recompile' : undefined}
+            className={`px-2.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer border-none ${
+              stale ? 'bg-[#f9a825] text-black' : 'bg-[#313244] text-[#cdd6f4] hover:bg-[#45475a]'
+            }`}
+          >
+            {ranManual ? 'Recompile' : 'Compile'}
+          </button>
+        )}
         <button
           onClick={handleCopy}
           className={`px-2.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer border-none ${
@@ -150,7 +180,11 @@ export function PreviewPanel() {
 
       {/* Code area */}
       <div className="flex-1 overflow-auto p-3.5 preview-scrollbar">
-        {code ? (
+        {!showCode ? (
+          <div className="flex items-center justify-center h-full text-[#45475a] text-[13px] font-sans">
+            Press “Compile” to build the scene code
+          </div>
+        ) : code ? (
           <pre
             className="whitespace-pre-wrap break-all leading-[1.65] font-mono text-[13px]"
             style={{ tabSize: 2 }}

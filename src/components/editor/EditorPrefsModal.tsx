@@ -564,6 +564,21 @@ function BehaviorTab() {
         </Row>
         <p className="text-[10px] text-slate-500 mt-1.5">{ep.validationModeHint}</p>
       </Section>
+
+      {/* Code preview & Play compile */}
+      <Section title={ep.sectionCompile}>
+        <Row label={ep.compileModeLabel}>
+          <Segmented
+            value={prefs.compileMode}
+            options={[
+              { value: 'live',   label: ep.compileModeLive },
+              { value: 'manual', label: ep.compileModeManual },
+            ]}
+            onChange={v => setPrefs({ compileMode: v as 'live' | 'manual' })}
+          />
+        </Row>
+        <p className="text-[10px] text-slate-500 mt-1.5">{ep.compileModeHint}</p>
+      </Section>
     </>
   );
 }
