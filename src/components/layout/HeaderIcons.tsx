@@ -72,6 +72,10 @@ export const Icon = {
     <path d="M7.7 7.7 10.5 16M16.3 7.7 13.5 16M8 6h8"/>
   </>, p),
 
+  play: (p?: IconProps) => svg(<>
+    <path d="M8 5.5v13l11-6.5L8 5.5Z"/>
+  </>, p),
+
   undo: (p?: IconProps) => svg(<>
     <path d="M9 14 4 9l5-5"/>
     <path d="M4 9h11a5 5 0 0 1 0 10H9"/>

@@ -3,6 +3,23 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
+// `localfile://` must be a privileged scheme so it can be loaded as a subresource
+// from a browsing context whose origin differs from the renderer — e.g. the
+// sandboxed Play-panel iframe. Without this, `<img src="localfile://…">` works in
+// the main window but is silently blocked inside the iframe. Must run before the
+// app `ready` event, so it lives at module top.
+protocol.registerSchemesAsPrivileged([
+  // Do NOT set `standard: true` — it makes Chromium parse `localfile:///D:/…` as a
+  // standard URL and hoist the Windows drive letter into the host (`localfile://d/…`),
+  // which breaks every localfile path (editor + iframe). `secure` alone is enough to
+  // let the sandboxed Play iframe load `localfile://` images as a no-cors subresource,
+  // and it leaves the (non-standard) URL parsing exactly as it was before.
+  {
+    scheme: 'localfile',
+    privileges: { secure: true, bypassCSP: true },
+  },
+]);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.env.APP_ROOT = path.join(__dirname, '..');

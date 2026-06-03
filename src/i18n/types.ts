@@ -47,6 +47,23 @@ export interface Translations {
     };
   };
 
+  play: {
+    noTemplate: string;
+    notBuilt: string;
+    build: string;
+    rebuild: string;
+    reload: string;
+    stale: string;
+    fromCurrent: string;
+    inspector: string;
+    variables: string;
+    errors: string;
+    clear: string;
+    noErrors: string;
+    noState: string;
+    passage: string;
+  };
+
   replace: {
     title:              string;
     find:               string;
@@ -611,6 +628,9 @@ export interface Translations {
     graph: string;
     graphTitle: string;
     graphClose: string;
+    play: string;
+    playTitle: string;
+    playClose: string;
     errorSave: (e: unknown) => string;
     errorInvalidProject: string;
     dialogSelectSC: string;
@@ -1744,6 +1764,11 @@ export interface Translations {
     validationModeLive: string;
     validationModeManual: string;
     validationModeHint: string;
+    sectionCompile: string;
+    compileModeLabel: string;
+    compileModeLive: string;
+    compileModeManual: string;
+    compileModeHint: string;
     titleBarStyleLabel: string;
     titleBarStyleCustom: string;
     titleBarStyleNative: string;
