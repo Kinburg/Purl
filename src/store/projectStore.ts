@@ -1431,7 +1431,7 @@ function findAssetNodeById(nodes: AssetTreeNode[], id: string): AssetTreeNode | 
 
 // ─── Store shape ──────────────────────────────────────────────────────────────
 
-type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate';
+type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate' | 'stats';
 
 interface ProjectState {
   project: Project;

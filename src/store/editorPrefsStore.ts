@@ -55,6 +55,12 @@ export interface EditorPrefs {
    *  'manual' = they rebuild only on the panel's Compile/Run button (better for
    *  huge stories where rebuilding on every edit would lag). */
   compileMode: 'live' | 'manual';
+  /** 'live' = the Stats panel recomputes automatically (debounced); 'manual' = only
+   *  on the panel's Refresh button (better for huge stories). */
+  statsMode: 'live' | 'manual';
+  /** 'live' = the scene graph rebuilds automatically (debounced); 'manual' = only on
+   *  the graph's Refresh button (the graph re-layout is the heaviest panel). */
+  graphMode: 'live' | 'manual';
   /** Height (px) of the Play-panel inspector pane (variables + errors). */
   playInspectorSizePx?: number;
 
@@ -120,6 +126,8 @@ const DEFAULTS: EditorPrefs = {
 
   validationMode: 'live',
   compileMode: 'live',
+  statsMode: 'live',
+  graphMode: 'live',
   playInspectorSizePx: 220,
 
   confirmDeleteScene:     true,

@@ -40,6 +40,13 @@ const validate = (p?: IconProps) => svg(<>
   <path d="M11 16 L15 20 L21 11" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
 </>, p);
 
+// Bar chart — story statistics.
+const stats = (p?: IconProps) => svg(<>
+  <rect x="5"    y="14" width="5" height="13" rx="1" fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="1.6"/>
+  <rect x="13.5" y="8"  width="5" height="19" rx="1" fill="currentColor" fillOpacity=".4"  stroke="currentColor" strokeWidth="1.6"/>
+  <rect x="22"   y="18" width="5" height="9"  rx="1" fill="currentColor" fillOpacity=".3"  stroke="currentColor" strokeWidth="1.6"/>
+</>, p);
+
 export const SIDEBAR_SVG_ICONS = {
   scenes,
   characters: BLOCK_SVG_ICONS.paperdoll,
@@ -51,4 +58,5 @@ export const SIDEBAR_SVG_ICONS = {
   panel,
   watchers,
   validate,
+  stats,
 };
