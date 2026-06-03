@@ -136,6 +136,7 @@ Three GitHub Actions workflows wire everything together:
 | `fix: ...` | patch (`1.2.X`) | Bug fix or improvement |
 | `site: ...` | — | Landing-page edits |
 | `chore: ...` | — | Tooling, dependencies, refactoring |
+| `test: ...` | — | Tests |
 
 Merge commits and bot commits (`chore: bump version to ...`) are skipped by the validator.
 

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run the test suite before every push. Fails the push if any test fails.
+# Bypass in a pinch with: git push --no-verify
+npm test
