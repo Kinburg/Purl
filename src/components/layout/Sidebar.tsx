@@ -11,6 +11,7 @@ const AssetManager     = lazy(() => import('../assets/AssetManager').then(m => (
 const WatcherManager   = lazy(() => import('../watchers/WatcherManager').then(m => ({ default: m.WatcherManager })));
 const ItemManager      = lazy(() => import('../items/ItemManager').then(m => ({ default: m.ItemManager })));
 const ContainerManager = lazy(() => import('../containers/ContainerManager').then(m => ({ default: m.ContainerManager })));
+const QuestManager     = lazy(() => import('../quests/QuestManager').then(m => ({ default: m.QuestManager })));
 const PluginManager    = lazy(() => import('../plugins/PluginManager').then(m => ({ default: m.PluginManager })));
 const ValidatePanel    = lazy(() => import('../validate/ValidatePanel').then(m => ({ default: m.ValidatePanel })));
 const StatsPanel       = lazy(() => import('../stats/StatsPanel').then(m => ({ default: m.StatsPanel })));
@@ -28,7 +29,7 @@ function TabFallback() {
   );
 }
 
-type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate' | 'stats';
+type Tab = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'quests' | 'plugins' | 'validate' | 'stats';
 
 export function Sidebar() {
   const activeSidebarTab = useProjectStore(s => s.activeSidebarTab);
@@ -41,6 +42,7 @@ export function Sidebar() {
     { id: 'characters', label: t.sidebar.characters },
     { id: 'items',      label: t.sidebar.items },
     { id: 'containers', label: t.sidebar.containers },
+    { id: 'quests',     label: t.sidebar.quests },
     { id: 'plugins',    label: t.sidebar.plugins },
     { id: 'variables',  label: t.sidebar.variables },
     { id: 'assets',     label: t.sidebar.assets },
@@ -86,6 +88,7 @@ export function Sidebar() {
           {activeSidebarTab === 'characters'  && <CharacterManager />}
           {activeSidebarTab === 'items'       && <ItemManager />}
           {activeSidebarTab === 'containers'  && <ContainerManager />}
+          {activeSidebarTab === 'quests'      && <QuestManager />}
           {activeSidebarTab === 'plugins'     && <PluginManager />}
           {activeSidebarTab === 'variables'   && <VariableManager />}
           {activeSidebarTab === 'assets'      && <AssetManager />}

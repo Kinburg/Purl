@@ -104,6 +104,8 @@ export function makeBlock(type: BlockType): Block {
     case 'slider':       return { id, type, variableId: '', min: 0, max: 100, step: 1, showValue: true };
     case 'display-object': return { id, type, source: 'group' as const, fields: [], layout: 'list' as const, live: true, autoSync: true };
     case 'save':         return { id, type };
+    case 'quest-set':    return { id, type, questId: '' };
+    case 'quest-show':   return { id, type, showDescription: true, showSteps: true, live: true };
     case 'plugin':       return { id, type, pluginId: '', values: {} };
   }
 }
@@ -157,6 +159,8 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('paperdoll',         t.addBlock.paperdoll.label,        t.addBlock.paperdoll.desc,        'game'),
     make('inventory',         t.addBlock.inventory.label,        t.addBlock.inventory.desc,        'game'),
     make('container',         t.addBlock.container.label,        t.addBlock.container.desc,        'game'),
+    make('quest-set',         t.addBlock.questSet.label,         t.addBlock.questSet.desc,         'quests'),
+    make('quest-show',        t.addBlock.questShow.label,        t.addBlock.questShow.desc,        'quests'),
     make('progress',          t.addBlock.progress.label,         t.addBlock.progress.desc,         'data'),
     make('date-time',         t.addBlock.dateTime.label,         t.addBlock.dateTime.desc,         'data'),
     make('display-object',    t.addBlock.displayObject.label,    t.addBlock.displayObject.desc,    'data'),

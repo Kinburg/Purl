@@ -47,6 +47,7 @@ import type {
   Watcher,
   ItemDefinition, ItemVarIds, ItemCategory,
   ContainerDefinition, ContainerVarIds, ContainerItemSlot,
+  QuestDefinition, QuestCategory, QuestVarIds,
   PaperdollSlot, PaperdollConfig,
 } from '../types';
 import { START_TAG, SYSTEM_TAGS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME, type SystemTag } from '../types';
@@ -574,6 +575,80 @@ function buildItemVarNodes(
   return {
     itemGroup,
     varIds: { itemsRootGroupId: rootGroupId, groupId, nameVarId, iconVarId, priceVarId, descVarId, stackableVarId, slotVarId },
+  };
+}
+
+// ─── Quest helpers ────────────────────────────────────────────────────────────
+
+const QUESTS_ROOT_GROUP_NAME = 'quests';
+
+function findOrCreateQuestsRootGroup(variableNodes: VariableTreeNode[]): {
+  nodes: VariableTreeNode[];
+  rootGroupId: string;
+} {
+  const existing = variableNodes.find(
+    n => n.kind === 'group' && n.name === QUESTS_ROOT_GROUP_NAME,
+  ) as VariableGroup | undefined;
+  if (existing) return { nodes: variableNodes, rootGroupId: existing.id };
+  const rootGroup: VariableGroup = { kind: 'group', id: uuid(), name: QUESTS_ROOT_GROUP_NAME, children: [] };
+  return { nodes: [...variableNodes, rootGroup], rootGroupId: rootGroup.id };
+}
+
+/** A valid, unique SugarCube identifier for a quest/step varName among `taken`. */
+function uniqueQuestVarName(name: string, taken: string[]): string {
+  const base = charToVarPrefix(name) || 'quest';
+  let varName = base;
+  let i = 2;
+  while (taken.includes(varName)) { varName = `${base}_${i}`; i++; }
+  return varName;
+}
+
+interface QuestVarBuildResult {
+  questGroup: VariableGroup;
+  varIds: QuestVarIds;
+}
+
+/** Build the VariableGroup subtree for a quest (name/description/state/category + steps). */
+function buildQuestVarNodes(
+  quest: QuestDefinition,
+  rootGroupId: string,
+  categories: QuestCategory[],
+): QuestVarBuildResult {
+  const categoryName = categories.find(c => c.id === quest.categoryId)?.name ?? '';
+  const nameVarId = uuid(), descVarId = uuid(), stateVarId = uuid(), categoryVarId = uuid(), groupId = uuid();
+
+  const children: VariableTreeNode[] = [
+    { kind: 'variable', id: nameVarId,     name: 'name',        varType: 'string', defaultValue: quest.name,              description: 'Quest name' },
+    { kind: 'variable', id: descVarId,     name: 'description', varType: 'string', defaultValue: quest.description ?? '', description: '' },
+    { kind: 'variable', id: stateVarId,    name: 'state',       varType: 'string', defaultValue: quest.initialState,      description: 'Quest state: hidden|active|done|failed' },
+    { kind: 'variable', id: categoryVarId, name: 'category',    varType: 'string', defaultValue: categoryName,            description: '' },
+  ];
+
+  let stepsGroupId: string | undefined;
+  const stepVarIds: Record<string, { groupId: string; nameVarId: string; descVarId: string; stateVarId: string }> = {};
+  if (quest.composite && quest.steps.length > 0) {
+    stepsGroupId = uuid();
+    const stepGroups: VariableGroup[] = quest.steps.map(st => {
+      const sg = uuid(), sn = uuid(), sd = uuid(), ss = uuid();
+      stepVarIds[st.id] = { groupId: sg, nameVarId: sn, descVarId: sd, stateVarId: ss };
+      return {
+        kind: 'group', id: sg, name: st.varName, children: [
+          { kind: 'variable', id: sn, name: 'name',        varType: 'string', defaultValue: st.name,              description: '' },
+          { kind: 'variable', id: sd, name: 'description', varType: 'string', defaultValue: st.description ?? '', description: '' },
+          { kind: 'variable', id: ss, name: 'state',       varType: 'string', defaultValue: st.initialState,      description: '' },
+        ],
+      };
+    });
+    children.push({ kind: 'group', id: stepsGroupId, name: 'steps', children: stepGroups });
+  }
+
+  const questGroup: VariableGroup = { kind: 'group', id: groupId, name: quest.varName, children };
+  return {
+    questGroup,
+    varIds: {
+      questsRootGroupId: rootGroupId, groupId, nameVarId, descVarId, stateVarId, categoryVarId,
+      stepsGroupId, stepVarIds: quest.composite ? stepVarIds : undefined,
+    },
   };
 }
 
@@ -1320,6 +1395,8 @@ function migrateProject(raw: any): Project {
   if (!p.sceneGroups) p.sceneGroups = [];
   if (!p.items) p.items = [];
   if (!p.containers) p.containers = [];
+  if (!p.quests) p.quests = [];
+  if (!p.questCategories) p.questCategories = [];
   // Ensure every item has a valid iconConfig (guard against incomplete saved data)
   p.items = (p.items as any[]).map((item: any) => ({
     ...item,
@@ -1431,7 +1508,7 @@ function findAssetNodeById(nodes: AssetTreeNode[], id: string): AssetTreeNode | 
 
 // ─── Store shape ──────────────────────────────────────────────────────────────
 
-type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'plugins' | 'validate' | 'stats';
+type SidebarTabId = 'scenes' | 'characters' | 'variables' | 'assets' | 'watchers' | 'items' | 'containers' | 'quests' | 'plugins' | 'validate' | 'stats';
 
 interface ProjectState {
   project: Project;
@@ -1546,6 +1623,13 @@ interface ProjectState {
   addItem: (item: Omit<ItemDefinition, 'id' | 'varIds'>) => string;
   updateItem: (id: string, patch: Partial<Omit<ItemDefinition, 'id' | 'varIds'>>) => void;
   deleteItem: (id: string) => void;
+
+  addQuest: (quest: Omit<QuestDefinition, 'id' | 'varIds'>) => string;
+  updateQuest: (id: string, patch: Partial<Omit<QuestDefinition, 'id' | 'varIds'>>) => void;
+  deleteQuest: (id: string) => void;
+  addQuestCategory: (cat: Omit<QuestCategory, 'id'>) => string;
+  updateQuestCategory: (id: string, patch: Partial<Omit<QuestCategory, 'id'>>) => void;
+  deleteQuestCategory: (id: string) => void;
 
   // Containers
   addContainer: (data: Omit<ContainerDefinition, 'id' | 'varIds'>) => string;
@@ -2911,6 +2995,107 @@ export const useProjectStore = create<ProjectState>()(
               },
             };
           });
+        },
+
+        // ── Quests ──────────────────────────────────────────────────────────────
+        addQuest: (questData) => {
+          get().saveSnapshot();
+          const questId = uuid();
+          set(s => {
+            const { nodes: vn1, rootGroupId } = findOrCreateQuestsRootGroup(s.project.variableNodes);
+            const taken = (s.project.quests ?? []).map(q => q.varName);
+            const varName = (questData.varName && !taken.includes(questData.varName))
+              ? questData.varName
+              : uniqueQuestVarName(questData.name, taken);
+            const quest: QuestDefinition = { ...questData, varName, id: questId };
+            const { questGroup, varIds } = buildQuestVarNodes(quest, rootGroupId, s.project.questCategories ?? []);
+            quest.varIds = varIds;
+            const vn2 = addNode(vn1 as AnyNode[], rootGroupId, questGroup as AnyNode) as VariableTreeNode[];
+            return {
+              project: { ...s.project, quests: [...(s.project.quests ?? []), quest], variableNodes: vn2 },
+            };
+          });
+          return questId;
+        },
+
+        updateQuest: (id, patch) => {
+          get().saveSnapshot();
+          set(s => {
+            const quest = (s.project.quests ?? []).find(q => q.id === id);
+            if (!quest) return s;
+            const updated: QuestDefinition = { ...quest, ...patch };
+            // Rebuild the quest's variable subtree from the updated definition (handles
+            // name/description/state/category + step add/remove/rename uniformly). Export
+            // reads variables by tree PATH (names), so regenerated ids are harmless.
+            let variableNodes = quest.varIds
+              ? removeNode(s.project.variableNodes as AnyNode[], quest.varIds.groupId) as VariableTreeNode[]
+              : s.project.variableNodes;
+            const { nodes: vn1, rootGroupId } = findOrCreateQuestsRootGroup(variableNodes);
+            const { questGroup, varIds } = buildQuestVarNodes(updated, rootGroupId, s.project.questCategories ?? []);
+            updated.varIds = varIds;
+            variableNodes = addNode(vn1 as AnyNode[], rootGroupId, questGroup as AnyNode) as VariableTreeNode[];
+            return {
+              project: {
+                ...s.project,
+                quests: (s.project.quests ?? []).map(q => q.id === id ? updated : q),
+                variableNodes,
+              },
+            };
+          });
+        },
+
+        deleteQuest: (id) => {
+          get().saveSnapshot();
+          set(s => {
+            const quest = (s.project.quests ?? []).find(q => q.id === id);
+            const variableNodes = quest?.varIds
+              ? removeNode(s.project.variableNodes as AnyNode[], quest.varIds.groupId) as VariableTreeNode[]
+              : s.project.variableNodes;
+            return {
+              project: {
+                ...s.project,
+                quests: (s.project.quests ?? []).filter(q => q.id !== id),
+                variableNodes,
+              },
+            };
+          });
+        },
+
+        addQuestCategory: (cat) => {
+          get().saveSnapshot();
+          const catId = uuid();
+          set(s => ({
+            project: { ...s.project, questCategories: [...(s.project.questCategories ?? []), { ...cat, id: catId }] },
+          }));
+          return catId;
+        },
+
+        updateQuestCategory: (id, patch) => {
+          get().saveSnapshot();
+          set(s => {
+            const cats = (s.project.questCategories ?? []).map(c => c.id === id ? { ...c, ...patch } : c);
+            // Renamed category → re-sync the `category` variable of quests using it.
+            let variableNodes = s.project.variableNodes;
+            if (patch.name !== undefined) {
+              for (const q of s.project.quests ?? []) {
+                if (q.categoryId === id && q.varIds?.categoryVarId) {
+                  variableNodes = updateVarInTree(variableNodes, q.varIds.categoryVarId, { defaultValue: patch.name });
+                }
+              }
+            }
+            return { project: { ...s.project, questCategories: cats, variableNodes } };
+          });
+        },
+
+        deleteQuestCategory: (id) => {
+          get().saveSnapshot();
+          set(s => ({
+            project: {
+              ...s.project,
+              questCategories: (s.project.questCategories ?? []).filter(c => c.id !== id),
+              quests: (s.project.quests ?? []).map(q => q.categoryId === id ? { ...q, categoryId: undefined } : q),
+            },
+          }));
         },
 
         // ── Containers ────────────────────────────────────────────────────────

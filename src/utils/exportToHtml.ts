@@ -2,7 +2,7 @@ import type { Project, ProjectSettings, PluginBlockDef } from '../types';
 import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
 import type { PassageContext } from './exportToTwee';
-import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, buildSavesConfigScript, hasAudioVolumeCell } from './exportToTwee';
+import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildQuestScript, buildQuestShowCSS, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, buildSavesConfigScript, hasAudioVolumeCell } from './exportToTwee';
 import { collectPluginIds, expandPluginDeps } from './pluginUtils';
 import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
@@ -248,6 +248,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const sectionCSS   = withSection('SectionBlock', buildSectionCSS(scenes));
   const calloutCSS   = withSection('Callout',      buildCalloutCSS(scenes));
   const doCSS        = withSection('DisplayObject', buildDisplayObjectCSS(scenes));
+  const questCSS     = withSection('Quests', buildQuestShowCSS(scenes));
   const buttonCSS    = withSection('Buttons',       buildButtonsCascadeCss(scenes, project.settings));
   const simpleCSS    = withSection('Block overrides', buildSimpleBlocksCascadeCss(scenes, project.settings));
   const tipCSS       = withSection('Tooltips',      buildTooltipCSS());
@@ -258,7 +259,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   const blockTypesCSS = withSection('Block Types', buildBlockTypesCSS());
   const userCSSRaw    = (project.customCss ?? '').trim();
   const userCSS       = userCSSRaw ? `/* ─── User CSS ─── */\n${userCSSRaw}` : '';
-  const combinedCSS   = [globalCSS, charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, sidebarCfgCSSSection, titleCfgCSSSection, userCSS].filter(Boolean).join('\n\n');
+  const combinedCSS   = [globalCSS, charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, questCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, blockTypesCSS, sidebarCfgCSSSection, titleCfgCSSSection, userCSS].filter(Boolean).join('\n\n');
 
   const settingsScript = buildSettingsScript(project.settings);
   const scriptContent = [
@@ -270,6 +271,7 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
     buildInputScript(scenes),
     buildLiveScript(scenes),
     buildWatcherScript(project.watchers ?? [], variables, variableNodes, idToName),
+    buildQuestScript(project.quests ?? []),
     buildAudioScript(scenes, project.settings?.audioUnlockText),
     buildInventoryScript(project),
     buildContainerScript(project),

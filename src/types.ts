@@ -1098,6 +1098,37 @@ export interface SaveBlock {
   notifyText?: string;
 }
 
+/**
+ * Sets a quest's state and/or its steps' states at this story point (activate /
+ * reveal / advance / fail). Invisible/logic block referencing a project quest by id.
+ * Composite quests run `_tgQuestNormalize` after the sets (chain + auto-complete).
+ */
+export interface SetQuestStateBlock {
+  id: string;
+  type: 'quest-set';
+  questId: string;
+  /** New parent quest state. Undefined = leave unchanged. */
+  parentState?: QuestState;
+  /** Per-step state changes (only listed steps change). */
+  stepStates?: { stepId: string; state: QuestState }[];
+}
+
+/**
+ * Renders the quest log — quests whose state matches `filterStates` (default
+ * active+done) and whose category ∈ `filterCategoryIds` (default all), reading
+ * `$quests.*` at render time. Composite quests show their (non-hidden) steps.
+ */
+export interface ShowQuestsBlock {
+  id: string;
+  type: 'quest-show';
+  filterStates?: QuestState[];
+  filterCategoryIds?: string[];
+  showDescription?: boolean;  // default true
+  showSteps?: boolean;        // default true
+  live?: boolean;             // re-render on .tg-live refresh
+  delay?: BlockDelay;
+}
+
 export type Block =
   | TextBlock
   | DialogueBlock
@@ -1139,6 +1170,8 @@ export type Block =
   | TimeManipulationBlock
   | TabsBlock
   | SaveBlock
+  | SetQuestStateBlock
+  | ShowQuestsBlock
   | PluginBlock;
 
 export type BlockType = Block['type'];
@@ -1578,6 +1611,68 @@ export interface ContainerDefinition {
   varIds?: ContainerVarIds;
 }
 
+// ─── Quest ────────────────────────────────────────────────────────────────────
+
+export type QuestState = 'hidden' | 'active' | 'done' | 'failed';
+
+/** Project-level quest category (e.g. "Main", "Side", "Combat") with a title colour. */
+export interface QuestCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** One step (sub-quest) of a composite quest. */
+export interface QuestStep {
+  id: string;
+  name: string;                 // required
+  varName: string;              // slug → $quests.{quest}.steps.{varName}
+  description?: string;
+  initialState: QuestState;
+}
+
+/** Refs to a step's auto-created variable nodes (sync + cleanup). */
+export interface QuestStepVarIds {
+  groupId: string;
+  nameVarId: string;
+  descVarId: string;
+  stateVarId: string;
+}
+
+/** Refs to a quest's auto-created variable nodes. Mirrors ItemVarIds. */
+export interface QuestVarIds {
+  questsRootGroupId: string;
+  groupId: string;              // $quests.{varName}
+  nameVarId: string;
+  descVarId: string;
+  stateVarId: string;
+  categoryVarId: string;
+  stepsGroupId?: string;        // composite only
+  stepVarIds?: Record<string, QuestStepVarIds>; // keyed by QuestStep.id
+}
+
+/**
+ * A quest definition. Stored in Project.quests[]. ALL data lives in variables under
+ * $quests.{varName} (name/description/state/category + steps), so export to StoryInit
+ * is automatic and authors can read/use them anywhere.
+ *  - simple    → composite:false, steps:[]
+ *  - composite → composite:true, steps:[…]; ordered = chain (sequential), else any-order;
+ *                autoCompleteParent = parent auto-done when all steps done.
+ */
+export interface QuestDefinition {
+  id: string;
+  name: string;                 // required
+  varName: string;              // slug → $quests.{varName}
+  description?: string;
+  categoryId?: string;          // → QuestCategory.id
+  initialState: QuestState;     // default 'active'
+  composite: boolean;
+  ordered?: boolean;            // composite: true = chain/sequential
+  autoCompleteParent?: boolean; // composite: parent auto-done when all steps done
+  steps: QuestStep[];           // [] for simple
+  varIds?: QuestVarIds;
+}
+
 // ─── Variable ───────────────────────────────────────────────────────────────
 
 export type VariableType = 'number' | 'string' | 'boolean' | 'array' | 'datetime';
@@ -1748,6 +1843,10 @@ export interface Project {
   items: ItemDefinition[];
   /** Container definitions (shops, chests, loot) — $containers.{varName}.items */
   containers: ContainerDefinition[];
+  /** Quest definitions — variables under $quests.{varName} (see QuestDefinition). */
+  quests?: QuestDefinition[];
+  /** Project-level quest categories (name + colour). */
+  questCategories?: QuestCategory[];
   variableNodes: VariableTreeNode[];
   assetNodes: AssetTreeNode[];
   watchers: Watcher[];

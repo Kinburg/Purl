@@ -5,7 +5,7 @@ import type { BlockType } from '../types';
 //  Used by AddBlockMenu (chips) and BlockItem (per-block card colour).
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type CategoryKey = 'narrative' | 'media' | 'layout' | 'game' | 'data' | 'interaction' | 'logic' | 'system';
+export type CategoryKey = 'narrative' | 'media' | 'layout' | 'game' | 'quests' | 'data' | 'interaction' | 'logic' | 'system';
 
 /** Category → block types. The order within each array also drives the per-block shade. */
 export const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
@@ -16,6 +16,8 @@ export const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
   { key: 'layout',      types: ['divider', 'spacer', 'tabs', 'section', 'table', 'include'] },
   // game = entities that need the Characters / Items systems.
   { key: 'game',        types: ['paperdoll', 'inventory', 'container'] },
+  // quests = quest-log blocks (set state + show), backed by the Quests manager entities.
+  { key: 'quests',      types: ['quest-set', 'quest-show'] },
   // data = blocks that read OR write story variables (genre-agnostic; useful for debug too).
   //   read/display: progress, date-time, display-object — author-side writes: variable-set, set-object, time-manipulation.
   //   (player-input writers like input-field/select/slider stay under `interaction`.)
@@ -33,6 +35,7 @@ export const CAT_COLORS: Record<string, { color: string; bg: string; ring: strin
   media:       { color: '#2dd4bf', bg: 'rgba(45,212,191,0.14)',  ring: 'rgba(45,212,191,0.5)'  },
   layout:      { color: '#f472b6', bg: 'rgba(244,114,182,0.14)', ring: 'rgba(244,114,182,0.5)' },
   game:        { color: '#fb923c', bg: 'rgba(251,146,60,0.14)',  ring: 'rgba(251,146,60,0.5)'  },
+  quests:      { color: '#fbbf24', bg: 'rgba(251,191,36,0.14)',  ring: 'rgba(251,191,36,0.5)'  },
   data:        { color: '#38bdf8', bg: 'rgba(56,189,248,0.14)',  ring: 'rgba(56,189,248,0.5)'  },
   interaction: { color: '#34d399', bg: 'rgba(16,185,129,0.14)',  ring: 'rgba(16,185,129,0.5)'  },
   logic:       { color: '#a78bfa', bg: 'rgba(167,139,250,0.14)', ring: 'rgba(167,139,250,0.5)' },
@@ -51,6 +54,7 @@ const CAT_HUE: Record<CategoryKey, { h: number; s: number; l: number }> = {
   media:       { h: 172, s: 62, l: 56 },
   layout:      { h: 330, s: 80, l: 72 },
   game:        { h: 27,  s: 92, l: 62 },
+  quests:      { h: 45,  s: 90, l: 60 },
   data:        { h: 199, s: 85, l: 62 },
   interaction: { h: 156, s: 64, l: 56 },
   logic:       { h: 255, s: 88, l: 76 },

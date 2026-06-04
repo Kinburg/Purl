@@ -267,6 +267,21 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <rect x="17" y="5.5" width="3" height="4" rx="0.5" fill="currentColor" opacity=".7"/>
   </>, p),
 
+  'quest-set': (p) => svg(<>
+    <path d="M8 4 V28" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M8 5 H25 L21 10 L25 15 H8 Z" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity=".2" strokeLinejoin="round"/>
+  </>, p),
+
+  'quest-show': (p) => svg(<>
+    <rect x="5" y="4" width="22" height="24" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+    <path d="M9 10 l1.4 1.4 2.4-2.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M16 10 H23" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M9 16 l1.4 1.4 2.4-2.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M16 16 H23" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M9 22 H14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M16 22 H23" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </>, p),
+
   plugin: (p) => svg(<>
     <rect x="6" y="10" width="20" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".1"/>
     <rect x="10" y="4" width="4" height="8" rx="1" fill="currentColor" fillOpacity=".5" stroke="currentColor" strokeWidth="1.3"/>

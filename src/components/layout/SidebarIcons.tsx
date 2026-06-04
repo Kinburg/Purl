@@ -47,6 +47,16 @@ const stats = (p?: IconProps) => svg(<>
   <rect x="22"   y="18" width="5" height="9"  rx="1" fill="currentColor" fillOpacity=".3"  stroke="currentColor" strokeWidth="1.6"/>
 </>, p);
 
+// Clipboard with checks — quest log.
+const quests = (p?: IconProps) => svg(<>
+  <rect x="6" y="5" width="20" height="23" rx="2" stroke="currentColor" strokeWidth="1.7" fill="currentColor" fillOpacity=".08"/>
+  <rect x="11" y="3" width="10" height="5" rx="1.5" fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="1.5"/>
+  <path d="M10 13.5l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  <path d="M18.5 13.5h3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  <path d="M10 21.5l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  <path d="M18.5 21.5h3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+</>, p);
+
 export const SIDEBAR_SVG_ICONS = {
   scenes,
   characters: BLOCK_SVG_ICONS.paperdoll,
@@ -59,4 +69,5 @@ export const SIDEBAR_SVG_ICONS = {
   watchers,
   validate,
   stats,
+  quests,
 };

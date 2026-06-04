@@ -7,6 +7,7 @@ import type {
   Watcher, WatcherCondition, AudioBlock, AudioGenBlock, ContainerBlock, TimeManipulationBlock,
   VariableTreeNode, VariableGroup, ItemDefinition,
   PluginBlockDef, PluginBlock,
+  QuestDefinition, QuestState,
   SceneBackground,
 } from '../types';
 import { START_TAG } from '../types';
@@ -294,7 +295,7 @@ export function blockToSC(
   passageCtx?: PassageContext,
 ): string {
   const raw = blockToSCInner(block, chars, vars, nodes, indent, idToName, project, passageCtx);
-  if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation' || block.type === 'save') return raw;
+  if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation' || block.type === 'save' || block.type === 'quest-set') return raw;
   const b = block as { delay?: BlockDelay; typewriter?: BlockTypewriter };
   return wrapBlockEffects(raw, b.delay, b.typewriter, indent, block.id);
 }
@@ -864,6 +865,54 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const msg = (block.notifyText ?? '').trim() || '✓';
       const notify = `<<script>>(function(){var n=$('<div>').text(${JSON.stringify(msg)}).css({position:'fixed',bottom:'1.2em',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.82)',color:'#fff',padding:'.4em .9em',borderRadius:'.4em',zIndex:99999,fontSize:'.9em',opacity:0,transition:'opacity .3s',pointerEvents:'none'}).appendTo('body');setTimeout(function(){n.css('opacity',1);},16);setTimeout(function(){n.css('opacity',0);setTimeout(function(){n.remove();},320);},1500);})();<</script>>`;
       return `${saveCall}${notify}`;
+    }
+
+    case 'quest-set': {
+      const quest = project?.quests?.find(q => q.id === block.questId);
+      if (!quest) return '';
+      const lines: string[] = [];
+      if (block.parentState) lines.push(`${indent}<<set $quests.${quest.varName}.state to "${block.parentState}">>`);
+      for (const ss of block.stepStates ?? []) {
+        const step = quest.steps.find(st => st.id === ss.stepId);
+        if (step) lines.push(`${indent}<<set $quests.${quest.varName}.steps.${step.varName}.state to "${ss.state}">>`);
+      }
+      if (quest.composite && quest.steps.length > 0) {
+        lines.push(`${indent}<<run window._tgQuestNormalize && window._tgQuestNormalize(${JSON.stringify(quest.varName)})>>`);
+      }
+      return lines.join('\n');
+    }
+
+    case 'quest-show': {
+      const allQuests = project?.quests ?? [];
+      const catFilter = block.filterCategoryIds ?? [];
+      const quests = catFilter.length
+        ? allQuests.filter(q => q.categoryId && catFilter.includes(q.categoryId))
+        : allQuests;
+      if (quests.length === 0) return '';
+      const states: QuestState[] = (block.filterStates && block.filterStates.length) ? block.filterStates : ['active', 'done'];
+      const showDesc = block.showDescription !== false;
+      const showSteps = block.showSteps !== false;
+      const cats = project?.questCategories ?? [];
+      const mark = (path: string) =>
+        `<<if ${path} is "done">>✓<<elseif ${path} is "failed">>✗<<elseif ${path} is "active">>•<<else>>·<</if>>`;
+      const cards = quests.map(q => {
+        const cond = states.map(s => `$quests.${q.varName}.state is "${s}"`).join(' or ');
+        const color = cats.find(c => c.id === q.categoryId)?.color;
+        const titleStyle = color ? ` style="color:${color}"` : '';
+        const parts: string[] = [];
+        parts.push(`<div class="tg-quest-title"${titleStyle}><span class="tg-quest-mark">${mark(`$quests.${q.varName}.state`)}</span> <<= $quests.${q.varName}.name>></div>`);
+        if (showDesc) parts.push(`<<if $quests.${q.varName}.description>><div class="tg-quest-desc"><<= $quests.${q.varName}.description>></div><</if>>`);
+        if (showSteps && q.composite && q.steps.length > 0) {
+          const stepLines = q.steps.map(st =>
+            `<<if $quests.${q.varName}.steps.${st.varName}.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark">${mark(`$quests.${q.varName}.steps.${st.varName}.state`)}</span> <<= $quests.${q.varName}.steps.${st.varName}.name>></div><</if>>`,
+          ).join('');
+          parts.push(`<div class="tg-quest-steps">${stepLines}</div>`);
+        }
+        return `<<if ${cond}>><div class="tg-quest">${parts.join('')}</div><</if>>`;
+      });
+      const cardsSrc = cards.join('');
+      if (block.live) return `${indent}<div class="tg-quests tg-live" data-wiki="${htmlAttr(cardsSrc)}">${cardsSrc}</div>`;
+      return `${indent}<div class="tg-quests">${cardsSrc}</div>`;
     }
 
     case 'table':
@@ -2305,6 +2354,68 @@ export function buildWatcherScript(watchers: Watcher[], vars: Variable[], nodes:
  * variable changes from buttons, function scenes, etc.
  * Only included when the project has at least one block with live: true.
  */
+function hasQuestShow(blocks: Block[]): boolean {
+  return blocks.some(b =>
+    b.type === 'quest-show'
+    || (b.type === 'condition' && b.branches.some(br => hasQuestShow(br.blocks)))
+    || (b.type === 'dialogue' && !!b.innerBlocks?.length && hasQuestShow(b.innerBlocks))
+    || (b.type === 'tabs' && b.tabs.some(t => hasQuestShow(t.blocks)))
+    || (b.type === 'section' && hasQuestShow(b.blocks))
+    || (b.type === 'for' && hasQuestShow(b.blocks))
+    || (b.type === 'table' && b.rows.some(r => r.cells.some(c => hasQuestShow(c.blocks)))),
+  );
+}
+
+/** CSS for the Show Quests block (`.tg-quests`). Emitted only when the block is used. */
+export function buildQuestShowCSS(scenes: Scene[]): string {
+  if (!scenes.some(s => hasQuestShow(s.blocks))) return '';
+  return [
+    '.tg-quests { display:flex; flex-direction:column; gap:.6em; }',
+    '.tg-quest { padding:.5em .7em; border-left:3px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); border-radius:.3em; }',
+    '.tg-quest-title { font-weight:600; }',
+    '.tg-quest-desc { opacity:.8; font-size:.92em; margin-top:.2em; }',
+    '.tg-quest-steps { margin-top:.35em; display:flex; flex-direction:column; gap:.15em; padding-left:.3em; }',
+    '.tg-quest-step { opacity:.9; font-size:.92em; }',
+    '.tg-quest-mark { display:inline-block; width:1.1em; text-align:center; opacity:.85; }',
+  ].join('\n');
+}
+
+/**
+ * Runtime for composite quests: `_tgQuestNormalize(varName)` applies chain
+ * auto-advance (ordered: completing a step activates the next hidden one) and
+ * parent auto-complete (all steps done → parent done). Called by Set-Quest-State.
+ * Emitted only when composite quests with steps exist.
+ */
+export function buildQuestScript(quests: QuestDefinition[]): string {
+  const composite = quests.filter(q => q.composite && q.steps.length > 0);
+  if (composite.length === 0) return '';
+  const cfg = composite.map(q =>
+    `${JSON.stringify(q.varName)}:{ordered:${!!q.ordered},auto:${q.autoCompleteParent !== false},steps:[${q.steps.map(s => JSON.stringify(s.varName)).join(',')}]}`,
+  ).join(',');
+  return [
+    '/* Quests: chain auto-advance + parent auto-complete */',
+    `window._tgQuests = {${cfg}};`,
+    'window._tgQuestNormalize = function(q){',
+    '  var cfg = window._tgQuests[q]; if (!cfg) return;',
+    '  var root = State.variables.quests; if (!root) return;',
+    '  var Q = root[q]; if (!Q || !Q.steps) return;',
+    '  if (cfg.ordered) {',
+    '    for (var i = 0; i < cfg.steps.length; i++) {',
+    '      var st = Q.steps[cfg.steps[i]];',
+    '      if (!st) continue;',
+    '      if (st.state === "done") continue;',
+    '      if (st.state === "hidden") st.state = "active";',
+    '      break;',
+    '    }',
+    '  }',
+    '  if (cfg.auto) {',
+    '    var allDone = cfg.steps.every(function(s){ var x = Q.steps[s]; return x && x.state === "done"; });',
+    '    if (allDone && Q.state !== "done") Q.state = "done";',
+    '  }',
+    '};',
+  ].join('\n');
+}
+
 export function buildLiveScript(scenes: Scene[]): string {
   if (!scenes.some(s => hasLiveBlocks(s.blocks))) return '';
   return [
@@ -2757,6 +2868,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const sectionCSS   = buildSectionCSS(scenes);      // SectionBlock container
   const calloutCSS   = buildCalloutCSS(scenes);      // CalloutBlock notice box
   const doCSS        = buildDisplayObjectCSS(scenes); // DisplayObject layouts
+  const questCSS     = buildQuestShowCSS(scenes);     // Show Quests block
   const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
   const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
   const animCSS      = buildAnimationCSS(scenes);
@@ -2764,7 +2876,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, questCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
   const userCSS      = (project.customCss ?? '').trim();
   const allCSS       = userCSS
     ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
@@ -2780,6 +2892,7 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
     buildInputScript(scenes),
     buildLiveScript(scenes),
     buildWatcherScript(project.watchers ?? [], variables, variableNodes, idToName),
+    buildQuestScript(project.quests ?? []),
     buildAudioScript(scenes, project.settings?.audioUnlockText),
     buildInventoryScript(project),
     buildContainerScript(project),
