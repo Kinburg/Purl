@@ -21,6 +21,7 @@ export interface Translations {
     items: string;
     containers: string;
     plugins: string;
+    quests: string;
     validate: string;
     stats: string;
   };
@@ -94,6 +95,56 @@ export interface Translations {
     refresh: string;
     notComputed: string;
     stale: string;
+  };
+
+  questSetBlock: {
+    quest: string;
+    selectQuest: string;
+    parentState: string;
+    keep: string;
+    noQuests: string;
+  };
+
+  questShowBlock: {
+    filterStates: string;
+    defaultStates: string;
+    filterCategories: string;
+    showDescription: string;
+    showSteps: string;
+    live: string;
+  };
+
+  quests: {
+    add: string;
+    empty: string;
+    noName: string;
+    defaultName: string;
+    confirmDelete: (n: string) => string;
+    categories: string;
+    addCategory: string;
+    newCategory: string;
+    createTitle: string;
+    editTitle: string;
+    sectionBasics: string;
+    sectionStructure: string;
+    name: string;
+    description: string;
+    category: string;
+    noCategory: string;
+    initialState: string;
+    composite: string;
+    ordered: string;
+    orderedHint: string;
+    autoComplete: string;
+    stepName: string;
+    addStep: string;
+    create: string;
+    save: string;
+    cancel: string;
+    stateHidden: string;
+    stateActive: string;
+    stateDone: string;
+    stateFailed: string;
   };
 
   replace: {
@@ -370,6 +421,8 @@ export interface Translations {
     dateTime: string;
     callout: string;
     save: string;
+    questSet: string;
+    questShow: string;
     select: string;
     slider: string;
     displayObject: string;
@@ -395,6 +448,7 @@ export interface Translations {
       media: string;
       layout: string;
       game: string;
+      quests: string;
       data: string;
       interaction: string;
       logic: string;
@@ -428,6 +482,8 @@ export interface Translations {
     audio:       { label: string; desc: string };
     audioGen:    { label: string; desc: string };
     container:   { label: string; desc: string };
+    questSet:    { label: string; desc: string };
+    questShow:   { label: string; desc: string };
     timeManipulation: { label: string; desc: string };
     paperdoll:        { label: string; desc: string };
     inventory:        { label: string; desc: string };

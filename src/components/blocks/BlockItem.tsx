@@ -62,6 +62,8 @@ const PaperdollBlockEditor  = lazy(() => import('./PaperdollBlockEditor').then(m
 const InventoryBlockEditor  = lazy(() => import('./InventoryBlockEditor').then(m => ({ default: m.InventoryBlockEditor })));
 const PluginBlockEditor     = lazy(() => import('./PluginBlockEditor').then(m => ({ default: m.PluginBlockEditor })));
 const TabsBlockEditor       = lazy(() => import('./TabsBlockEditor').then(m => ({ default: m.TabsBlockEditor })));
+const QuestSetBlockEditor   = lazy(() => import('./QuestSetBlockEditor').then(m => ({ default: m.QuestSetBlockEditor })));
+const ShowQuestsBlockEditor = lazy(() => import('./ShowQuestsBlockEditor').then(m => ({ default: m.ShowQuestsBlockEditor })));
 
 import { usePluginStore } from '../../store/pluginStore';
 
@@ -114,6 +116,8 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'paperdoll':         PaperdollBlockEditor        as never,
   'inventory':         InventoryBlockEditor        as never,
   'tabs':              TabsBlockEditor             as never,
+  'quest-set':         QuestSetBlockEditor         as never,
+  'quest-show':        ShowQuestsBlockEditor       as never,
   'plugin':            PluginBlockEditor           as never,
 };
 

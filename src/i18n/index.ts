@@ -89,6 +89,8 @@ export function blockTypeLabel(t: Translations, type: Block['type']): string {
     'date-time':         t.block.dateTime,
     'callout':           t.block.callout,
     'save':              t.block.save,
+    'quest-set':         t.block.questSet,
+    'quest-show':        t.block.questShow,
     'select':            t.block.select,
     'slider':            t.block.slider,
     'display-object':    t.block.displayObject,
