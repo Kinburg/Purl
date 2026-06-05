@@ -12,6 +12,14 @@ export interface Translations {
     delete: string;
   };
 
+  /** Dialog shown when a new project's target sub-folder already exists. */
+  folderConflict: {
+    title: string;
+    message: (name: string) => string;
+    overwrite: string;
+    createNew: string;
+  };
+
   sidebar: {
     scenes: string;
     characters: string;
@@ -1849,6 +1857,11 @@ export interface Translations {
     deleteGroupWithScenes: string;
     sectionExport: string;
     confirmOpenFolderAfterExport: string;
+    sectionProjects: string;
+    projectsDirLabel: string;
+    projectsDirHint: string;
+    projectsDirBrowse: string;
+    projectsDirReset: string;
     sectionValidator: string;
     validationModeLabel: string;
     validationModeLive: string;

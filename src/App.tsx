@@ -19,6 +19,8 @@ import { useAutosave } from './hooks/useAutosave';
 import { Toaster, toast } from 'sonner';
 import { useT } from './i18n';
 import { fsApi, joinPath, safeName } from './lib/fsApi';
+import { pickNewProjectDir } from './lib/projectDir';
+import { FolderConflictModal } from './components/shared/FolderConflictModal';
 import { injectPreviewCSS } from './utils/previewCss';
 import { useDebouncedValue } from './utils/useDebouncedValue';
 
@@ -104,7 +106,7 @@ export default function App() {
     try {
       let dir = projectDir;
       if (!dir) {
-        dir = await fsApi.openFolderDialog();
+        dir = await pickNewProjectDir(project.title);
         if (!dir) { setSavingOnExit(false); return; }
         setProjectDir(dir);
       }
@@ -137,7 +139,7 @@ export default function App() {
       try {
         let dir = savedDir;
         if (!dir) {
-          dir = await fsApi.openFolderDialog();
+          dir = await pickNewProjectDir(p.title);
           if (!dir) return;
           setDir(dir);
         }
@@ -268,6 +270,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Project-folder collision prompt (driven by useFolderConflictStore). */}
+      <FolderConflictModal />
 
       <Toaster
         position="bottom-right"

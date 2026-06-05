@@ -447,9 +447,12 @@ ipcMain.handle('dialog:openFiles', async (_e, options: Electron.OpenDialogOption
   return result.canceled ? [] : result.filePaths;
 });
 
-ipcMain.handle('dialog:openFolder', async () => {
+ipcMain.handle('dialog:openFolder', async (_e, defaultPath?: string) => {
   if (!win) return null;
-  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+    ...(defaultPath ? { defaultPath } : {}),
+  });
   return result.canceled ? null : result.filePaths[0];
 });
 

@@ -23,7 +23,7 @@ export const fsApi = {
     api().openFileDialog(opts),
   openFilesDialog: (opts?: Parameters<ElectronAPI['openFilesDialog']>[0]) =>
     api().openFilesDialog(opts),
-  openFolderDialog: ()                            => api().openFolderDialog(),
+  openFolderDialog: (defaultPath?: string)        => api().openFolderDialog(defaultPath),
   saveFileDialog: (opts?: Parameters<ElectronAPI['saveFileDialog']>[0]) =>
     api().saveFileDialog(opts),
   openPath:       (p: string)                     => api().openPath(p),

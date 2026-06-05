@@ -54,8 +54,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFilesDialog: (options?: Electron.OpenDialogOptions): Promise<string[]> =>
     ipcRenderer.invoke('dialog:openFiles', options),
 
-  openFolderDialog: (): Promise<string | null> =>
-    ipcRenderer.invoke('dialog:openFolder'),
+  openFolderDialog: (defaultPath?: string): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:openFolder', defaultPath),
 
   saveFileDialog: (options?: Electron.SaveDialogOptions): Promise<string | null> =>
     ipcRenderer.invoke('dialog:saveFile', options),
