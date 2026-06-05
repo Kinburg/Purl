@@ -17,6 +17,7 @@ import {
   parseSCFormatJs, storeSCTemplate, clearSCTemplate,
 } from '../../utils/scRuntime';
 import { fsApi, joinPath, safeName } from '../../lib/fsApi';
+import { pickNewProjectDir } from '../../lib/projectDir';
 import { toast } from 'sonner';
 import { Icon } from './HeaderIcons';
 import { LocaleSelect } from './LocaleSelect';
@@ -125,11 +126,12 @@ export function Header() {
       await fsApi.mkdir(joinPath(projectDir, 'release', 'assets'));
       return projectDir;
     }
-    const folder = await fsApi.openFolderDialog();
-    if (!folder) return null;
-    setProjectDir(folder);
-    await fsApi.mkdir(joinPath(folder, 'release', 'assets'));
-    return folder;
+    // No project dir yet: pick a parent folder + create a {parent}/{name} sub-folder.
+    const dir = await pickNewProjectDir(project.title);
+    if (!dir) return null;
+    setProjectDir(dir);
+    await fsApi.mkdir(joinPath(dir, 'release', 'assets'));
+    return dir;
   }
 
   function unapprovedScenes(): string[] {
@@ -146,7 +148,7 @@ export function Header() {
     try {
       let dir = projectDir;
       if (!dir) {
-        dir = await fsApi.openFolderDialog();
+        dir = await pickNewProjectDir(project.title);
         if (!dir) return;
         setProjectDir(dir);
       }
@@ -161,7 +163,7 @@ export function Header() {
 
   const handleSaveProjectAs = async () => {
     fileDD.close();
-    const dir = await fsApi.openFolderDialog();
+    const dir = await pickNewProjectDir(project.title);
     if (!dir) return;
     setBusy(true);
     try {

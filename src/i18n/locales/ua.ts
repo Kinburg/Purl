@@ -9,6 +9,13 @@ const ua: Translations = {
     delete:  'Видалити',
   },
 
+  folderConflict: {
+    title:     'Тека вже існує',
+    message:   (name) => `Тека «${name}» уже існує в цьому розташуванні й не порожня.\n\nПерезаписати її чи створити нову теку поруч?`,
+    overwrite: 'Перезаписати',
+    createNew: 'Створити нову теку',
+  },
+
   sidebar: {
     scenes:     'Сцени',
     characters: 'Персонажі',
@@ -1792,6 +1799,11 @@ a:hover { background: rgba(99,102,241,0.15); }`,
     deleteGroupWithScenes:        'Видалити групу разом зі сценами',
     sectionExport:                'Експорт',
     confirmOpenFolderAfterExport: 'Запитувати про відкриття папки після HTML-експорту',
+    sectionProjects:              'Проекти',
+    projectsDirLabel:             'Тека з проектами',
+    projectsDirHint:              'Пропонується як батьківська тека під час створення проекту. Усередині створюється підтека з назвою проекту.',
+    projectsDirBrowse:            'Огляд…',
+    projectsDirReset:             'Скинути до типової',
     sectionValidator:             'Валідатор',
     validationModeLabel:          'Режим перевірки',
     validationModeLive:           'Наживо',

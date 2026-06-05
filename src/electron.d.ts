@@ -31,7 +31,7 @@ interface ElectronAPI {
     title?: string;
   }): Promise<string[]>;
 
-  openFolderDialog(): Promise<string | null>;
+  openFolderDialog(defaultPath?: string): Promise<string | null>;
 
   saveFileDialog(options?: {
     defaultPath?: string;

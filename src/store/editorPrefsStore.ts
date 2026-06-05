@@ -79,6 +79,12 @@ export interface EditorPrefs {
   // ── Export ────────────────────────────────────────────────────────────────
   confirmOpenFolderAfterExport: boolean;
 
+  // ── Projects ────────────────────────────────────────────────────────────────
+  /** Default parent folder suggested when creating / first-saving a project.
+   *  A sub-folder named after the project is created inside it.
+   *  Empty = use the built-in default (Documents/Purl/Projects). */
+  projectsDir: string;
+
   // ── Add-block menu ──────────────────────────────────────────────────────
   recentBlockTypes: BlockType[];
 
@@ -140,6 +146,8 @@ const DEFAULTS: EditorPrefs = {
   deleteGroupWithScenes: false,
 
   confirmOpenFolderAfterExport: true,
+
+  projectsDir: '',
 
   recentBlockTypes: [],
 

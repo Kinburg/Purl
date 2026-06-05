@@ -13,6 +13,7 @@ import {
 import {
   type LLMProvider, fetchGeminiModels, classifyModel, type GeminiModelWithTier,
 } from '../../utils/llm';
+import { fsApi } from '../../lib/fsApi';
 import { toast } from 'sonner';
 
 const AUTOSAVE_INTERVALS = [1, 5, 10, 30] as const;
@@ -437,6 +438,12 @@ function BehaviorTab() {
     api.getTitleBarStyle().then(s => setTitleBarStyleState(s));
   }, []);
 
+  // Built-in default projects folder — shown as the placeholder when none is set.
+  const [defaultProjectsDir, setDefaultProjectsDir] = useState('');
+  useEffect(() => {
+    fsApi.getProjectsDir().then(setDefaultProjectsDir).catch(() => {});
+  }, []);
+
   const toggle = (key: keyof typeof prefs) =>
     setPrefs({ [key]: !prefs[key] } as any);
 
@@ -461,6 +468,40 @@ function BehaviorTab() {
             <Toggle value={prefs.saveOnExit} onChange={() => toggle('saveOnExit')} />
           </Row>
         </div>
+      </Section>
+
+      {/* Projects folder */}
+      <Section title={ep.sectionProjects}>
+        <ModalField label={ep.projectsDirLabel} note={ep.projectsDirHint}>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={prefs.projectsDir}
+              onChange={e => setPrefs({ projectsDir: e.target.value })}
+              placeholder={defaultProjectsDir}
+              className={INPUT_CLS + ' flex-1 font-mono'}
+            />
+            <button
+              type="button"
+              className="px-2 py-1.5 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-200 transition-colors cursor-pointer shrink-0"
+              onClick={async () => {
+                const dir = await fsApi.openFolderDialog(prefs.projectsDir || defaultProjectsDir);
+                if (dir) setPrefs({ projectsDir: dir });
+              }}
+            >
+              {ep.projectsDirBrowse}
+            </button>
+          </div>
+          {prefs.projectsDir && (
+            <button
+              type="button"
+              className="self-start mt-1 text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
+              onClick={() => setPrefs({ projectsDir: '' })}
+            >
+              {ep.projectsDirReset}
+            </button>
+          )}
+        </ModalField>
       </Section>
 
       {/* Window title bar */}

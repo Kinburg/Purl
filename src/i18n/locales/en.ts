@@ -9,6 +9,13 @@ const en: Translations = {
     delete:  'Delete',
   },
 
+  folderConflict: {
+    title:     'Folder already exists',
+    message:   (name) => `A folder named “${name}” already exists in this location and isn’t empty.\n\nOverwrite it, or create a new folder next to it?`,
+    overwrite: 'Overwrite',
+    createNew: 'Create new folder',
+  },
+
   sidebar: {
     scenes:     'Scenes',
     characters: 'Characters',
@@ -1793,6 +1800,11 @@ a:hover { background: rgba(99,102,241,0.15); }`,
     deleteGroupWithScenes:        'Delete group and all scenes inside',
     sectionExport:                'Export',
     confirmOpenFolderAfterExport: 'Ask to open folder after HTML export',
+    sectionProjects:              'Projects',
+    projectsDirLabel:             'Projects folder',
+    projectsDirHint:              'Suggested as the parent folder when creating a project. A sub-folder named after the project is created inside it.',
+    projectsDirBrowse:            'Browse…',
+    projectsDirReset:             'Reset to default',
     sectionValidator:             'Validator',
     validationModeLabel:          'Validation mode',
     validationModeLive:           'Live',

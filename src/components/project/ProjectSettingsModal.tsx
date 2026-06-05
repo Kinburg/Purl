@@ -5,6 +5,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT } from '../../i18n';
 import { fsApi, joinPath, safeName } from '../../lib/fsApi';
+import { pickNewProjectDir } from '../../lib/projectDir';
 import { toast } from 'sonner';
 import { PRESET_TRANSLATION_LANGUAGES } from '../../utils/translationLanguages';
 import type {
@@ -225,10 +226,12 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
 
     setBusy(true);
     try {
-      const folder = await fsApi.openFolderDialog();
-      if (!folder) { setBusy(false); return; }
+      // The user picks the PARENT "projects" folder; a sub-folder named after
+      // the project is created inside it and the project is deployed there.
+      const dir = await pickNewProjectDir(trimmedTitle);
+      if (!dir) { setBusy(false); return; }
 
-      await fsApi.mkdir(joinPath(folder, 'release', 'assets'));
+      await fsApi.mkdir(joinPath(dir, 'release', 'assets'));
 
       // Create project — no header image (legacy SidebarPanel feature is gone).
       // Pre-created `sidePanel` variable group — wired to StoryCaption.systemConfig
@@ -265,9 +268,9 @@ export function ProjectSettingsModal({ mode, onClose, initialTab = 'general' }: 
       };
 
       const fileName = `${safeName(trimmedTitle)}.purl`;
-      await fsApi.writeFile(joinPath(folder, fileName), JSON.stringify(newProject, null, 2));
+      await fsApi.writeFile(joinPath(dir, fileName), JSON.stringify(newProject, null, 2));
 
-      loadProject(newProject, folder);
+      loadProject(newProject, dir);
       setProjectSettingsOpen(false);
       onClose();
       toast.success(ps.successCreate);
