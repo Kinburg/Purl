@@ -57,6 +57,7 @@ import { TableBlockEditor } from './TableBlockEditor';
 // first time a scene contains one. Named exports → wrapped in default-shim.
 const ImageGenBlockEditor   = lazy(() => import('./ImageGenBlockEditor').then(m => ({ default: m.ImageGenBlockEditor })));
 const AudioGenBlockEditor   = lazy(() => import('./AudioGenBlockEditor').then(m => ({ default: m.AudioGenBlockEditor })));
+const VideoGenBlockEditor   = lazy(() => import('./VideoGenBlockEditor').then(m => ({ default: m.VideoGenBlockEditor })));
 const ContainerBlockEditor  = lazy(() => import('./ContainerBlockEditor').then(m => ({ default: m.ContainerBlockEditor })));
 const PaperdollBlockEditor  = lazy(() => import('./PaperdollBlockEditor').then(m => ({ default: m.PaperdollBlockEditor })));
 const InventoryBlockEditor  = lazy(() => import('./InventoryBlockEditor').then(m => ({ default: m.InventoryBlockEditor })));
@@ -111,6 +112,7 @@ const BLOCK_EDITORS: Record<Block['type'], AnyEditor> = {
   'popup':             PopupBlockEditor            as never,
   'audio':             AudioBlockEditor            as never,
   'audio-gen':         AudioGenBlockEditor         as never,
+  'video-gen':         VideoGenBlockEditor         as never,
   'container':         ContainerBlockEditor        as never,
   'time-manipulation': TimeManipulationBlockEditor as never,
   'paperdoll':         PaperdollBlockEditor        as never,
@@ -174,7 +176,9 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
   );
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    // Translate only (NOT CSS.Transform, which also applies dnd-kit's scaleX/scaleY) —
+    // otherwise dragging a short block past a much taller neighbour stretches the ghost.
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };

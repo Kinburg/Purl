@@ -29,6 +29,20 @@ export interface TemplateTokens {
   tags?: string;
   /** Audio generation — beats per minute (`${bpm}`) */
   bpm?: number;
+  /** Single input image absolute path (`${imagePath}`) — local ComfyUI, load-from-path node. */
+  imagePath?: string;
+  /** Ordered keyframe absolute paths, newline-joined (`${keyframePaths}`) — video keyframes. */
+  keyframePaths?: string;
+  /** Per-gap transition hints, newline-joined (`${keyframePrompts}`) — one per consecutive keyframe pair (N-1). */
+  keyframePrompts?: string;
+  /** Per-gap transition durations in seconds, newline-joined (`${keyframeDurations}`) — N-1 values. */
+  keyframeDurations?: string;
+  /** Folder the workflow should save its output into (`${outputDir}`) — enables reading the result from disk. */
+  outputDir?: string;
+  /** Video generation — frames per second (`${fps}`). */
+  fps?: number;
+  /** Video generation — total frame count (`${frames}`). */
+  frames?: number;
 }
 
 export async function requestJson(url: string, init?: {
@@ -65,11 +79,18 @@ function replaceTemplateTokens(value: string, tokens: TemplateTokens): string {
   const heightText = tokens.genHeight && tokens.genHeight > 0 ? String(tokens.genHeight) : '';
   const durationText = tokens.duration && tokens.duration > 0 ? String(tokens.duration) : '';
   const bpmText = Number.isFinite(tokens.bpm) ? String(tokens.bpm) : '';
+  const fpsText = Number.isFinite(tokens.fps) ? String(tokens.fps) : '';
+  const framesText = Number.isFinite(tokens.frames) ? String(tokens.frames) : '';
 
   let res = value
     .replaceAll('${prompt}', tokens.prompt ?? '')
     .replaceAll('${negative_prompt}', neg)
     .replaceAll('${base64Image}', tokens.base64Image ?? '')
+    .replaceAll('${imagePath}', tokens.imagePath ?? '')
+    .replaceAll('${keyframePaths}', tokens.keyframePaths ?? '')
+    .replaceAll('${keyframePrompts}', tokens.keyframePrompts ?? '')
+    .replaceAll('${keyframeDurations}', tokens.keyframeDurations ?? '')
+    .replaceAll('${outputDir}', tokens.outputDir ?? '')
     .replaceAll('${lyrics}', tokens.lyrics ?? '')
     .replaceAll('${tags}', tokens.tags ?? '');
 
@@ -81,6 +102,8 @@ function replaceTemplateTokens(value: string, tokens: TemplateTokens): string {
     res = res.replaceAll('${seconds}', durationText);
   }
   if (bpmText) res = res.replaceAll('${bpm}', bpmText);
+  if (fpsText) res = res.replaceAll('${fps}', fpsText);
+  if (framesText) res = res.replaceAll('${frames}', framesText);
   return res;
 }
 
@@ -112,11 +135,18 @@ export function withTemplateInjected(
         val.includes('${width}') ||
         val.includes('${height}') ||
         val.includes('${base64Image}') ||
+        val.includes('${imagePath}') ||
+        val.includes('${keyframePaths}') ||
+        val.includes('${keyframePrompts}') ||
+        val.includes('${keyframeDurations}') ||
+        val.includes('${outputDir}') ||
         val.includes('${duration}') ||
         val.includes('${seconds}') ||
         val.includes('${lyrics}') ||
         val.includes('${tags}') ||
-        val.includes('${bpm}');
+        val.includes('${bpm}') ||
+        val.includes('${fps}') ||
+        val.includes('${frames}');
       if (!hasToken) continue;
 
       const trimmed = val.trim();
@@ -130,6 +160,10 @@ export function withTemplateInjected(
         inputs[key] = tokens.duration;
       } else if (trimmed === '${bpm}' && Number.isFinite(tokens.bpm)) {
         inputs[key] = tokens.bpm;
+      } else if (trimmed === '${fps}' && Number.isFinite(tokens.fps)) {
+        inputs[key] = tokens.fps;
+      } else if (trimmed === '${frames}' && Number.isFinite(tokens.frames)) {
+        inputs[key] = tokens.frames;
       } else {
         inputs[key] = replaceTemplateTokens(val, tokens);
       }

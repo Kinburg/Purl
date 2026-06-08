@@ -26,6 +26,7 @@ import type {
   FunctionBlock,
   ImageBlock,
   ImageGenBlock,
+  VideoGenBlock,
   IncludeBlock,
   InputFieldBlock,
   LinkBlock,
@@ -947,12 +948,12 @@ export function buildBlockTypesCSS(): string {
 // structural base.
 
 export type SimpleBlockType =
-  | 'text' | 'image' | 'image-gen' | 'video' | 'include' | 'divider'
+  | 'text' | 'image' | 'image-gen' | 'video' | 'video-gen' | 'include' | 'divider'
   | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup' | 'tabs'
   | 'display-object';
 
 type SimpleBlockBlock =
-  | TextBlock | ImageBlock | ImageGenBlock | VideoBlock | IncludeBlock | DividerBlock
+  | TextBlock | ImageBlock | ImageGenBlock | VideoBlock | VideoGenBlock | IncludeBlock | DividerBlock
   | CheckboxBlock | RadioBlock | InputFieldBlock | ChoiceBlock | PopupBlock | TabsBlock
   | DisplayObjectBlock;
 
@@ -1404,6 +1405,8 @@ const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
   // tg-image base CSS; cascade default/spot classes get their own `tg-image-gen-*` namespace.
   'image-gen':   { baseClass: 'tg-image',        buildRules: buildMediaBlockRules('img'),                          schema: MEDIA_BLOCK_FIELD_SCHEMA },
   video:         { baseClass: 'tg-video',        buildRules: buildMediaBlockRules('video'),                        schema: MEDIA_BLOCK_FIELD_SCHEMA },
+  // video-gen exports as `<div class="tg-video"><video/></div>` (same wrapper as video), so it shares tg-video base CSS.
+  'video-gen':   { baseClass: 'tg-video',        buildRules: buildMediaBlockRules('video'),                        schema: MEDIA_BLOCK_FIELD_SCHEMA },
   include:       { baseClass: 'tg-include',      buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
   divider:       { baseClass: 'tg-divider',      buildRules: buildSingleSelectorRules(dividerFieldsToDecls),      schema: DIVIDER_FIELD_SCHEMA },
   checkbox:      { baseClass: 'tg-checkbox',     buildRules: buildSingleSelectorRules(contentBlockFieldsToDecls), schema: CONTENT_BLOCK_FIELD_SCHEMA },
@@ -1445,7 +1448,7 @@ export function simpleBlockSpotClass(type: SimpleBlockType, blockId: string): st
 export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
   const result: SimpleBlockBlock[] = [];
   for (const b of blocks) {
-    if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video'
+    if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video' || b.type === 'video-gen'
         || b.type === 'include' || b.type === 'divider'
         || b.type === 'checkbox' || b.type === 'radio' || b.type === 'input-field'
         || b.type === 'choice' || b.type === 'popup' || b.type === 'tabs'
@@ -1550,7 +1553,7 @@ export function buildAllSpotStyleRules(scenes: Scene[]): string {
       raw = buildButtonSpotStyleBlock(block);
     } else if (
       block.type === 'text'      || block.type === 'image'     ||
-      block.type === 'image-gen' || block.type === 'video'     ||
+      block.type === 'image-gen' || block.type === 'video'     || block.type === 'video-gen' ||
       block.type === 'include'   || block.type === 'divider'   ||
       block.type === 'checkbox'  || block.type === 'radio'     ||
       block.type === 'input-field' ||

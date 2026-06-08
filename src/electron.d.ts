@@ -62,6 +62,8 @@ interface ElectronAPI {
   maximizeWindow(): Promise<void>;
   closeWindow(): Promise<void>;
   isWindowMaximized(): Promise<boolean>;
+  /** Open the DevTools console (detached window). */
+  openDevTools(): Promise<void>;
   /** Subscribe to maximize/unmaximize notifications. Returns an unsubscribe fn. */
   onWindowMaximized(callback: (maximized: boolean) => void): () => void;
 

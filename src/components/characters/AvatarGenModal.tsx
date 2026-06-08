@@ -8,6 +8,7 @@ import { useT } from '../../i18n';
 import { generateImageWithProvider, type ComfyProgress } from '../../utils/imageGen/providers';
 import { loadComfyWorkflow, loadExampleWorkflows, collectWorkflowFiles, EXAMPLES_PREFIX } from '../../utils/imageGen/workflowLoader';
 import { generateAvatarPromptWithLlm } from '../../utils/imageGen/llmPrompt';
+import { bytesToBase64 } from '../../utils/base64';
 import NumericInput from '../shared/NumericInput';
 import { StyleChipsEditor } from '../shared/StyleChipsEditor';
 import { ImageAssetPicker } from '../shared/ImageMappingEditor';
@@ -38,15 +39,6 @@ function slotApproveFilename(slot: ModalSlotState, mapping: ImageBoundMapping | 
   if (!mapping) return sanitizeFilename(slot.label);
   if (mapping.matchType === 'range') return `${mapping.rangeMin ?? '0'}-${mapping.rangeMax ?? '0'}`;
   return sanitizeFilename(mapping.value || slot.label);
-}
-
-function bytesToBase64(bytes: number[]): string {
-  const uint8 = new Uint8Array(bytes);
-  const chunks: string[] = [];
-  for (let i = 0; i < uint8.length; i += 8192) {
-    chunks.push(String.fromCharCode(...uint8.subarray(i, i + 8192)));
-  }
-  return btoa(chunks.join(''));
 }
 
 const ASPECT_RATIOS = [

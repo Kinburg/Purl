@@ -116,6 +116,10 @@ export interface EditorPrefs {
   comfyUiUrl: string;
   /** Global ComfyUI workflows folder. Empty = use comfyUI_workflows/ inside each project. */
   comfyUiWorkflowsDir: string;
+  /** Global ComfyUI output folder (the server's `output/`). Empty = disabled.
+   *  When set, generated files can be copied straight from disk instead of fetched
+   *  via /view — far faster for large files (video). Local ComfyUI only. */
+  comfyUiOutputDir: string;
   /** Global Pollinations model (empty = use default 'flux'). */
   pollinationsModel: string;
   /** Global Pollinations API token. */
@@ -173,6 +177,7 @@ const DEFAULTS: EditorPrefs = {
   imageGenProvider:    'comfyui',
   comfyUiUrl:          'http://127.0.0.1:8188',
   comfyUiWorkflowsDir: '',
+  comfyUiOutputDir:    '',
   pollinationsModel:   '',
   pollinationsToken:   '',
 };

@@ -136,7 +136,7 @@ export function Header() {
 
   function unapprovedScenes(): string[] {
     return project.scenes
-      .filter(scene => scene.blocks.some(b => b.type === 'image-gen' && b.src.startsWith('history/')))
+      .filter(scene => scene.blocks.some(b => (b.type === 'image-gen' || b.type === 'video-gen') && b.src.startsWith('history/')))
       .map(scene => scene.name);
   }
 

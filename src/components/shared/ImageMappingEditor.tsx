@@ -117,7 +117,7 @@ export function ImageAssetPicker({
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLInputElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
 
   const hasImages = hasImageAssets(assetNodes);
   const displayName = value ? value.split('/').pop()! : '';
@@ -128,15 +128,17 @@ export function ImageAssetPicker({
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
       const maxH = Math.max(spaceBelow, spaceAbove, 120);
-      const top = spaceBelow >= Math.min(maxH, 240)
-        ? rect.bottom + 2
-        : rect.top - Math.min(maxH, 240) - 2;
+      // Open downward when there's room; otherwise anchor the panel's BOTTOM just
+      // above the trigger so it hugs the button (no detached gap / overlap above).
+      const openUp = spaceBelow < Math.min(maxH, 240);
       const w = Math.max(rect.width, 220);
       setPos({
-        top,
+        ...(openUp
+          ? { bottom: window.innerHeight - rect.top + 2 }
+          : { top: rect.bottom + 2 }),
         left: Math.min(rect.left, window.innerWidth - w - 4),
         width: w,
-        maxHeight: Math.min(maxH, 320),
+        maxHeight: Math.min(openUp ? spaceAbove : spaceBelow, 320),
       });
     }
     setOpen(true);
@@ -171,7 +173,7 @@ export function ImageAssetPicker({
 
   return (
     <div className="flex-1 flex flex-col gap-1 min-w-0">
-      {hasImages && (
+      {hasImages ? (
         <>
           <button
             ref={btnRef}
@@ -189,7 +191,7 @@ export function ImageAssetPicker({
             <div
               ref={panelRef}
               className="fixed z-[9999] bg-slate-900 border border-slate-600 rounded shadow-xl flex flex-col"
-              style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
+              style={{ ...(pos.top != null ? { top: pos.top } : { bottom: pos.bottom }), left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
             >
               <input
                 ref={filterRef}
@@ -213,14 +215,16 @@ export function ImageAssetPicker({
             </div>
           )}
         </>
+      ) : (
+        // No image assets yet — fall back to a free-text path field so a value
+        // can still be entered (e.g. before the asset is imported).
+        <input
+          className="w-full bg-slate-800 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500 font-mono"
+          placeholder={placeholder}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+        />
       )}
-
-      <input
-        className="w-full bg-slate-800 text-xs text-white rounded px-1.5 py-1 outline-none border border-slate-600 focus:border-indigo-500 font-mono"
-        placeholder={placeholder}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-      />
     </div>
   );
 }

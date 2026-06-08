@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useProjectStore, flattenAssets } from '../../store/projectStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { fsApi, joinPath, toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
+import { bytesToBase64 } from '../../utils/base64';
 import type {
   ImageBoundMapping,
   AvatarGenSettings, AvatarGenSlotData, AvatarGenHistoryEntry,
@@ -433,12 +434,7 @@ export function ImageBoundGenPanel({
             const fileUrl = toLocalFileUrl(absPath);
             const imgRes = await fsApi.httpRequestBinary({ url: fileUrl });
             if (imgRes.status >= 200 && imgRes.status < 300) {
-              const uint8 = new Uint8Array(imgRes.bytes);
-              const chunks: string[] = [];
-              for (let i = 0; i < uint8.length; i += 8192) {
-                chunks.push(String.fromCharCode(...uint8.subarray(i, i + 8192)));
-              }
-              imageBase64 = btoa(chunks.join(''));
+              imageBase64 = bytesToBase64(imgRes.bytes);
             }
           } catch { /* non-fatal */ }
         }

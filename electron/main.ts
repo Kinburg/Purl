@@ -248,7 +248,6 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-  // win.webContents.openDevTools();
 
   // Fix WebSocket handshake Origin for local services (e.g. ComfyUI).
   // Electron renderer sends an Origin that ComfyUI doesn't recognise → 403.
@@ -516,6 +515,9 @@ ipcMain.handle('window:maximize',    (e) => {
 });
 ipcMain.handle('window:close',       (e) => { BrowserWindow.fromWebContents(e.sender)?.close(); });
 ipcMain.handle('window:isMaximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false);
+ipcMain.handle('window:openDevTools', (e) => {
+  BrowserWindow.fromWebContents(e.sender)?.webContents.openDevTools({ mode: 'detach' });
+});
 
 // ─── IPC: app config ──────────────────────────────────────────────────────────
 

@@ -90,6 +90,26 @@ export function makeBlock(type: BlockType): Block {
       stopOthers: false,
       volume: 100,
     };
+    case 'video-gen':    return {
+      id, type,
+      provider: 'comfyui',
+      workflowFile: '',
+      mode: 'text' as const,
+      prompt: '',
+      seedMode: 'random' as const,
+      seed: 0,
+      genWidth: 720,
+      genHeight: 480,
+      duration: 0,
+      fps: 25,
+      src: '',
+      history: [],
+      readFromFolder: true,
+      autoplay: false,
+      loop: false,
+      controls: true,
+      width: 480,
+    };
     case 'container':    return { id, type, containerId: '', charId: '' };
     case 'time-manipulation': return { id, type, variableId: '', years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
     case 'paperdoll':    return { id, type, charId: '', showLabels: false };
@@ -155,6 +175,7 @@ function buildBlockEntries(t: ReturnType<typeof useT>): BlockEntry[] {
     make('video',             t.addBlock.video.label,            t.addBlock.video.desc,            'media'),
     make('audio',             t.addBlock.audio.label,            t.addBlock.audio.desc,            'media'),
     make('audio-gen',         t.addBlock.audioGen.label,         t.addBlock.audioGen.desc,         'media'),
+    make('video-gen',         t.addBlock.videoGen.label,         t.addBlock.videoGen.desc,         'media'),
     make('audio-volume',      t.addBlock.audioVolume.label,      t.addBlock.audioVolume.desc,      'media'),
     make('paperdoll',         t.addBlock.paperdoll.label,        t.addBlock.paperdoll.desc,        'game'),
     make('inventory',         t.addBlock.inventory.label,        t.addBlock.inventory.desc,        'game'),

@@ -1148,6 +1148,26 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return emitAudioPlayback(ab, indent);
     }
 
+    case 'video-gen': {
+      // Draft (history/) takes are editor-only — never exported. Approved (assets/)
+      // files render exactly like a Video block.
+      if (!block.src.startsWith('assets/')) return '';
+      const attrs = [
+        block.controls ? 'controls' : '',
+        block.autoplay ? 'autoplay' : '',
+        block.loop ? 'loop' : '',
+        block.width > 0 ? `width="${block.width}"` : '',
+      ].filter(Boolean).join(' ');
+      const settings = project?.settings;
+      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
+      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
+      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
+      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
+      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
+      const classes = ['tg-video', ...extra].join(' ');
+      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
+    }
+
     case 'container': {
       const cb = block as ContainerBlock;
       if (!cb.containerId) return `${indent}/* Container block: no container selected */`;

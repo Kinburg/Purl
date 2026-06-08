@@ -92,6 +92,13 @@ window.PURL_BLOCKS = [
     svg: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12 H10 L18 5 V27 L10 20 H5 Z" stroke="var(--accent)" stroke-width="1.6" fill="var(--accent)" fill-opacity=".18"/><path d="M21.5 10 C25 12.5 25 19.5 21.5 22" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M24.5 7 C30 10.5 30 21.5 24.5 25" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".5"/></svg>`
   },
   {
+    id: 'video-gen', kind: 'media', name_en: 'AI Video', name_uk: 'AI-відео',
+    desc_en: 'Generates video via a ComfyUI workflow — text-to-video, image-to-video, or from keyframes. Same approve / history flow as AI Image; large results are read straight from ComfyUI\'s output folder.',
+    desc_uk: 'Генерує відео через воркфлоу ComfyUI — з тексту, із зображення або за ключовими кадрами. Той самий потік схвалення / історії, що й AI-зображення; великі результати читаються прямо з вихідної папки ComfyUI.',
+    tags: ['ai', 'comfyui', 'video'],
+    svg: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="20" height="15" rx="2.5" stroke="var(--accent)" stroke-width="1.6" fill="var(--accent)" fill-opacity=".1"/><path d="M11 16 L17 19.5 L11 23 Z" fill="var(--accent)" opacity=".7"/><path d="M24 4 L25.4 7.6 L29 9 L25.4 10.4 L24 14 L22.6 10.4 L19 9 L22.6 7.6 Z" fill="var(--accent)" opacity=".85"/><circle cx="27" cy="18" r="1.4" fill="var(--accent)" opacity=".5"/></svg>`
+  },
+  {
     id: 'audio-gen', kind: 'media', name_en: 'AI Audio', name_uk: 'AI-аудіо',
     desc_en: 'Generates music or a track via a ComfyUI workflow (ACE Step) from a style prompt and optional lyrics. Same approve / history flow as AI Image, plus full playback controls.',
     desc_uk: 'Генерує музику чи трек через воркфлоу ComfyUI (ACE Step) за стиль-промптом та опційними текстами пісні. Той самий потік схвалення / історії, що й AI-зображення, плюс повне керування відтворенням.',

@@ -380,6 +380,14 @@ export interface ImageGenBlock {
   genSettings?: AvatarGenSettings;
   /** When true (bound + ComfyUI), pass the default-slot image as ${base64Image} into variant generations. */
   useRefImage?: boolean;
+  /** Optional input/reference image for static (img2img) generation — project-relative path
+   *  (an asset under assets/, or a copied-in file under inputs/{blockId}/). Passed to the workflow
+   *  as ${imagePath} (always) and ${base64Image} (only when that token is present in the JSON). */
+  inputImageSrc?: string;
+  /** When true, read the generated file straight from disk (the workflow's ${outputDir}, or the
+   *  configured comfyUiOutputDir) instead of fetching over /view — faster for large files.
+   *  Local ComfyUI only; falls back to /view when the file can't be located. */
+  readFromFolder?: boolean;
   /** Spot-level style override (always static; supersedes ProjectSettings.defaultBlockStyles['image-gen']). */
   customStyle?: BlockStyleOverride;
 }
@@ -480,6 +488,77 @@ export interface AudioGenBlock {
   onLeave: AudioOnLeave;
   stopOthers: boolean;
   volume: number;       // 0–100
+}
+
+// ── Video generation (ComfyUI) ───────────────────────────────────────────────
+
+export interface VideoGenHistoryEntry {
+  id: string;
+  src: string;            // relative path under history/ (or assets/ after approve)
+  prompt: string;
+  seed?: number;
+  duration?: number;      // seconds
+  fps?: number;
+  createdAt: number;
+  provider: string;
+}
+
+export type VideoGenMode = 'text' | 'image' | 'keyframes';
+
+/** One ordered keyframe — its file is copied into keyframes/{blockId}/ (non-exported). */
+export interface VideoKeyframe {
+  id: string;
+  src: string;            // project-relative path under keyframes/{blockId}/
+  /** Transition hint: what changes going FROM this frame to the next. Unused on the last frame. */
+  prompt?: string;
+  /** Duration (sec) of the transition FROM this frame to the next. Unused on the last frame. */
+  duration?: number;
+}
+
+/**
+ * "Video generation" block — text→video, image→video, or keyframes→video via a
+ * user-authored ComfyUI workflow. Mirrors AudioGenBlock's generation / approve /
+ * history flow, but carries VIDEO playback fields (like VideoBlock) instead of audio.
+ *
+ * Workflow tokens: ${prompt} ${negative_prompt} ${seed} ${width} ${height}
+ * ${duration} ${fps}; plus inputs per mode — ${imagePath} (and ${base64Image} when
+ * that token is present) for image mode, ${keyframePaths} (comma-joined, ordered) for
+ * keyframes. Exported to SugarCube only when `src` is under assets/ (approved).
+ */
+export interface VideoGenBlock {
+  id: string;
+  type: 'video-gen';
+  provider: 'comfyui';
+  workflowFile: string;
+  mode: VideoGenMode;
+  prompt: string;
+  negativePrompt?: string;
+  styleHints?: string[];
+  seedMode: ImageGenSeedMode;
+  seed?: number;
+  genWidth?: number;
+  genHeight?: number;
+  duration?: number;      // seconds
+  fps?: number;
+  // ── Inputs ────────────────────────────────────────────────────────────────
+  /** image mode — single reference image (asset path, or copied into inputs/{blockId}/). */
+  inputImageSrc?: string;
+  /** keyframes mode — ordered frames, copied into keyframes/{blockId}/. */
+  keyframes?: VideoKeyframe[];
+  // ── Current/approved file + history ─────────────────────────────────────────
+  src: string;
+  approvedHistoryId?: string;
+  lastApprovedDir?: string;
+  history?: VideoGenHistoryEntry[];
+  /** Read the generated file from ComfyUI's output folder instead of /view (see ImageGenBlock). */
+  readFromFolder?: boolean;
+  // ── Playback fields (mirror VideoBlock) ──────────────────────────────────────
+  autoplay: boolean;
+  loop: boolean;
+  controls: boolean;
+  width: number;          // 0 = auto (display width)
+  delay?: BlockDelay;
+  customStyle?: BlockStyleOverride;
 }
 
 // ── Button block ──────────────────────────────────────────────────────────────
@@ -1166,6 +1245,7 @@ export type Block =
   | PopupBlock
   | AudioBlock
   | AudioGenBlock
+  | VideoGenBlock
   | ContainerBlock
   | TimeManipulationBlock
   | TabsBlock
