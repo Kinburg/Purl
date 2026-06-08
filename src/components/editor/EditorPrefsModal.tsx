@@ -591,6 +591,19 @@ function BehaviorTab() {
         </div>
       </Section>
 
+      {/* Developer */}
+      {api?.openDevTools && (
+        <Section title={ep.sectionDeveloper}>
+          <button
+            type="button"
+            onClick={() => window.electronAPI?.openDevTools?.()}
+            className="px-3 py-1.5 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer transition-colors"
+          >
+            {ep.openConsole}
+          </button>
+        </Section>
+      )}
+
       {/* Validator */}
       <Section title={ep.sectionValidator}>
         <Row label={ep.validationModeLabel}>
@@ -692,7 +705,7 @@ function AiTab() {
     llmOpenaiUrl, llmOpenaiApiKey, llmOpenaiModel,
     llmMaxTokens, llmTemperature, llmSystemPrompt,
     llmFilterThought, llmGenerationHistory,
-    imageGenProvider, comfyUiUrl, comfyUiWorkflowsDir,
+    imageGenProvider, comfyUiUrl, comfyUiWorkflowsDir, comfyUiOutputDir,
     pollinationsModel, pollinationsToken,
   } = prefs;
 
@@ -970,6 +983,28 @@ function AiTab() {
                     onClick={async () => {
                       const dir = await window.electronAPI?.openFolderDialog?.();
                       if (dir) setPrefs({ comfyUiWorkflowsDir: dir });
+                    }}
+                  >
+                    {llm.comfyUiWorkflowsDirBrowse}
+                  </button>
+                </div>
+              </ModalField>
+
+              <ModalField label={llm.comfyUiOutputDirLabel} note={llm.comfyUiOutputDirHint}>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={comfyUiOutputDir}
+                    onChange={e => setPrefs({ comfyUiOutputDir: e.target.value })}
+                    placeholder={llm.comfyUiOutputDirPlaceholder}
+                    className={INPUT_CLS + ' flex-1'}
+                  />
+                  <button
+                    type="button"
+                    className="px-2 py-1.5 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-200 transition-colors cursor-pointer shrink-0"
+                    onClick={async () => {
+                      const dir = await window.electronAPI?.openFolderDialog?.();
+                      if (dir) setPrefs({ comfyUiOutputDir: dir });
                     }}
                   >
                     {llm.comfyUiWorkflowsDirBrowse}

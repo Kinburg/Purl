@@ -86,6 +86,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow:    (): Promise<void>    => ipcRenderer.invoke('window:maximize'),
   closeWindow:       (): Promise<void>    => ipcRenderer.invoke('window:close'),
   isWindowMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:isMaximized'),
+  openDevTools:      (): Promise<void>    => ipcRenderer.invoke('window:openDevTools'),
 
   onWindowMaximized: (callback: (maximized: boolean) => void): (() => void) => {
     const handler = (_e: unknown, maximized: boolean) => callback(maximized);

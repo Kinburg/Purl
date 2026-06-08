@@ -114,6 +114,15 @@ export const BLOCK_SVG_ICONS: Record<BlockType, (p?: IconProps) => React.ReactNo
     <circle cx="29.5" cy="22" r="1" fill="currentColor" opacity=".35"/>
   </>, p),
 
+  'video-gen': (p) => svg(<>
+    {/* Film frame — lower-left */}
+    <rect x="3" y="11" width="20" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.6" fill="currentColor" fillOpacity=".1"/>
+    <path d="M11 16 L17 19.5 L11 23 Z" fill="currentColor" opacity=".7"/>
+    {/* Generation spark — upper-right corner */}
+    <path d="M24 4 L25.4 7.6 L29 9 L25.4 10.4 L24 14 L22.6 10.4 L19 9 L22.6 7.6 Z" fill="currentColor" opacity=".85"/>
+    <circle cx="27" cy="18" r="1.4" fill="currentColor" opacity=".5"/>
+  </>, p),
+
   table: (p) => svg(<>
     <rect x="2" y="3" width="28" height="26" rx="2.5" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity=".07"/>
     <rect x="2" y="3" width="28" height="7" rx="2.5" fill="currentColor" fillOpacity=".2"/>

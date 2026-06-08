@@ -1,0 +1,1121 @@
+{
+  "283": {
+    "inputs": {
+      "condition": "True",
+      "LOOP": [
+        "285",
+        0
+      ],
+      "data": [
+        "285",
+        1
+      ],
+      "aux": [
+        "285",
+        2
+      ],
+      "aux2": [
+        "285",
+        3
+      ],
+      "aux3": [
+        "366",
+        0
+      ]
+    },
+    "class_type": "LoopClose",
+    "_meta": {
+      "title": "⏹️ Loop Close"
+    }
+  },
+  "285": {
+    "inputs": {
+      "start": 0,
+      "step": 1,
+      "end": [
+        "319:282",
+        0
+      ],
+      "condition": "True",
+      "data": [
+        "371",
+        0
+      ],
+      "aux": [
+        "372",
+        0
+      ],
+      "aux2": [
+        "375",
+        0
+      ]
+    },
+    "class_type": "LoopOpen",
+    "_meta": {
+      "title": "🔃 Loop Open"
+    }
+  },
+  "289": {
+    "inputs": {
+      "text": "%aux%['index']",
+      "output_type": "FORMULA",
+      "aux": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "DataMonitor",
+    "_meta": {
+      "title": "👁‍🗨GET Loop Index"
+    }
+  },
+  "298": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Key Frames Paths"
+    }
+  },
+  "299": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Transition Prompts"
+    }
+  },
+  "307": {
+    "inputs": {
+      "operation": "SPLIT_LINES",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "402:151:149",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "311": {
+    "inputs": {
+      "index": [
+        "289",
+        0
+      ],
+      "any": [
+        "285",
+        2
+      ]
+    },
+    "class_type": "easy indexAnything",
+    "_meta": {
+      "title": "Get Transition Prompt"
+    }
+  },
+  "313": {
+    "inputs": {
+      "operation": "SPLIT_LINES",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "401:151:149",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "342": {
+    "inputs": {
+      "fps": [
+        "381",
+        1
+      ],
+      "images": [
+        "283",
+        4
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "343": {
+    "inputs": {
+      "filename_prefix": "video/ComfyUI",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Video"
+    }
+  },
+  "366": {
+    "inputs": {
+      "any_1": [
+        "340:339",
+        0
+      ],
+      "any_2": [
+        "285",
+        4
+      ]
+    },
+    "class_type": "easy batchAnything",
+    "_meta": {
+      "title": "Batch Any"
+    }
+  },
+  "371": {
+    "inputs": {
+      "operation": "REVERSE",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "313",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "372": {
+    "inputs": {
+      "operation": "REVERSE",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "307",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "373": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Transition Durations"
+    }
+  },
+  "374": {
+    "inputs": {
+      "operation": "SPLIT_LINES",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "403:151:149",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "375": {
+    "inputs": {
+      "operation": "REVERSE",
+      "start_from_end": false,
+      "case_insensitive": false,
+      "param1": "",
+      "param2": "",
+      "param3": "",
+      "input": [
+        "374",
+        0
+      ]
+    },
+    "class_type": "StringOperation",
+    "_meta": {
+      "title": "🔠 String ⁄ List Operations"
+    }
+  },
+  "381": {
+    "inputs": {
+      "round_integer": "round",
+      "text": [
+        "382",
+        0
+      ]
+    },
+    "class_type": "CR String To Number",
+    "_meta": {
+      "title": "🔧 CR String To Number"
+    }
+  },
+  "382": {
+    "inputs": {
+      "value": "25"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "FPS"
+    }
+  },
+  "390": {
+    "inputs": {
+      "value": "480"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "391": {
+    "inputs": {
+      "round_integer": "round",
+      "text": [
+        "396:151:149",
+        0
+      ]
+    },
+    "class_type": "CR String To Number",
+    "_meta": {
+      "title": "🔧 CR String To Number"
+    }
+  },
+  "392": {
+    "inputs": {
+      "value": "720"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "393": {
+    "inputs": {
+      "round_integer": "round",
+      "text": [
+        "394:151:149",
+        0
+      ]
+    },
+    "class_type": "CR String To Number",
+    "_meta": {
+      "title": "🔧 CR String To Number"
+    }
+  },
+  "395": {
+    "inputs": {
+      "value": "${"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Var Flag"
+    }
+  },
+  "398": {
+    "inputs": {
+      "value": "${width}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Width Var"
+    }
+  },
+  "399": {
+    "inputs": {
+      "value": "${height}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Height Var"
+    }
+  },
+  "400": {
+    "inputs": {
+      "value": "${fps}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "FPS Var"
+    }
+  },
+  "404": {
+    "inputs": {
+      "value": "${keyframePaths}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Key Frames Paths Var"
+    }
+  },
+  "405": {
+    "inputs": {
+      "value": "${keyframePrompts}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Transition Prompts Var"
+    }
+  },
+  "406": {
+    "inputs": {
+      "value": "${keyframeDurations}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Transition Durations Var"
+    }
+  },
+  "407": {
+    "inputs": {
+      "value": "${seed}"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Seed Var"
+    }
+  },
+  "414": {
+    "inputs": {
+      "seed": 1064722523253642
+    },
+    "class_type": "easy seed",
+    "_meta": {
+      "title": "Seed Debug"
+    }
+  },
+  "394:151:149": {
+    "inputs": {
+      "switch": [
+        "394:151:150",
+        0
+      ],
+      "on_false": [
+        "398",
+        0
+      ],
+      "on_true": [
+        "392",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "394:151:150": {
+    "inputs": {
+      "string": [
+        "398",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "396:151:149": {
+    "inputs": {
+      "switch": [
+        "396:151:150",
+        0
+      ],
+      "on_false": [
+        "399",
+        0
+      ],
+      "on_true": [
+        "390",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "396:151:150": {
+    "inputs": {
+      "string": [
+        "399",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "397:151:149": {
+    "inputs": {
+      "switch": [
+        "397:151:150",
+        0
+      ],
+      "on_false": [
+        "400",
+        0
+      ],
+      "on_true": [
+        "382",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "397:151:150": {
+    "inputs": {
+      "string": [
+        "400",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "401:151:149": {
+    "inputs": {
+      "switch": [
+        "401:151:150",
+        0
+      ],
+      "on_false": [
+        "404",
+        0
+      ],
+      "on_true": [
+        "298",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "401:151:150": {
+    "inputs": {
+      "string": [
+        "404",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "402:151:149": {
+    "inputs": {
+      "switch": [
+        "402:151:150",
+        0
+      ],
+      "on_false": [
+        "405",
+        0
+      ],
+      "on_true": [
+        "299",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "402:151:150": {
+    "inputs": {
+      "string": [
+        "405",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "403:151:149": {
+    "inputs": {
+      "switch": [
+        "403:151:150",
+        0
+      ],
+      "on_false": [
+        "406",
+        0
+      ],
+      "on_true": [
+        "373",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "403:151:150": {
+    "inputs": {
+      "string": [
+        "406",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "411:160": {
+    "inputs": {
+      "output_type": "string",
+      "*": [
+        "414",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "411:161": {
+    "inputs": {
+      "output_type": "int",
+      "*": [
+        "411:165:151:149",
+        0
+      ]
+    },
+    "class_type": "easy convertAnything",
+    "_meta": {
+      "title": "Convert Any"
+    }
+  },
+  "411:165:151:149": {
+    "inputs": {
+      "switch": [
+        "411:165:151:150",
+        0
+      ],
+      "on_false": [
+        "407",
+        0
+      ],
+      "on_true": [
+        "411:160",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch"
+    }
+  },
+  "411:165:151:150": {
+    "inputs": {
+      "string": [
+        "407",
+        0
+      ],
+      "substring": [
+        "395",
+        0
+      ],
+      "case_sensitive": false
+    },
+    "class_type": "StringContains",
+    "_meta": {
+      "title": "Contains"
+    }
+  },
+  "319:284": {
+    "inputs": {
+      "any": [
+        "372",
+        0
+      ]
+    },
+    "class_type": "easy lengthAnything",
+    "_meta": {
+      "title": "Length Any"
+    }
+  },
+  "319:282": {
+    "inputs": {
+      "a": [
+        "319:284",
+        0
+      ],
+      "b": 1,
+      "operation": "subtract"
+    },
+    "class_type": "easy mathInt",
+    "_meta": {
+      "title": "Math Int"
+    }
+  },
+  "387:320": {
+    "inputs": {
+      "image_path_or_URL": [
+        "387:385",
+        0
+      ],
+      "image": "",
+      "upscale_method": "lanczos",
+      "megapixels": 0,
+      "scale_by": 1,
+      "resize_mode": "longest_side",
+      "size": 0
+    },
+    "class_type": "AILab_LoadImage",
+    "_meta": {
+      "title": "Load Image (RMBG) 🖼️"
+    }
+  },
+  "387:385": {
+    "inputs": {
+      "index": [
+        "387:386",
+        0
+      ],
+      "any": [
+        "285",
+        1
+      ]
+    },
+    "class_type": "easy indexAnything",
+    "_meta": {
+      "title": "Index Any"
+    }
+  },
+  "387:386": {
+    "inputs": {
+      "a": [
+        "289",
+        0
+      ],
+      "b": 1,
+      "operation": "add"
+    },
+    "class_type": "easy mathInt",
+    "_meta": {
+      "title": "Math Int"
+    }
+  },
+  "388:296": {
+    "inputs": {
+      "image_path_or_URL": [
+        "388:317",
+        0
+      ],
+      "image": "",
+      "upscale_method": "lanczos",
+      "megapixels": 0,
+      "scale_by": 1,
+      "resize_mode": "longest_side",
+      "size": 0
+    },
+    "class_type": "AILab_LoadImage",
+    "_meta": {
+      "title": "Load Image (RMBG) 🖼️"
+    }
+  },
+  "388:317": {
+    "inputs": {
+      "index": [
+        "289",
+        0
+      ],
+      "any": [
+        "285",
+        1
+      ]
+    },
+    "class_type": "easy indexAnything",
+    "_meta": {
+      "title": "Index Any"
+    }
+  },
+  "389:376": {
+    "inputs": {
+      "index": [
+        "289",
+        0
+      ],
+      "any": [
+        "285",
+        3
+      ]
+    },
+    "class_type": "easy indexAnything",
+    "_meta": {
+      "title": "Get Length"
+    }
+  },
+  "389:379": {
+    "inputs": {
+      "round_integer": "round",
+      "text": [
+        "389:376",
+        0
+      ]
+    },
+    "class_type": "CR String To Number",
+    "_meta": {
+      "title": "🔧 CR String To Number"
+    }
+  },
+  "389:383": {
+    "inputs": {
+      "a": [
+        "389:379",
+        0
+      ],
+      "b": [
+        "381",
+        0
+      ],
+      "operation": "multiply"
+    },
+    "class_type": "easy mathInt",
+    "_meta": {
+      "title": "Math Int"
+    }
+  },
+  "340:324": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "340:325": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "340:324",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "340:326": {
+    "inputs": {
+      "fps": [
+        "381",
+        1
+      ],
+      "images": [
+        "340:339",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "340:327": {
+    "inputs": {
+      "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "340:328": {
+    "inputs": {
+      "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "340:329": {
+    "inputs": {
+      "shift": 5,
+      "model": [
+        "340:330",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  },
+  "340:330": {
+    "inputs": {
+      "lora_name": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      "strength_model": 1,
+      "model": [
+        "340:328",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "340:331": {
+    "inputs": {
+      "lora_name": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      "strength_model": 1,
+      "model": [
+        "340:327",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "340:332": {
+    "inputs": {
+      "shift": 5,
+      "model": [
+        "340:331",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  },
+  "340:333": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 10000,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "340:329",
+        0
+      ],
+      "positive": [
+        "340:336",
+        0
+      ],
+      "negative": [
+        "340:336",
+        1
+      ],
+      "latent_image": [
+        "340:334",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "340:334": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "411:161",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "340:332",
+        0
+      ],
+      "positive": [
+        "340:336",
+        0
+      ],
+      "negative": [
+        "340:336",
+        1
+      ],
+      "latent_image": [
+        "340:336",
+        2
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "340:335": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "340:336": {
+    "inputs": {
+      "width": [
+        "393",
+        0
+      ],
+      "height": [
+        "391",
+        0
+      ],
+      "length": [
+        "389:383",
+        0
+      ],
+      "batch_size": 1,
+      "positive": [
+        "340:337",
+        0
+      ],
+      "negative": [
+        "340:325",
+        0
+      ],
+      "vae": [
+        "340:335",
+        0
+      ],
+      "start_image": [
+        "387:320",
+        0
+      ],
+      "end_image": [
+        "388:296",
+        0
+      ]
+    },
+    "class_type": "WanFirstLastFrameToVideo",
+    "_meta": {
+      "title": "WanFirstLastFrameToVideo"
+    }
+  },
+  "340:337": {
+    "inputs": {
+      "text": [
+        "311",
+        0
+      ],
+      "clip": [
+        "340:324",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "340:339": {
+    "inputs": {
+      "samples": [
+        "340:333",
+        0
+      ],
+      "vae": [
+        "340:335",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  }
+}

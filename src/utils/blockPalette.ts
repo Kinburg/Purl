@@ -10,7 +10,7 @@ export type CategoryKey = 'narrative' | 'media' | 'layout' | 'game' | 'quests' |
 /** Category → block types. The order within each array also drives the per-block shade. */
 export const BLOCK_CATEGORIES: { key: CategoryKey; types: BlockType[] }[] = [
   { key: 'narrative',   types: ['text', 'dialogue', 'callout'] },
-  { key: 'media',       types: ['image', 'image-gen', 'video', 'audio', 'audio-gen', 'audio-volume'] },
+  { key: 'media',       types: ['image', 'image-gen', 'video', 'video-gen', 'audio', 'audio-gen', 'audio-volume'] },
   // layout = blocks that space / arrange / compose content (rather than being content). No logic, no own player input.
   //   divider/spacer space; tabs/section/table group inline blocks; include embeds another passage's content.
   { key: 'layout',      types: ['divider', 'spacer', 'tabs', 'section', 'table', 'include'] },

@@ -78,6 +78,7 @@ export function blockTypeLabel(t: Translations, type: Block['type']): string {
     'popup':             t.block.popup,
     'audio':             t.block.audio,
     'audio-gen':         t.block.audioGen,
+    'video-gen':         t.block.videoGen,
     'container':         t.block.container,
     'time-manipulation': t.block.timeManipulation,
     'paperdoll':         t.block.paperdoll,

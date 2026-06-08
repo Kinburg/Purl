@@ -24,23 +24,48 @@ export interface ImageGenerateParams {
   onProgress?: (progress: ComfyProgress) => void;
   /** Base64-encoded reference image injected as ${base64Image} in ComfyUI workflow nodes. */
   imageBase64?: string;
+  /** Absolute path of the input image injected as ${imagePath} (local ComfyUI, load-from-path node). */
+  imagePath?: string;
+  /** Folder the workflow should save into, injected as ${outputDir}. */
+  outputDir?: string;
 }
 
 export interface ImageGenerateResult {
-  imageUrl?: string;    // URL to download image (ComfyUI)
+  imageUrl?: string;    // URL to download image (ComfyUI /view)
   bytes?: number[];     // Raw image bytes
   contentType?: string; // MIME type when bytes are present
+  // Raw ComfyUI output descriptor — lets the caller copy the file straight from
+  // disk (comfyUiOutputDir/subfolder/filename) instead of fetching over /view.
+  filename?: string;
+  subfolder?: string;
+  outputType?: string;  // ComfyUI "type", usually "output"
 }
 
 function extractFirstImage(outputs: Record<string, any>): { filename: string; subfolder?: string; type?: string } | null {
+  // Prefer a SAVED image (type "output") over a temp/preview one — a workflow may
+  // have both a SaveImage and a PreviewImage. Picking the saved file is also required
+  // for folder-read (temp files live in ComfyUI's temp dir, not its output folder).
+  const pick = (list: any[]): { filename: string; subfolder?: string; type?: string } | null => {
+    const files = list.filter((it: any) => it && typeof it === 'object' && typeof it.filename === 'string');
+    if (files.length === 0) return null;
+    const chosen = files.find((it: any) => it.type === 'output') ?? files[0];
+    return { filename: chosen.filename, subfolder: chosen.subfolder, type: chosen.type };
+  };
+  // 1) Standard `images` outputs (SaveImage / PreviewImage).
+  const images: any[] = [];
   for (const out of Object.values(outputs)) {
-    const images = out?.images;
-    if (Array.isArray(images) && images.length > 0) {
-      const first = images[0];
-      if (first?.filename) return first;
-    }
+    if (Array.isArray(out?.images)) images.push(...out.images);
   }
-  return null;
+  const fromImages = pick(images);
+  if (fromImages) return fromImages;
+  // 2) Fallback: any reported file descriptor under any key (custom save nodes
+  //    report under `gifs` / `result` / a node-specific key instead of `images`).
+  const any: any[] = [];
+  for (const out of Object.values(outputs)) {
+    if (!out || typeof out !== 'object') continue;
+    for (const val of Object.values(out)) if (Array.isArray(val)) any.push(...val);
+  }
+  return pick(any);
 }
 
 async function generateWithComfy(params: ImageGenerateParams, signal?: AbortSignal): Promise<ImageGenerateResult> {
@@ -52,12 +77,19 @@ async function generateWithComfy(params: ImageGenerateParams, signal?: AbortSign
     genWidth: params.genWidth,
     genHeight: params.genHeight,
     base64Image: params.imageBase64,
+    imagePath: params.imagePath,
+    outputDir: params.outputDir,
   });
 
   console.log('[ImageGen] Submitting prompt to ComfyUI:', promptWorkflow);
 
   const image = await runComfyWorkflow(baseUrl, promptWorkflow, extractFirstImage, params.onProgress, signal);
-  return { imageUrl: buildComfyViewUrl(baseUrl, image) };
+  return {
+    imageUrl: buildComfyViewUrl(baseUrl, image),
+    filename: image.filename,
+    subfolder: image.subfolder,
+    outputType: image.type,
+  };
 }
 
 async function generateWithPollinations(params: ImageGenerateParams, signal?: AbortSignal): Promise<ImageGenerateResult> {

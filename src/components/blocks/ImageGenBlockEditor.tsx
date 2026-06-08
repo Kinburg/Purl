@@ -13,6 +13,9 @@ import { StyleChipsEditor } from '../shared/StyleChipsEditor';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
 import { ImageMappingEditor } from '../shared/ImageMappingEditor';
+import { ImageAssetSelect } from '../shared/ImageAssetSelect';
+import { useFlatAssets } from '../../hooks/useFlatVariables';
+import { bytesToBase64 } from '../../utils/base64';
 import NumericInput from '../shared/NumericInput';
 import { ImageBoundGenPanel, type ImageBoundGenInput } from '../shared/ImageBoundGenPanel';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
@@ -78,6 +81,7 @@ export function ImageGenBlockEditor({
   const imageGenProvider    = useEditorPrefsStore(s => s.imageGenProvider);
   const comfyUiUrl          = useEditorPrefsStore(s => s.comfyUiUrl);
   const comfyUiWorkflowsDir = useEditorPrefsStore(s => s.comfyUiWorkflowsDir);
+  const comfyUiOutputDir    = useEditorPrefsStore(s => s.comfyUiOutputDir);
   const pollinationsModel   = useEditorPrefsStore(s => s.pollinationsModel);
   const pollinationsToken   = useEditorPrefsStore(s => s.pollinationsToken);
 
@@ -176,11 +180,37 @@ export function ImageGenBlockEditor({
 
   const history = block.history ?? [];
   const imageAssets = useMemo(() => new Set(flattenAssets(project.assetNodes).map(a => a.relativePath)), [project.assetNodes]);
+  const allAssets = useFlatAssets();
+  const imageAssetList = useMemo(() => allAssets.filter(a => a.assetType === 'image'), [allAssets]);
   // Resolve preview: history/ paths live directly under projectDir; assets/ paths inside release/
   const currentPreview = block.src && projectDir
     ? toLocalFileUrl(resolveAssetPath(projectDir, block.src))
     : '';
   const isApproved = block.src.startsWith('assets/');
+
+  // Optional input/reference image (static img2img). Lives under inputs/{blockId}/
+  // (external file, copied in) or assets/ (picked from project assets) — both resolvable.
+  const inputImagePreview = block.inputImageSrc && projectDir
+    ? toLocalFileUrl(resolveAssetPath(projectDir, block.inputImageSrc))
+    : '';
+
+  const pickInputFromFile = async () => {
+    if (!projectDir) return toast.error(ig.errorNoProjectDir);
+    const file = await fsApi.openFileDialog({
+      title: ig.inputImageFromFile,
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
+    });
+    if (!file) return;
+    const base = (file.replace(/\\/g, '/').split('/').pop() || 'input.png').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const rel = `inputs/${block.id}/${base}`;
+    try {
+      await fsApi.mkdir(joinPath(projectDir, `inputs/${block.id}`));
+      await fsApi.copyFile(file, joinPath(projectDir, rel));
+      update({ inputImageSrc: rel });
+    } catch {
+      toast.error(ig.errorGenerateImage);
+    }
+  };
 
   const generatePrompt = async (llmMode: 'hint' | 'rephrase' | 'continue') => {
     const scene = project.scenes.find(s => s.id === sceneId);
@@ -232,6 +262,35 @@ export function ImageGenBlockEditor({
       const effectivePrompt = styleHints.length > 0
         ? `${block.prompt.trim()}, ${styleHints.join(', ')}`
         : block.prompt;
+
+      // history/{blockId}/ holds drafts (outside release/assets — not exported).
+      const histDirRel = `history/${block.id}`;
+      await fsApi.mkdir(joinPath(projectDir, histDirRel));
+
+      // Input image (img2img) — ComfyUI only. Provide ${imagePath} always (cheap);
+      // encode ${base64Image} only when the workflow actually uses that token.
+      const wfStr = imageGenProvider === 'comfyui' ? JSON.stringify(workflowJson) : '';
+      let imagePath: string | undefined;
+      let imageBase64: string | undefined;
+      if (imageGenProvider === 'comfyui' && block.inputImageSrc) {
+        const absInput = resolveAssetPath(projectDir, block.inputImageSrc);
+        imagePath = absInput.replace(/\\/g, '/');
+        if (wfStr.includes('${base64Image}')) {
+          try {
+            const r = await fsApi.httpRequestBinary({ url: toLocalFileUrl(absInput) });
+            if (r.status >= 200 && r.status < 300) imageBase64 = bytesToBase64(r.bytes);
+          } catch { /* non-fatal */ }
+        }
+      }
+
+      // Folder-read uses ComfyUI's OWN output folder, never the project: its SaveImage
+      // rejects cross-drive paths ("Paths don't have the same drive"). ${outputDir}, if a
+      // workflow references it, resolves to that folder (always on ComfyUI's own drive).
+      let outputDir: string | undefined;
+      if (imageGenProvider === 'comfyui' && block.readFromFolder && comfyUiOutputDir.trim()) {
+        outputDir = comfyUiOutputDir.trim().replace(/\\/g, '/');
+      }
+
       const generated = await generateImageWithProvider(imageGenProvider, {
         baseUrl: comfyUiUrl,
         workflow: workflowJson,
@@ -242,28 +301,45 @@ export function ImageGenBlockEditor({
         pollinationsToken,
         genWidth: block.genWidth,
         genHeight: block.genHeight,
+        imageBase64,
+        imagePath,
+        outputDir,
         onProgress: imageGenProvider === 'comfyui' ? setGenProgress : undefined,
       }, controller.signal);
       // Keep the last used seed visible in editor.
       if (seedMode === 'random') update({ seed: usedSeed });
 
-      let bytes: number[];
-      let ext: string;
-      if (generated.bytes) {
-        bytes = generated.bytes;
+      const genId = crypto.randomUUID();
+      let ext = 'png';
+
+      // Copy the result straight from ComfyUI's output folder (cross-drive copy is fine),
+      // skipping the slow /view byte transfer. Falls through to /view if not located.
+      let diskSrc = '';
+      if (block.readFromFolder && generated.filename && comfyUiOutputDir.trim()) {
+        const parts = [comfyUiOutputDir.trim(), generated.subfolder, generated.filename].filter((p): p is string => !!p);
+        diskSrc = joinPath(...parts);
+        if (!(await fsApi.exists(diskSrc))) diskSrc = '';
+      }
+
+      let relPath: string;
+      if (diskSrc) {
+        ext = generated.filename!.split('.').pop()?.toLowerCase() || 'png';
+        relPath = `${histDirRel}/${genId}.${ext}`;
+        await fsApi.copyFile(diskSrc, joinPath(projectDir, relPath));
+        console.log('[ImageGen] result source = DISK (copied from ComfyUI output folder):', diskSrc);
+      } else if (generated.bytes) {
         ext = detectExt('', generated.contentType ?? null);
+        relPath = `${histDirRel}/${genId}.${ext}`;
+        await fsApi.writeFileBinary(joinPath(projectDir, relPath), generated.bytes);
+        console.log('[ImageGen] result source = PROVIDER BYTES (e.g. Pollinations)');
       } else {
         const imgRes = await fsApi.httpRequestBinary({ url: generated.imageUrl! });
         if (imgRes.status < 200 || imgRes.status >= 300) throw new Error(`Image download failed: ${imgRes.status}`);
-        bytes = imgRes.bytes;
         ext = detectExt(generated.imageUrl!, imgRes.headers['content-type'] ?? null);
+        relPath = `${histDirRel}/${genId}.${ext}`;
+        await fsApi.writeFileBinary(joinPath(projectDir, relPath), imgRes.bytes);
+        console.log('[ImageGen] result source = HTTP /view (downloaded over IPC):', generated.imageUrl);
       }
-      const genId = crypto.randomUUID();
-      // Generated images go to history/ (outside release/assets) — not exported automatically
-      const relPath = `history/${block.id}/${genId}.${ext}`;
-      const absPath = joinPath(projectDir, relPath);
-      await fsApi.mkdir(joinPath(projectDir, `history/${block.id}`));
-      await fsApi.writeFileBinary(absPath, bytes);
 
       const nextHistory = [
         ...history,
@@ -446,6 +522,23 @@ export function ImageGenBlockEditor({
           </div>
         )}
 
+        {imageGenProvider === 'comfyui' && (
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none" title={ig.readFromFolderHint}>
+              <input
+                type="checkbox"
+                className="accent-indigo-500 cursor-pointer"
+                checked={block.readFromFolder ?? false}
+                onChange={e => update({ readFromFolder: e.target.checked })}
+              />
+              <span className="text-xs text-slate-300">{ig.readFromFolderLabel}</span>
+            </label>
+            {block.readFromFolder && !comfyUiOutputDir.trim() && (
+              <p className="text-[10px] text-amber-400/80 pl-5">{ig.readFromFolderNeedsSetting}</p>
+            )}
+          </div>
+        )}
+
         {/* Generation size */}
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-400 w-20 shrink-0">{ig.genSizeLabel}</label>
@@ -591,6 +684,46 @@ export function ImageGenBlockEditor({
               onChange={e => update({ negativePrompt: e.target.value })}
             />
           </div>
+
+          {imageGenProvider === 'comfyui' && (
+            <div className="flex items-start gap-2">
+              <label className="text-xs text-slate-400 w-20 shrink-0 pt-2">{ig.inputImageLabel}</label>
+              <div className="flex-1 flex flex-col gap-1.5">
+                {block.inputImageSrc && (
+                  <div className="flex items-center gap-2">
+                    {inputImagePreview && (
+                      <img
+                        key={inputImagePreview}
+                        src={inputImagePreview}
+                        alt=""
+                        className="w-14 h-14 object-cover rounded border border-slate-700 shrink-0"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    <span className="text-xs text-slate-400 flex-1 truncate font-mono">{block.inputImageSrc}</span>
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-red-800 text-slate-300 hover:text-white cursor-pointer transition-colors shrink-0"
+                      onClick={() => update({ inputImageSrc: undefined })}
+                    >
+                      {ig.inputImageClear}
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <ImageAssetSelect assets={imageAssetList} label={ig.inputImageFromAsset} onPick={src => update({ inputImageSrc: src })} />
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer shrink-0"
+                    onClick={pickInputFromFile}
+                  >
+                    {block.inputImageSrc ? ig.inputImageReplace : ig.inputImageFromFile}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">{ig.inputImageHint}</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
