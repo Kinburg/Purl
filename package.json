@@ -2,14 +2,23 @@
   "name": "purl",
   "author": "Dmytro Hrubnyk",
   "description": "No-code APP for creating SugarCube 2 stories",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kinburg/Purl.git"
+  },
   "private": true,
   "version": "1.47.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "dist": "npm run build && electron-builder",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
@@ -20,6 +29,11 @@
   "build": {
     "appId": "com.purlapp.app",
     "productName": "Purl",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
     "extraResources": [
       {
         "from": "resources/example-workflows",

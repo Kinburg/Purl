@@ -1,4 +1,6 @@
 #!/bin/sh
-# Run the test suite before every push. Fails the push if any test fails.
+# Local pre-push gate: typecheck + lint + tests. Fails the push if any step fails.
+# (.github/workflows/test.yml re-runs the same gate as the server-side safety net
+# for pushes made with --no-verify or fresh clones where hooks aren't installed.)
 # Bypass in a pinch with: git push --no-verify
-npm test
+npm run typecheck && npm run lint && npm test
