@@ -147,7 +147,7 @@ export function PluginBodyEditor({ blocks, onChange, params, collapsed: collapse
                 block={block}
                 sceneId={PLUGIN_SCENE_ID}
                 collapsed={collapsed.has(block.id)}
-                onToggleCollapse={() => toggleBlock(block.id)}
+                onToggleCollapse={toggleBlock}
                 onUpdate={patch => updateAt(i, patch)}
                 onDelete={() => deleteAt(i)}
                 onDuplicate={() => duplicateAt(i)}

@@ -149,7 +149,10 @@ interface Props {
   block: Block;
   sceneId: string;
   collapsed?: boolean;
-  onToggleCollapse?: () => void;
+  /** Receives the block id so callers can pass a STABLE handler (e.g. a useCallback
+   *  `toggleBlock`) instead of a per-block inline arrow — the latter changes identity
+   *  every render and defeats this component's React.memo for every block. */
+  onToggleCollapse?: (blockId: string) => void;
   /** Override patch handler (used when block lives outside a scene, e.g. plugin body). */
   onUpdate?: (patch: Partial<Block>) => void;
   /** Override delete handler — bypasses projectStore when provided. */
@@ -215,7 +218,7 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
           <button
             className="text-slate-600 hover:text-slate-300 text-sm transition-colors cursor-pointer"
             title={collapsed ? t.block.expand : t.block.collapse}
-            onClick={onToggleCollapse}
+            onClick={() => onToggleCollapse?.(block.id)}
           >
             {collapsed ? '▸' : '▾'}
           </button>

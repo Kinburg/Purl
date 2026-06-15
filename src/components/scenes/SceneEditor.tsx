@@ -272,7 +272,7 @@ export function SceneEditor() {
                         block={block}
                         sceneId={scene.id}
                         collapsed={collapsedBlocks.has(block.id)}
-                        onToggleCollapse={() => toggleBlock(block.id)}
+                        onToggleCollapse={toggleBlock}
                       />
                       <InsertZone
                         sceneId={scene.id}

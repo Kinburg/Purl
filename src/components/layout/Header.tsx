@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useProjectStore } from '../../store/projectStore';
+import { useState, useEffect, memo } from 'react';
+import { useProjectStore, isProjectFile } from '../../store/projectStore';
 import { useEditorStore } from '../../store/editorStore';
 import { usePluginStore } from '../../store/pluginStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
@@ -30,7 +30,7 @@ function truncatePath(p: string, segments = 2): string {
   return '…/' + parts.slice(-segments).join('/');
 }
 
-export function Header() {
+function HeaderImpl() {
   // Selectors instead of destructuring — Header is 958 lines and re-renders on
   // every project change. Most fields are accessed only inside event handlers;
   // pulling them via selectors keeps Header subscribed to exactly what it reads.
@@ -187,6 +187,9 @@ export function Header() {
     try {
       const text   = await fsApi.readFile(filePath);
       const loaded = JSON.parse(text);
+      // Reject a valid-JSON-but-not-a-Project file up front so we never replace the
+      // open project with an empty one recovered from garbage.
+      if (!isProjectFile(loaded)) throw new Error('Not a Purl project file');
       const dir = filePath.replace(/[/\\][^/\\]+$/, '');
       loadProject(loaded, dir);
     } catch {
@@ -988,3 +991,7 @@ function Btn({
     </button>
   );
 }
+
+// memo: Header takes no props, so it only needs to re-render from its own store
+// subscriptions — not every time the App shell re-renders (e.g. on scene edits).
+export const Header = memo(HeaderImpl);
