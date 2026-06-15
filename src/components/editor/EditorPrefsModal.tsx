@@ -10,9 +10,10 @@ import {
   INPUT_CLS,
   ModalField, ModalRow, ModalSection,
 } from '../shared/ModalShell';
-import {
-  type LLMProvider, fetchGeminiModels, classifyModel, type GeminiModelWithTier,
-} from '../../utils/llm';
+import { type LLMProvider, type GeminiModelWithTier } from '../../utils/llm';
+// Import the model-listing helpers directly from the provider (not the llm index)
+// so they don't drag @google/genai into the startup bundle — this modal is lazy.
+import { fetchGeminiModels, classifyModel } from '../../utils/llm/geminiProvider';
 import { fsApi } from '../../lib/fsApi';
 import { toast } from 'sonner';
 
