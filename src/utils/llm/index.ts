@@ -1,17 +1,24 @@
 import type {Project, Scene} from '../../types';
 import type {LLMProvider, LLMProviderImpl, ProviderConfig, GenerationParams, LLMMode} from './types';
-import {koboldcppProvider} from './koboldcppProvider';
-import {geminiProvider} from './geminiProvider';
-import {openaiProvider} from './openaiProvider';
 import {buildTranslatePrompt} from './promptBuilder';
 
-// --- Provider Registry ---
+// --- Provider Registry (lazy) ---
+//
+// Providers are dynamically imported on first use so the heavy @google/genai SDK
+// (the gemini provider's dependency, ~279 KB) is NOT pulled into the startup bundle.
+// utils/llm is statically reachable from the editor entry, so a static provider
+// import would eagerly load the SDK on every launch even when no AI feature is used.
+// The dynamic import defers it to the first generation (the lazy LLM-settings modal
+// imports geminiProvider directly for its model listing).
 
-const providers: Record<LLMProvider, LLMProviderImpl> = {
-    koboldcpp: koboldcppProvider,
-    gemini: geminiProvider,
-    openai: openaiProvider,
-};
+async function getProvider(provider: LLMProvider): Promise<LLMProviderImpl> {
+    switch (provider) {
+        case 'koboldcpp': return (await import('./koboldcppProvider')).koboldcppProvider;
+        case 'gemini':    return (await import('./geminiProvider')).geminiProvider;
+        case 'openai':    return (await import('./openaiProvider')).openaiProvider;
+        default:          throw new Error(`Unknown LLM provider: ${provider}`);
+    }
+}
 
 // --- Main Dispatcher ---
 
@@ -33,8 +40,7 @@ export async function generateText(
     onChunk?: (accumulated: string) => void,
     apiKey?: string
 ): Promise<string> {
-    const impl = providers[provider];
-    if (!impl) throw new Error(`Unknown LLM provider: ${provider}`);
+    const impl = await getProvider(provider);
 
     const config: ProviderConfig = {
         url: urlOrApiKey,
@@ -84,15 +90,14 @@ export async function translateString(
  * Sends a stop/abort request to the specified LLM provider.
  */
 export async function abortGeneration(provider: LLMProvider, genUrl: string) {
-    const impl = providers[provider];
-    if (!impl) return;
+    let impl: LLMProviderImpl;
+    try { impl = await getProvider(provider); } catch { return; }
     await impl.abort({url: genUrl, apiKey: '', model: ''});
 }
 
 // --- Re-exports ---
 
 export type {LLMMode, LLMProvider, GeminiModel, GenerationParams, ProviderConfig} from './types';
-export {fetchGeminiModels, classifyModel} from './geminiProvider';
 export type {GeminiModelWithTier, GeminiModelTier} from './geminiProvider';
 export {filterThought} from './utils';
 export {buildSceneContext, buildTranslatePrompt} from './promptBuilder';
