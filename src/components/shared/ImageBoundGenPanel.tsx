@@ -406,11 +406,11 @@ export function ImageBoundGenPanel({
   // ── generate image ────────────────────────────────────────────────────────
 
   const generateForSlot = async (slotId: string) => {
-    if (!projectDir) return toast.error(ag.errorNoProjectDir);
-    if (imageGenProvider === 'comfyui' && !workflowFile) return toast.error(ag.errorNoWorkflow);
+    if (!projectDir) { toast.error(ag.errorNoProjectDir); return; }
+    if (imageGenProvider === 'comfyui' && !workflowFile) { toast.error(ag.errorNoWorkflow); return; }
     const slot = slots.find(s => s.slotId === slotId);
     if (!slot) return;
-    if (!slot.prompt.trim()) return toast.error(ag.errorNoPrompt);
+    if (!slot.prompt.trim()) { toast.error(ag.errorNoPrompt); return; }
 
     const controller = new AbortController();
     abortRefs.current.set(slotId, controller);
@@ -544,7 +544,7 @@ export function ImageBoundGenPanel({
   // ── approve all ───────────────────────────────────────────────────────────
 
   const approveAll = async () => {
-    if (!projectDir) return toast.error(ag.errorNoProjectDir);
+    if (!projectDir) { toast.error(ag.errorNoProjectDir); return; }
 
     let updatedCell: ImageBoundGenInput = { ...cell };
     const updatedSlots = [...slots];

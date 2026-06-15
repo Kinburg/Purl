@@ -136,7 +136,7 @@ export function VideoGenBlockEditor({
 
   // ── Input image (image mode) ───────────────────────────────────────────────
   const pickInputFromFile = async () => {
-    if (!projectDir) return toast.error(vg.errorNoProjectDir);
+    if (!projectDir) { toast.error(vg.errorNoProjectDir); return; }
     const file = await fsApi.openFileDialog({
       title: vg.inputImageFromFile,
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
@@ -176,7 +176,7 @@ export function VideoGenBlockEditor({
   };
 
   const addKeyframesFromFiles = async () => {
-    if (!projectDir) return toast.error(vg.errorNoProjectDir);
+    if (!projectDir) { toast.error(vg.errorNoProjectDir); return; }
     const files = await fsApi.openFilesDialog({
       title: vg.keyframesAddFiles,
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
@@ -216,7 +216,7 @@ export function VideoGenBlockEditor({
 
   // Replace a keyframe's image in place — keeps its position, prompt and duration.
   const replaceKeyframe = async (index: number) => {
-    if (!projectDir) return toast.error(vg.errorNoProjectDir);
+    if (!projectDir) { toast.error(vg.errorNoProjectDir); return; }
     const file = await fsApi.openFileDialog({
       title: vg.keyframeReplace,
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
@@ -245,10 +245,10 @@ export function VideoGenBlockEditor({
 
   // ── Generate ────────────────────────────────────────────────────────────────
   const generateVideo = async () => {
-    if (!projectDir) return toast.error(vg.errorNoProjectDir);
-    if (!block.workflowFile) return toast.error(vg.errorNoWorkflow);
-    if (mode === 'text' && !block.prompt.trim()) return toast.error(vg.errorNoPrompt);
-    if (mode === 'keyframes' && keyframes.length < 2) return toast.error(vg.errorNeedKeyframes);
+    if (!projectDir) { toast.error(vg.errorNoProjectDir); return; }
+    if (!block.workflowFile) { toast.error(vg.errorNoWorkflow); return; }
+    if (mode === 'text' && !block.prompt.trim()) { toast.error(vg.errorNoPrompt); return; }
+    if (mode === 'keyframes' && keyframes.length < 2) { toast.error(vg.errorNeedKeyframes); return; }
 
     saveSnapshot();
     const controller = new AbortController();
