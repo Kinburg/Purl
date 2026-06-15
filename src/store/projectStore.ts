@@ -1344,8 +1344,37 @@ function migrateTableCellsToBlocks(p: any): any {
   return p;
 }
 
+/**
+ * Structural guard for an untrusted parsed `.purl` file before it is trusted as a
+ * Project. A file can be valid JSON yet structurally wrong (hand-edited, truncated,
+ * or simply the wrong file). We require the load-bearing shape — a plain object with
+ * a `scenes` array; `migrateProject()` backfills everything else. Use this at the
+ * file-open boundary to reject garbage with a clear error instead of silently
+ * replacing the open project. Mirrors `pluginStore.normalizePluginDef`.
+ */
+export function isProjectFile(raw: unknown): raw is Project {
+  return !!raw && typeof raw === 'object' && !Array.isArray(raw)
+    && Array.isArray((raw as { scenes?: unknown }).scenes);
+}
+
 function migrateProject(raw: any): Project {
-  let p = { ...raw };
+  // Defensive coercion: a corrupt/hand-edited file or stale localStorage may be valid
+  // JSON but structurally wrong. Coerce the load-bearing collections to safe defaults
+  // so the migrate*/map pipeline below can't throw deep with a confusing stack. This
+  // keeps onRehydrateStorage (app boot) robust; the Header open flow additionally
+  // rejects non-Project files up front via isProjectFile(). Note: variableNodes /
+  // assetNodes are intentionally NOT defaulted here — the legacy `variables`→
+  // `variableNodes` rename below keys on their absence.
+  const src = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  let p: any = { ...src };
+  if (!Array.isArray(p.scenes)) p.scenes = [];
+  if (!Array.isArray(p.characters)) p.characters = [];
+  if (!Array.isArray(p.sceneGroups)) p.sceneGroups = [];
+  if (!Array.isArray(p.items)) p.items = [];
+  if (!Array.isArray(p.containers)) p.containers = [];
+  if (!Array.isArray(p.watchers)) p.watchers = [];
+  if (p.settings == null || typeof p.settings !== 'object') p.settings = {};
+  if (typeof p.title !== 'string') p.title = 'Untitled';
 
   // variables: Variable[] → variableNodes: VariableTreeNode[]
   if ('variables' in p && !('variableNodes' in p)) {
@@ -3302,7 +3331,14 @@ export const useProjectStore = create<ProjectState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.project) {
-          state.project = migrateProject(state.project);
+          // Belt-and-braces: migrateProject coerces rather than throws, but a sub-migration
+          // could still choke on genuinely malformed persisted data — never let that brick boot.
+          try {
+            state.project = migrateProject(state.project);
+          } catch (e) {
+            console.error('[projectStore] rehydrate migration failed, resetting project:', e);
+            state.project = makeDefaultProject();
+          }
         }
         // Migrate retired sidebar tabs (the 🗂️ panel tab was removed when sidebar-as-scene shipped)
         if (state && (state.activeSidebarTab as string) === 'panel') {
