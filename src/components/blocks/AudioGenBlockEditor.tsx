@@ -425,10 +425,10 @@ export function AudioGenBlockEditor({
   };
 
   const generateAudio = async () => {
-    if (!projectDir) return toast.error(ig.errorNoProjectDir);
-    if (!block.workflowFile) return toast.error(ig.errorNoWorkflow);
+    if (!projectDir) { toast.error(ig.errorNoProjectDir); return; }
+    if (!block.workflowFile) { toast.error(ig.errorNoWorkflow); return; }
     const hasContent = (block.stylePrompt ?? '').trim() || (block.lyrics ?? '').trim();
-    if (!hasContent) return toast.error(ig.errorNoPrompt);
+    if (!hasContent) { toast.error(ig.errorNoPrompt); return; }
 
     saveSnapshot();
     const controller = new AbortController();

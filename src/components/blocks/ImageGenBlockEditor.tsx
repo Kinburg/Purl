@@ -195,7 +195,7 @@ export function ImageGenBlockEditor({
     : '';
 
   const pickInputFromFile = async () => {
-    if (!projectDir) return toast.error(ig.errorNoProjectDir);
+    if (!projectDir) { toast.error(ig.errorNoProjectDir); return; }
     const file = await fsApi.openFileDialog({
       title: ig.inputImageFromFile,
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
@@ -245,9 +245,9 @@ export function ImageGenBlockEditor({
   };
 
   const generateImage = async () => {
-    if (!projectDir) return toast.error(ig.errorNoProjectDir);
-    if (imageGenProvider === 'comfyui' && !block.workflowFile) return toast.error(ig.errorNoWorkflow);
-    if (!block.prompt.trim()) return toast.error(ig.errorNoPrompt);
+    if (!projectDir) { toast.error(ig.errorNoProjectDir); return; }
+    if (imageGenProvider === 'comfyui' && !block.workflowFile) { toast.error(ig.errorNoWorkflow); return; }
+    if (!block.prompt.trim()) { toast.error(ig.errorNoPrompt); return; }
 
     saveSnapshot();
     const controller = new AbortController();
