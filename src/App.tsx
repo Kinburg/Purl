@@ -31,8 +31,14 @@ export default function App() {
   // every keystroke. Action references are stable, project is split per-field.
   const fixVariableNames = useProjectStore(s => s.fixVariableNames);
   const projectDir       = useProjectStore(s => s.projectDir);
-  const project          = useProjectStore(s => s.project);
   const setProjectDir    = useProjectStore(s => s.setProjectDir);
+  // Subscribe ONLY to the style-relevant slices, not the whole `project` object.
+  // The full-object subscription re-rendered the shell on every commit — including
+  // variable / watcher / asset / item edits that don't affect the shell at all.
+  // Handlers read the full project non-reactively via useProjectStore.getState().
+  const characters = useProjectStore(s => s.project.characters);
+  const scenes     = useProjectStore(s => s.project.scenes);
+  const settings   = useProjectStore(s => s.project.settings);
 
   const projectSettingsOpen    = useEditorStore(s => s.projectSettingsOpen);
   const setProjectSettingsOpen = useEditorStore(s => s.setProjectSettingsOpen);
@@ -73,15 +79,14 @@ export default function App() {
   // when typing into a TextBlock) was visibly laggy. 300ms feels live but cuts
   // recomputes by ~10×.
   const cssSnapshot = useMemo(
-    () => ({ characters: project.characters, scenes: project.scenes, settings: project.settings }),
-    [project.characters, project.scenes, project.settings],
+    () => ({ characters, scenes, settings }),
+    [characters, scenes, settings],
   );
   const debouncedCssSnapshot = useDebouncedValue(cssSnapshot, 300);
   useEffect(() => {
-    injectPreviewCSS({ ...project, ...debouncedCssSnapshot });
-    // project intentionally not in deps — we only react to the debounced parts;
-    // the full project object is only used to merge non-style fields for the call.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Merge the debounced style slices over the current full project, read
+    // non-reactively — we only want to recompute when the debounced parts change.
+    injectPreviewCSS({ ...useProjectStore.getState().project, ...debouncedCssSnapshot });
   }, [debouncedCssSnapshot]);
 
   // Show project settings modal on first launch (no folder selected = brand new session)
@@ -103,6 +108,7 @@ export default function App() {
 
   async function handleSaveAndExit() {
     setSavingOnExit(true);
+    const project = useProjectStore.getState().project;
     try {
       let dir = projectDir;
       if (!dir) {

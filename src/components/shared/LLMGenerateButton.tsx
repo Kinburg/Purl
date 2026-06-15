@@ -9,6 +9,10 @@ import { useT } from '../../i18n';
 
 const MAX_PROJECT_HISTORY = 10;
 
+// Stable empty-array reference so the project-history selector never returns a fresh
+// `[]` (which would re-render every LLMGenerateButton on any commit).
+const EMPTY_HISTORY: GenerationHistoryEntry[] = [];
+
 interface Props {
   sceneId: string;
   blockId: string;
@@ -20,23 +24,21 @@ interface Props {
 export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated, onStreaming }: Props) {
   const t = useT();
   const llmT = t.llmGenerateButton;
-  const {
-    llmEnabled,
-    llmProvider,
-    llmUrl,
-    llmGeminiApiKey,
-    llmGeminiModel,
-    llmOpenaiUrl,
-    llmOpenaiApiKey,
-    llmOpenaiModel,
-    llmMaxTokens,
-    llmTemperature,
-    llmSystemPrompt,
-    llmFilterThought,
-    llmGenerationHistory,
-  } = useEditorPrefsStore();
-  const project      = useProjectStore(s => s.project);
-  const storyLanguage = project.settings.storyLanguage || 'English';
+  // Subscribe ONLY to render-affecting state. Connection/model params and the full
+  // project are read non-reactively via getState() inside the handlers — otherwise
+  // this button (mounted in EVERY text/dialogue/callout/note block) re-rendered on
+  // every keystroke anywhere, since it used to subscribe to the whole project AND
+  // the whole prefs store.
+  const llmEnabled           = useEditorPrefsStore(s => s.llmEnabled);
+  const llmGenerationHistory = useEditorPrefsStore(s => s.llmGenerationHistory);
+  const storyLanguage = useProjectStore(s => s.project.settings.storyLanguage) || 'English';
+  // Only THIS block's stored history affects render (project-history mode); select it
+  // narrowly with a stable empty fallback so other blocks' edits don't re-render us.
+  const blockHistory = useProjectStore(s => {
+    const sc = s.project.scenes.find(x => x.id === sceneId);
+    const b = sc?.blocks.find(x => x.id === blockId) as { generationHistory?: GenerationHistoryEntry[] } | undefined;
+    return b?.generationHistory ?? EMPTY_HISTORY;
+  });
   const saveSnapshot = useProjectStore(s => s.saveSnapshot);
   const updateBlock  = useProjectStore(s => s.updateBlock);
   const memHistory = useGenerationHistoryStore();
@@ -51,7 +53,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
   const entries = llmGenerationHistory === 'memory'
     ? memHistory.getEntries(blockId)
     : llmGenerationHistory === 'project'
-      ? getProjectHistory(project, sceneId, blockId)
+      ? blockHistory
       : [];
   const histIndex = llmGenerationHistory === 'memory'
     ? memHistory.getIndex(blockId)
@@ -73,6 +75,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
+      const { llmProvider, llmUrl } = useEditorPrefsStore.getState();
       abortGeneration(llmProvider, llmUrl);
       setLoading(null);
       toast.info(llmT.generationStopped);
@@ -89,7 +92,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
       setPos({ top: rect.bottom + 2, left: Math.max(4, left) });
     }
     setOpen(true);
-  }, [open, loading, llmUrl, llmProvider]);
+  }, [open, loading]);
 
   useEffect(() => {
     if (!open) return;
@@ -133,6 +136,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
     if (llmGenerationHistory === 'memory') {
       memHistory.addEntry(blockId, entry);
     } else if (llmGenerationHistory === 'project') {
+      const project = useProjectStore.getState().project;
       const scene = project.scenes.find(s => s.id === sceneId);
       const block = scene?.blocks.find(b => b.id === blockId);
       if (block && (block.type === 'text' || block.type === 'dialogue' || block.type === 'callout' || block.type === 'note')) {
@@ -165,6 +169,12 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
   };
 
   const handleGenerate = async (mode: LLMMode) => {
+    const project = useProjectStore.getState().project;
+    const {
+      llmProvider, llmUrl, llmGeminiApiKey, llmGeminiModel, llmOpenaiUrl,
+      llmOpenaiApiKey, llmOpenaiModel, llmMaxTokens, llmTemperature,
+      llmSystemPrompt, llmFilterThought,
+    } = useEditorPrefsStore.getState();
     const scene = project.scenes.find(s => s.id === sceneId);
     if (!scene) return;
 
@@ -318,14 +328,6 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
       )}
     </>
   );
-}
-
-// --- Helper: read project-stored history ---
-
-function getProjectHistory(project: any, sceneId: string, blockId: string): GenerationHistoryEntry[] {
-  const scene = project.scenes?.find((s: any) => s.id === sceneId);
-  const block = scene?.blocks?.find((b: any) => b.id === blockId);
-  return block?.generationHistory ?? [];
 }
 
 // --- Sub-components ---

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useRef, memo, type ReactNode } from 'react';
 import { Group, Panel, Separator, type Layout } from 'react-resizable-panels';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import type { PanelLayout } from '../../store/editorPrefsStore';
@@ -64,7 +64,7 @@ function SidebarResizeHandle() {
   );
 }
 
-export function WorkspaceLayout() {
+function WorkspaceLayoutImpl() {
   const panelLayout    = useEditorPrefsStore(s => s.panelLayout);
   const setPanelLayout = useEditorPrefsStore(s => s.setPanelLayout);
 
@@ -199,3 +199,7 @@ export function WorkspaceLayout() {
     </div>
   );
 }
+
+// memo: WorkspaceLayout takes no props — re-render only from its own store
+// subscriptions, not on every App-shell re-render.
+export const WorkspaceLayout = memo(WorkspaceLayoutImpl);
