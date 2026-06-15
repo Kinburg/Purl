@@ -3,7 +3,7 @@ import { START_TAG } from '../types';
 import { flattenVariables, hasLeafVariables } from './treeUtils';
 import type { PassageContext } from './exportToTwee';
 import { blockToSC, buildCellSharedCSS, buildTabsBlockCSS, buildSectionCSS, buildCalloutCSS, buildDisplayObjectCSS, buildTabsBlockScript, buildTooltipCSS, buildLightboxScript, buildInputScript, buildLiveScript, buildWatcherScript, buildQuestScript, buildQuestShowCSS, buildPurlSignatureScript, defaultValueLiteral, buildObjectLiteral, buildAudioCacheLines, buildAudioScript, buildInventoryScript, buildInventoryCSS, buildContainerScript, buildContainerCSS, buildDateTimeScript, buildPaperdollScript, buildPaperdollCSS, setPluginRegistry, exportSceneBg, buildSceneBgScript, hasScenesWithBg, buildSidebarSystemConfigOutput, buildTitleSystemConfigCSS, buildPassageLifecycleScript, buildSavesConfigScript, hasAudioVolumeCell } from './exportToTwee';
-import { collectPluginIds, expandPluginDeps } from './pluginUtils';
+import { buildPluginPassageBodies } from './exportToTwee';
 import { buildAllDialogueCss, buildStyleBindScript, hasStyleBindings, buildButtonsCascadeCss, buildSimpleBlocksCascadeCss, buildBlockTypesCSS, buildPopupClassSyncScript } from './styleCascade';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,7 +70,6 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   scriptContent: string;
 } {
   setPluginRegistry(plugins);
-  const pluginById = new Map(plugins.map((p) => [p.id, p]));
   const variables = flattenVariables(project.variableNodes);
   const { scenes, characters } = project;
   const idToName = new Map(scenes.map(s => [s.id, s.name]));
@@ -216,26 +215,17 @@ export function buildPassages(project: Project, plugins: PluginBlockDef[] = []):
   });
 
   // Hidden plugin passages ─ ref'd by scene plugin-blocks via <<include "__plug_id">>.
-  {
-    const rootIds = new Set<string>();
-    for (const scene of scenes) collectPluginIds(scene.blocks, rootIds);
-    const allIds = expandPluginDeps(rootIds, (id) => pluginById.get(id));
-    for (const id of allIds) {
-      const def = pluginById.get(id);
-      if (!def) continue;
-      const body = def.blocks
-        .map((b) => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
-        .filter(Boolean)
-        .join('\n');
-      passages.push({
-        pid: pid++,
-        name: `__plug_${def.id}`,
-        tags: 'nobr',
-        content: body,
-        x: colW * 7,
-        y: 100 + rowH * passages.length,
-      });
-    }
+  // Shared with exportToTwee via buildPluginPassageBodies — this path previously
+  // skipped rewriteParamRefs, breaking plugin blocks that reference params.
+  for (const { id, body } of buildPluginPassageBodies(scenes, characters, variables, variableNodes, idToName, project)) {
+    passages.push({
+      pid: pid++,
+      name: `__plug_${id}`,
+      tags: 'nobr',
+      content: body,
+      x: colW * 7,
+      y: 100 + rowH * passages.length,
+    });
   }
 
   const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
