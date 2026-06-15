@@ -119,6 +119,32 @@ function htmlAttr(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
+/**
+ * Quote a user string as a JS / TwineScript string literal — double-quoted with
+ * embedded `"`, `\`, newlines, etc. escaped (delegates to JSON.stringify).
+ *
+ * Use this everywhere a raw `` `"${val}"` `` would otherwise interpolate
+ * user-controlled text into a quoted string that SugarCube evaluates as JS:
+ * `<<if>>` / `<<set>>` / `<<run>>` expressions, `.includes()`/`.push()` calls,
+ * and macro string args (`<<link>>`, `<<option>>`, `<<radiobutton>>`, …). Without
+ * it a value containing a quote, backslash, or `</script>` breaks the generated
+ * `.twee`/HTML or silently mis-parses the macro at runtime. The returned string
+ * INCLUDES its surrounding quotes, so substitute it where the quotes used to be.
+ */
+function scStr(s: string | undefined | null): string {
+  return JSON.stringify(s ?? '');
+}
+
+/**
+ * Compile-time exhaustiveness guard. In the `default:` branch of an exhaustive
+ * `switch (block.type)`, TypeScript narrows the value to `never`; adding a new
+ * Block variant that isn't handled makes this a compile error instead of the
+ * switch silently falling through and exporting the literal string `undefined`.
+ */
+function assertNever(x: never): never {
+  throw new Error(`Unhandled variant in export: ${JSON.stringify(x)}`);
+}
+
 /** Build the SugarCube variable reference string including array accessor. */
 function varRefWithAccessor(path: string, accessor: ArrayAccessor | undefined, vars: Variable[], nodes: VariableTreeNode[]): string {
   if (!accessor || accessor.kind === 'whole') return `$${path}`;
@@ -156,7 +182,7 @@ function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: Variabl
     const varName  = `_${paramKey}`;
     let val = opt.conditionValue ?? '';
     if (val && !val.startsWith('$') && !val.startsWith('_') && isNaN(Number(val)) && val !== 'true' && val !== 'false') {
-      val = `"${val}"`;
+      val = scStr(val);
     }
     return `${varName} ${opt.conditionOperator} ${val}`;
   }
@@ -177,8 +203,8 @@ function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: Variabl
 
   if (v.varType === 'array') {
     switch (op) {
-      case 'contains':  return `${varName}.includes("${val}")`;
-      case '!contains': return `!${varName}.includes("${val}")`;
+      case 'contains':  return `${varName}.includes(${scStr(val)})`;
+      case '!contains': return `!${varName}.includes(${scStr(val)})`;
       case 'empty':     return `${varName}.length === 0`;
       case '!empty':    return `${varName}.length > 0`;
       default: return `${varName} ${op} ${val}`;
@@ -186,7 +212,7 @@ function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: Variabl
   }
 
   let quotedVal = val;
-  if (v.varType === 'string' || v.varType === 'datetime') quotedVal = `"${val}"`;
+  if (v.varType === 'string' || v.varType === 'datetime') quotedVal = scStr(val);
   return `${varName} ${op} ${quotedVal}`;
 }
 
@@ -195,7 +221,7 @@ function actionToSC(a: ButtonAction, vars: Variable[], nodes: VariableTreeNode[]
   if (a.type === 'open-popup') {
     const target = sceneTarget(a.targetSceneId ?? '', idToName);
     const title = a.title ?? '';
-    return `${lineIndent}<<run Dialog.setup("${title}"); Dialog.wiki(Story.get(${target}).processText()); Dialog.open();>>`;
+    return `${lineIndent}<<run Dialog.setup(${scStr(title)}); Dialog.wiki(Story.get(${target}).processText()); Dialog.open();>>`;
   }
   const v = vars.find(x => x.id === a.variableId);
   if (!v) return '';
@@ -205,18 +231,18 @@ function actionToSC(a: ButtonAction, vars: Variable[], nodes: VariableTreeNode[]
     const accessorKind = a.accessor?.kind ?? 'whole';
     if (accessorKind === 'index') {
       const ref = varRefWithAccessor(path, a.accessor, vars, nodes);
-      return `${lineIndent}<<set ${ref} to "${a.value}">>`;
+      return `${lineIndent}<<set ${ref} to ${scStr(a.value)}>>`;
     }
     switch (a.operator) {
-      case 'push':   return `${lineIndent}<<run $${path}.push("${a.value}")>>`;
-      case 'remove': return `${lineIndent}<<run $${path}.deleteWith(function(x){return x==="${a.value}";})>>`;
+      case 'push':   return `${lineIndent}<<run $${path}.push(${scStr(a.value)})>>`;
+      case 'remove': return `${lineIndent}<<run $${path}.deleteWith(function(x){return x===${scStr(a.value)};})>>`;
       case 'clear':  return `${lineIndent}<<set $${path} to []>>`;
       default:       return `${lineIndent}<<set $${path} to ${a.value}>>`;
     }
   }
 
   let val = a.value;
-  if (v.varType === 'string' || v.varType === 'datetime') val = `"${val}"`;
+  if (v.varType === 'string' || v.varType === 'datetime') val = scStr(val);
   if (a.operator === '=') return `${lineIndent}<<set $${path} to ${val}>>`;
   return `${lineIndent}<<set $${path} ${a.operator} ${val}>>`;
 }
@@ -356,7 +382,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
             const hi = m.rangeMax ?? '0';
             cond = `${vname} >= ${lo} && ${vname} <= ${hi}`;
           } else {
-            const val = boundVar?.varType === 'string' ? `"${m.value}"` : m.value;
+            const val = boundVar?.varType === 'string' ? scStr(m.value) : m.value;
             cond = `${vname} eq ${val}`;
           }
           return `${kw} ${cond}>>${imgTag(m.src)}`;
@@ -404,7 +430,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         const cond = choiceConditionExpr(opt, vars, nodes) || opt.condition.trim();
         const raw = opt.targetSceneId || '';
         const target = raw ? sceneTarget(raw, idToName) : '"Start"';
-        const link = `<<link "${opt.label}" ${target}>><</link>>`;
+        const link = `<<link ${scStr(opt.label)} ${target}>><</link>>`;
         if (cond) return `${indent}  <<if ${cond}>>${link}<</if>>`;
         return `${indent}  ${link}`;
       });
@@ -467,11 +493,11 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         const accessorKind = block.accessor?.kind ?? 'whole';
         if (accessorKind === 'index') {
           const ref = varRefWithAccessor(path, block.accessor, vars, nodes);
-          return `${indent}<<set ${ref} to "${block.value}">>`;
+          return `${indent}<<set ${ref} to ${scStr(block.value)}>>`;
         }
         switch (block.operator) {
-          case 'push':   return `${indent}<<run $${path}.push("${block.value}")>>`;
-          case 'remove': return `${indent}<<run $${path}.deleteWith(function(x){return x==="${block.value}";})>>`;
+          case 'push':   return `${indent}<<run $${path}.push(${scStr(block.value)})>>`;
+          case 'remove': return `${indent}<<run $${path}.deleteWith(function(x){return x===${scStr(block.value)};})>>`;
           case 'clear':  return `${indent}<<set $${path} to []>>`;
           case '=':      return `${indent}<<set $${path} to ${block.value}>>`;
           default:       return `${indent}<<set $${path} to ${block.value}>>`;
@@ -499,14 +525,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
           if (mt === 'range') {
             cond = `${cvName} >= ${m.rangeMin ?? '0'} && ${cvName} <= ${m.rangeMax ?? '0'}`;
           } else {
-            const val = cv?.varType === 'string' ? `"${m.value}"` : m.value;
+            const val = cv?.varType === 'string' ? scStr(m.value) : m.value;
             cond = `${cvName} eq ${val}`;
           }
-          return `${indent}${kw} ${cond}>><<set $${path} to "${m.result}">>`;
+          return `${indent}${kw} ${cond}>><<set $${path} to ${scStr(m.result)}>>`;
         });
 
         if (block.dynamicDefault !== undefined) {
-          cases.push(`${indent}<<else>><<set $${path} to "${block.dynamicDefault}">>`);
+          cases.push(`${indent}<<else>><<set $${path} to ${scStr(block.dynamicDefault)}>>`);
         }
         cases.push(`${indent}<</if>>`);
         return cases.join('\n');
@@ -534,7 +560,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
 
       // ── Manual value ────────────────────────────────────────────────────────
       let val = block.value;
-      if (v.varType === 'string' || v.varType === 'datetime') val = `"${val}"`;
+      if (v.varType === 'string' || v.varType === 'datetime') val = scStr(val);
       if (block.operator === '=') return `${indent}<<set $${path} to ${val}>>`;
       return `${indent}<<set $${path} ${block.operator} ${val}>>`;
     }
@@ -565,7 +591,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
           if (mt === 'range') {
             cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
           } else {
-            const val = bv?.varType === 'string' ? `"${m.value}"` : m.value;
+            const val = bv?.varType === 'string' ? scStr(m.value) : m.value;
             cond = `${vname} eq ${val}`;
           }
           return `${indent}${kw} ${cond}>>${imgTag(m.src)}`;
@@ -605,7 +631,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
           if (mt === 'range') {
             cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
           } else {
-            const val = bv?.varType === 'string' ? `"${m.value}"` : m.value;
+            const val = bv?.varType === 'string' ? scStr(m.value) : m.value;
             cond = `${vname} eq ${val}`;
           }
           return `${indent}${kw} ${cond}>>${imgTag(m.src)}`;
@@ -746,7 +772,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       if (block.options.length === 0) return '';
       const v = vars.find(x => x.id === block.variableId);
       const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      const opts = block.options.map(o => `<<option "${o.label}" "${o.value}">>`).join('');
+      const opts = block.options.map(o => `<<option ${scStr(o.label)} ${scStr(o.value)}>>`).join('');
       const listbox = `<<listbox "${vname}" autoselect>>${opts}<</listbox>>`;
       const label = block.label ? `${block.label} ` : '';
       return `${indent}<span class="tg-select">${label}${listbox}</span>`;
@@ -928,8 +954,8 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
     case 'inventory': {
       const char = chars.find(ch => ch.id === block.charId);
       if (!char?.varName) return '';
-      const title = (block.title ?? '').replace(/"/g, '\\"');
-      return `${indent}<<tgInventory "${char.varName}"${title ? ` "${title}"` : ''}>>`;
+      const title = block.title ?? '';
+      return `${indent}<<tgInventory "${char.varName}"${title ? ` ${scStr(title)}` : ''}>>`;
     }
 
     case 'button': {
@@ -955,7 +981,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       return (
         spotPrefix +
         `${indent}<span class="${classAttr}"${bindAttr}>` +
-        `<<link "${block.label}">>\n` +
+        `<<link ${scStr(block.label)}>>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
@@ -992,12 +1018,12 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
           .map(a => actionToSC(a, vars, nodes, '', idToName).trim())
           .filter(Boolean)
           .join('');
-        return `${indent}<<link "${block.label}">>${inlineActions}${targetActions.join('')}<</link>>`;
+        return `${indent}<<link ${scStr(block.label)}>>${inlineActions}${targetActions.join('')}<</link>>`;
       }
       actionLines.push(...targetActions.map(a => `${indent}  ${a}`));
       return (
         spotPrefix +
-        `${indent}<span class="${classAttr}"${bindAttr}><<link "${block.label}">>\n` +
+        `${indent}<span class="${classAttr}"${bindAttr}><<link ${scStr(block.label)}>>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
@@ -1027,7 +1053,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         }
         // 'none': nav stays empty — actions only
       }
-      return `${indent}<<link "${block.label}">>${inlineActions}${nav}<</link>>`;
+      return `${indent}<<link ${scStr(block.label)}>>${inlineActions}${nav}<</link>>`;
     }
 
     case 'function': {
@@ -1050,7 +1076,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       actionLines.push(`${indent}  <<run UIBar.update()>>`);
       return (
         spotPrefix +
-        `${indent}<span class="${classAttr}"${bindAttr}><<link "${block.label}">>\n` +
+        `${indent}<span class="${classAttr}"${bindAttr}><<link ${scStr(block.label)}>>\n` +
         actionLines.join('\n') + '\n' +
         `${indent}<</link>></span>`
       );
@@ -1081,14 +1107,14 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         lines.push(`${indent}<span id="${uid}">${inputLines.join('<br>')}</span>`);
         const handlers = cb.options.map((opt, i) => {
           const optId = `${uid}_${i}`;
-          const val = (opt.value ?? '').replace(/"/g, '\\"');
+          const val = scStr(opt.value ?? '');
           return (
             `var e${i}=document.getElementById('${optId}');` +
             `if(e${i}){` +
-            `e${i}.checked=State.variables.${arrPath}.includes("${val}");` +
+            `e${i}.checked=State.variables.${arrPath}.includes(${val});` +
             `e${i}.addEventListener('change',function(){` +
-            `if(this.checked){State.variables.${arrPath}.push("${val}");}` +
-            `else{State.variables.${arrPath}.deleteWith(function(x){return x==="${val}";});}});}`
+            `if(this.checked){State.variables.${arrPath}.push(${val});}` +
+            `else{State.variables.${arrPath}.deleteWith(function(x){return x===${val};});}});}`
           );
         }).join('');
         lines.push(`${indent}<<script>>setTimeout(function(){${handlers}},0);<</script>>`);
@@ -1111,7 +1137,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const lines: string[] = [];
       if (rb.label) lines.push(`${indent}${rb.label}`);
       for (const opt of rb.options) {
-        lines.push(`${indent}<<radiobutton "${vname}" "${opt.value}" autocheck>> ${opt.label}`);
+        lines.push(`${indent}<<radiobutton "${vname}" ${scStr(opt.value)} autocheck>> ${opt.label}`);
       }
       const rbSettings = project?.settings;
       const rbExtra = rbSettings ? simpleBlockCascadeClasses(rb, rbSettings) : [];
@@ -1133,7 +1159,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const classArg = dlgClasses ? `, "${dlgClasses}"` : '';
       const spotStyle = buildSimpleBlockSpotStyleBlock(block);
       const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      return `${spotPrefix}${indent}<<run Dialog.setup("${title}"${classArg}); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
+      return `${spotPrefix}${indent}<<run Dialog.setup(${scStr(title)}${classArg}); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
     }
 
     case 'audio': {
@@ -1176,7 +1202,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       const hero = chars.find(c => c.isHero);
       if (!hero) return `${indent}/* Container block: no main hero defined — set one in Characters tab */`;
       const heroVarName = hero.varName || hero.name.toLowerCase().replace(/\s+/g, '_');
-      const titleArg = cb.title ? ` "${cb.title.replace(/"/g, '\\"')}"` : '';
+      const titleArg = cb.title ? ` ${scStr(cb.title)}` : '';
       return `${indent}<<tgContainer "${container.varName}" "${heroVarName}"${titleArg}>>`;
     }
 
@@ -1224,7 +1250,7 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
       // runtime active-class JS can find them. Click sets ctrl var + Engine.show()
       // (re-renders main passage and triggers UIBar.update() automatically).
       const buttons = block.tabs.map((tab, i) =>
-        `<span data-idx="${i}"><<link "${tab.label.replace(/"/g, '\\"')}">><<set ${ctrlVar} to ${i}>><<run Engine.show()>><</link>></span>`
+        `<span data-idx="${i}"><<link ${scStr(tab.label)}>><<set ${ctrlVar} to ${i}>><<run Engine.show()>><</link>></span>`
       ).join('');
       const tabBar = `${indent}<div class="${barClass}" data-ctrl="${ctrlInfo.path}">${buttons}</div>`;
       // Lazy init: if ctrl var is undefined when first rendered, set it to defaultIdx.
@@ -1250,6 +1276,8 @@ function blockToSCInner(block: Block, chars: Character[], vars: Variable[], node
         .join('');
       return `${indent}${setters}<<include "__plug_${def.id}">>`;
     }
+    default:
+      return assertNever(block);
   }
 }
 
@@ -1292,7 +1320,7 @@ function branchToSC(
     // We don't know the param's runtime type here, so quote the value only
     // when it isn't already a SC expression ($...) or temp-var (_...).
     if (!val.startsWith('$') && !val.startsWith('_') && isNaN(Number(val)) && val !== 'true' && val !== 'false') {
-      val = `"${val}"`;
+      val = scStr(val);
     }
     const expr = `${varName} ${branch.operator} ${val}`;
     if (branch.branchType === 'if' || isFirst) {
@@ -1315,8 +1343,8 @@ function branchToSC(
     expr = `${ref} >= ${lo} && ${ref} <= ${hi}`;
   } else if (v?.varType === 'array' && accessorKind === 'whole') {
     switch (branch.operator) {
-      case 'contains':  expr = `${varName}.includes("${branch.value}")`; break;
-      case '!contains': expr = `!${varName}.includes("${branch.value}")`; break;
+      case 'contains':  expr = `${varName}.includes(${scStr(branch.value)})`; break;
+      case '!contains': expr = `!${varName}.includes(${scStr(branch.value)})`; break;
       case 'empty':     expr = `${varName}.length === 0`; break;
       case '!empty':    expr = `${varName}.length > 0`; break;
       default: {
@@ -1326,7 +1354,7 @@ function branchToSC(
     }
   } else if (v?.varType === 'array' && accessorKind === 'index') {
     const ref = varRefWithAccessor(vPath, acc, vars, nodes);
-    expr = `${ref} ${branch.operator} "${branch.value}"`;
+    expr = `${ref} ${branch.operator} ${scStr(branch.value)}`;
   } else if (v?.varType === 'array' && accessorKind === 'length') {
     expr = `${varName}.length ${branch.operator} ${branch.value}`;
   } else {
@@ -1339,7 +1367,7 @@ function branchToSC(
     const looksLikeRef = /^[_$][A-Za-z_$][\w$.]*$/.test(val);
     const looksLikeLiteral = /^-?\d+(\.\d+)?$/.test(val) || val === 'true' || val === 'false';
     if ((v?.varType === 'string' || v?.varType === 'datetime') && !looksLikeRef && !looksLikeLiteral) {
-      val = `"${val}"`;
+      val = scStr(val);
     }
     expr = `${varName} ${branch.operator} ${val}`;
   }
@@ -2263,7 +2291,7 @@ function actionToJS(a: ButtonAction, vars: Variable[], nodes: VariableTreeNode[]
   if (a.type === 'open-popup') {
     const target = sceneTarget(a.targetSceneId ?? '', idToName);
     const title = a.title ?? '';
-    return `Dialog.setup("${title}"); Dialog.wiki(Story.get(${target}).processText()); Dialog.open();`;
+    return `Dialog.setup(${scStr(title)}); Dialog.wiki(Story.get(${target}).processText()); Dialog.open();`;
   }
   const v = vars.find(x => x.id === a.variableId);
   if (!v) return '';
@@ -2498,15 +2526,6 @@ export function buildInputScript(scenes: Scene[]): string {
     '  };',
     '})());',
   ].join('\n');
-}
-
-// ─── Animation CSS ────────────────────────────────────────────────────────────
-// Animations use CSS transitions triggered via inline JS (setTimeout 16ms) rather than
-// CSS @keyframes, which are unreliable on elements inserted by SugarCube's <<timed>> macro.
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function buildAnimationCSS(_scenes: Scene[]): string {
-  return '';
 }
 
 // ─── Tooltip CSS ──────────────────────────────────────────────────────────────
@@ -2775,6 +2794,49 @@ function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): s
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
+/**
+ * Build the body markup for every plugin passage (`__plug_<id>`) referenced by the
+ * scenes (and recursively by other plugins), with plugin-param refs scoped to temp
+ * vars (`$__tgParam__key` → `_key`, `State.variables.__tgParam__key` → State.temporary).
+ *
+ * Shared by exportToTwee() and exportToHtml.buildPassages() so the virtual-param-node
+ * + rewriteParamRefs logic can't drift between the two exporters. (It previously did:
+ * the HTML/Play path skipped rewriteParamRefs entirely, so plugin blocks referencing a
+ * param exported broken `$__tgParam__…` references in standalone HTML and the Play
+ * preview.) Requires setPluginRegistry() to have been called first.
+ */
+export function buildPluginPassageBodies(
+  scenes: Scene[],
+  characters: Character[],
+  variables: Variable[],
+  variableNodes: VariableTreeNode[],
+  idToName: Map<string, string> | undefined,
+  project: Project,
+): Array<{ id: string; body: string }> {
+  const rootPluginIds = new Set<string>();
+  for (const scene of scenes) collectPluginIds(scene.blocks, rootPluginIds);
+  const allPluginIds = expandPluginDeps(rootPluginIds, getPluginDef);
+  const out: Array<{ id: string; body: string }> = [];
+  for (const id of allPluginIds) {
+    const def = getPluginDef(id);
+    if (!def) continue;
+    // Virtual variable/group nodes (marker-named) let blockToSC resolve `param:<key>`
+    // ids; the marker paths are then rewritten to temp-var form by rewriteParamRefs.
+    const virtualParamNodes: VariableTreeNode[] = paramsToVirtualNodes(
+      def.params, variableNodes, /* useMarkerNames */ true,
+    );
+    const paramVars: Variable[] = flattenVariables(virtualParamNodes);
+    const mergedVars: Variable[] = [...variables, ...paramVars];
+    const mergedNodes: VariableTreeNode[] = [...variableNodes, ...virtualParamNodes];
+    const body = def.blocks
+      .map((b) => blockToSC(b, characters, mergedVars, mergedNodes, '', idToName, project))
+      .filter(Boolean)
+      .join('\n');
+    out.push({ id: def.id, body: rewriteParamRefs(body) || '' });
+  }
+  return out;
+}
+
 export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): string {
   setPluginRegistry(plugins);
   const variableNodes = project.variableNodes;
@@ -2891,12 +2953,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   const questCSS     = buildQuestShowCSS(scenes);     // Show Quests block
   const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
   const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
-  const animCSS      = buildAnimationCSS(scenes);
   const tipCSS       = buildTooltipCSS();
   const containerCSS = buildContainerCSS();
   const paperdollCSS = buildPaperdollCSS(project);
   const inventoryCSS = buildInventoryCSS(project);
-  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, questCSS, buttonCSS, simpleCSS, animCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
+  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, questCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
   const userCSS      = (project.customCss ?? '').trim();
   const allCSS       = userCSS
     ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
@@ -2998,33 +3059,11 @@ export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): 
   }
 
   // ── Hidden plugin passages ────────────────────────────────────────────────
-  // Collect every plugin referenced anywhere in the scenes, then recursively
-  // expand to include plugins-used-by-plugins. Emit each as `__plug_<id>`.
-  const rootPluginIds = new Set<string>();
-  for (const scene of scenes) collectPluginIds(scene.blocks, rootPluginIds);
-  const allPluginIds = expandPluginDeps(rootPluginIds, getPluginDef);
-  for (const id of allPluginIds) {
-    const def = getPluginDef(id);
-    if (!def) continue;
-
-    // Build virtual variable/group nodes for plugin params so `blockToSC` can
-    // resolve `param:<key>` ids. Node names use the path-marker prefix
-    // (`__tgParam__key`) so emitted paths like `$__tgParam__key.field` are
-    // rewritten to `_key.field` by `rewriteParamRefs` in the final pass.
-    // For `object` params with a linked project group, a virtual GROUP node is
-    // created whose children mirror the real group — allowing field-level refs.
-    const virtualParamNodes: VariableTreeNode[] = paramsToVirtualNodes(
-      def.params, variableNodes, /* useMarkerNames */ true,
-    );
-    const paramVars: Variable[] = flattenVariables(virtualParamNodes);
-    const mergedVars: Variable[] = [...variables, ...paramVars];
-    const mergedNodes: VariableTreeNode[] = [...variableNodes, ...virtualParamNodes];
-
-    const body = def.blocks
-      .map((b) => blockToSC(b, characters, mergedVars, mergedNodes, '', idToName, project))
-      .filter(Boolean)
-      .join('\n');
-    parts.push(`::__plug_${def.id} [nobr]\n${rewriteParamRefs(body) || ''}\n`);
+  // Each plugin referenced by the scenes (and its plugin deps) emits a `__plug_<id>`
+  // passage. Body assembly + param scoping is shared with the HTML/Play exporter via
+  // buildPluginPassageBodies so the two formats can't diverge.
+  for (const { id, body } of buildPluginPassageBodies(scenes, characters, variables, variableNodes, idToName, project)) {
+    parts.push(`::__plug_${id} [nobr]\n${body}\n`);
   }
 
   return parts.join('\n\n') + '\n';
@@ -3126,7 +3165,7 @@ export function exportSceneBg(
         if (mt === 'range') {
           cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
         } else {
-          const val = bv?.varType === 'string' ? `"${m.value}"` : m.value;
+          const val = bv?.varType === 'string' ? scStr(m.value) : m.value;
           cond = `${vname} eq ${val}`;
         }
         return `${kw} ${cond}>><<set _tgBg to "${m.src}">>`;
@@ -3518,7 +3557,7 @@ function buildBoundMappingHtml(
     if (mt === 'range') {
       cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
     } else {
-      const val = varType === 'string' ? `"${m.value}"` : m.value;
+      const val = varType === 'string' ? scStr(m.value) : m.value;
       cond = `${vname} eq ${val}`;
     }
     return `${kw} ${cond}>>${imgTag(m.src)}`;
@@ -4106,12 +4145,3 @@ export function buildInventoryScript(project: Project): string {
   ].join('\n');
 }
 
-export function downloadFile(content: string, filename: string, mimeType = 'text/plain') {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
