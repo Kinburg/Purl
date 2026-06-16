@@ -6,7 +6,6 @@ import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useT, useLocaleStore, getLocales } from '../../i18n';
 import { useConfirm } from '../shared/ConfirmModal';
 import { useDropdown } from '../shared/useDropdown';
-import { generateStandaloneHtml } from '../../utils/exportToHtml';
 import { exportToTwee } from '../../utils/exportToTwee';
 import { importFromTweeSource, ImportError, type ImportResult } from '../../utils/importFromTwee';
 import { importFromHtmlSource } from '../../utils/importFromHtml';
@@ -21,8 +20,7 @@ import { pickNewProjectDir } from '../../lib/projectDir';
 import { toast } from 'sonner';
 import { Icon } from './HeaderIcons';
 import { LocaleSelect } from './LocaleSelect';
-
-const PURL_EXT = 'purl';
+import { doSaveToDir, unapprovedScenes, dirOfPath, writeHtmlBundle, PURL_EXT } from '../../services/projectFiles';
 
 function truncatePath(p: string, segments = 2): string {
   const parts = p.split(/[/\\]/).filter(Boolean);
@@ -114,13 +112,6 @@ function HeaderImpl() {
 
   // ─── Save helpers ─────────────────────────────────────────────────────────
 
-  async function doSaveToDir(dir: string): Promise<void> {
-    await fsApi.mkdir(joinPath(dir, 'release', 'assets'));
-    const content  = JSON.stringify(project, null, 2);
-    const fileName = `${safeName(project.title)}.${PURL_EXT}`;
-    await fsApi.writeFile(joinPath(dir, fileName), content);
-  }
-
   async function ensureProjectDir(): Promise<string | null> {
     if (projectDir) {
       await fsApi.mkdir(joinPath(projectDir, 'release', 'assets'));
@@ -132,12 +123,6 @@ function HeaderImpl() {
     setProjectDir(dir);
     await fsApi.mkdir(joinPath(dir, 'release', 'assets'));
     return dir;
-  }
-
-  function unapprovedScenes(): string[] {
-    return project.scenes
-      .filter(scene => scene.blocks.some(b => (b.type === 'image-gen' || b.type === 'video-gen') && b.src.startsWith('history/')))
-      .map(scene => scene.name);
   }
 
   // ─── Save / Open ──────────────────────────────────────────────────────────
@@ -152,7 +137,7 @@ function HeaderImpl() {
         if (!dir) return;
         setProjectDir(dir);
       }
-      await doSaveToDir(dir);
+      await doSaveToDir(project, dir);
       toast.success(t.header.successSave);
     } catch (e) {
       alert(t.header.errorSave(String(e)));
@@ -168,7 +153,7 @@ function HeaderImpl() {
     setBusy(true);
     try {
       setProjectDir(dir);
-      await doSaveToDir(dir);
+      await doSaveToDir(project, dir);
       toast.success(t.header.successSave);
     } catch (e) {
       alert(t.header.errorSave(String(e)));
@@ -298,12 +283,10 @@ function HeaderImpl() {
         if (!dir) return;
         const releaseDir = joinPath(dir, 'release');
 
-        const { html, css } = generateStandaloneHtml(
+        await writeHtmlBundle(
           project, template, usePluginStore.getState().plugins,
+          joinPath(releaseDir, 'index.html'), releaseDir,
         );
-
-        await fsApi.writeFile(joinPath(releaseDir, 'index.html'), html);
-        await fsApi.writeFile(joinPath(releaseDir, 'story.css'), css);
         toast.success(t.header.successExportHtml);
         if (confirmOpenFolderAfterExport) {
           ask({ message: t.header.confirmHtmlSaved }, async () => { await fsApi.openPath(releaseDir); });
@@ -315,7 +298,7 @@ function HeaderImpl() {
       }
     };
 
-    const badScenes = unapprovedScenes();
+    const badScenes = unapprovedScenes(project);
     if (badScenes.length > 0) {
       ask(
         { message: `${t.header.unapprovedImagesTitle}\n\n${t.header.unapprovedImagesMessage(badScenes)}` },
@@ -341,11 +324,8 @@ function HeaderImpl() {
     if (!filePath) return;
     setBusy(true);
     try {
-      const { html, css } = generateStandaloneHtml(project, template, usePluginStore.getState().plugins);
-      const lastSep = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-      const saveDir = lastSep >= 0 ? filePath.substring(0, lastSep) : '.';
-      await fsApi.writeFile(filePath, html);
-      await fsApi.writeFile(joinPath(saveDir, 'story.css'), css);
+      const saveDir = dirOfPath(filePath);
+      await writeHtmlBundle(project, template, usePluginStore.getState().plugins, filePath, saveDir);
       toast.success(t.header.successExportHtml);
     } catch (e) {
       alert(t.header.errorExportHtml(String(e)));
@@ -434,11 +414,8 @@ function HeaderImpl() {
       if (!savePath) return;
       setBusy(true);
 
-      const { html, css } = generateStandaloneHtml(translatedProject, template, usePluginStore.getState().plugins);
-      const lastSep = Math.max(savePath.lastIndexOf('/'), savePath.lastIndexOf('\\'));
-      const saveDir = lastSep >= 0 ? savePath.substring(0, lastSep) : '.';
-      await fsApi.writeFile(savePath, html);
-      await fsApi.writeFile(joinPath(saveDir, 'story.css'), css);
+      const saveDir = dirOfPath(savePath);
+      await writeHtmlBundle(translatedProject, template, usePluginStore.getState().plugins, savePath, saveDir);
       toast.success(`Exported ${langCode} version successfully!`);
     } catch (e) {
       alert('Error during translated export: ' + String(e));
@@ -450,7 +427,7 @@ function HeaderImpl() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const locales = getLocales();
-  const hasUnapproved = scReady && unapprovedScenes().length > 0;
+  const hasUnapproved = scReady && unapprovedScenes(project).length > 0;
   const exportTooltip = projectDir
     ? `${t.header.exportSaveInFolder} → ${projectDir}/release/index.html`
     : t.header.exportSaveInFolder;
