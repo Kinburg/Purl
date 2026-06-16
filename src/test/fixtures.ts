@@ -64,6 +64,20 @@ export function ifBlock(id: string, branchBlocks: Block[][]): Block {
   } as Block;
 }
 
+/** Dialogue block with optional inner blocks (the nested block container). */
+export function dialogue(id: string, innerBlocks: Block[] = [], characterId = 'c1'): Block {
+  return { id, type: 'dialogue', characterId, text: 'hi', innerBlocks } as Block;
+}
+
+/** Tabs block; each tab gets an id, label, and its own block container. */
+export function tabs(id: string, tabList: Array<{ id: string; label?: string; blocks?: Block[] }>): Block {
+  return {
+    id,
+    type: 'tabs',
+    tabs: tabList.map(t => ({ id: t.id, label: t.label ?? 'Tab', blocks: t.blocks ?? [] })),
+  } as Block;
+}
+
 export function variable(id: string, name: string): VariableTreeNode {
   return { kind: 'variable', id, name, varType: 'number', defaultValue: '0', description: '' };
 }
