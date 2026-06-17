@@ -1,36 +1,20 @@
 import type {
   Project, ProjectSettings, Block, Character, Variable, ConditionBranch, ChoiceOption,
   SidebarCell, TableBlock,
-  Scene, BlockDelay, BlockTypewriter, IncludeBlock,
-  ArrayAccessor, ButtonAction, CheckboxBlock, RadioBlock, DateTimeDisplayMode,
+  Scene, BlockDelay, BlockTypewriter,
+  ArrayAccessor, ButtonAction, DateTimeDisplayMode,
   AudioVolumeBlock, ProgressBlock, DateTimeBlock,
-  Watcher, WatcherCondition, AudioBlock, AudioGenBlock, ContainerBlock, TimeManipulationBlock,
+  Watcher, WatcherCondition, AudioBlock, AudioGenBlock,
   VariableTreeNode, VariableGroup, ItemDefinition,
-  PluginBlockDef, PluginBlock,
-  QuestDefinition, QuestState,
+  PluginBlockDef,
+  QuestDefinition,
   SceneBackground,
 } from '../types';
-import { START_TAG } from '../types';
 import { flattenVariables, getVariablePath, hasLeafVariables } from './treeUtils';
-import { collectPluginIds, expandPluginDeps, pluginValueLiteral } from './pluginUtils';
+import { collectPluginIds, expandPluginDeps } from './pluginUtils';
 import { paramsToVirtualNodes, rewriteParamRefs } from './pluginParamScope';
-import {
-  buildAllDialogueCss,
-  buildStyleBindScript,
-  hasStyleBindings,
-  buildDialogueSpotStyleBlock,
-  dialogueElementClasses,
-  dialogueDataStyleBind,
-  buildButtonsCascadeCss,
-  buildButtonSpotStyleBlock,
-  buttonElementClasses,
-  buttonDataStyleBind,
-  buildSimpleBlocksCascadeCss,
-  buildSimpleBlockSpotStyleBlock,
-  simpleBlockCascadeClasses,
-  simpleBlockDataStyleBind,
-  buildPopupClassSyncScript,
-} from './styleCascade';
+import { compileStory } from './export/compileStory';
+import { HANDLERS } from './export/blockHandlers';
 
 // ─── Plugin registry (set by exportToTwee / buildPassages at start of export) ─
 // Keeps blockToSC* recursive calls simple — they look up defs through this module-scope map.
@@ -38,19 +22,19 @@ let PLUGIN_DEFS: Map<string, PluginBlockDef> = new Map();
 export function setPluginRegistry(plugins: PluginBlockDef[] | undefined) {
   PLUGIN_DEFS = new Map((plugins ?? []).map((p) => [p.id, p]));
 }
-function getPluginDef(id: string): PluginBlockDef | undefined {
+export function getPluginDef(id: string): PluginBlockDef | undefined {
   return PLUGIN_DEFS.get(id);
 }
 
 // ─── Variable path helpers ────────────────────────────────────────────────────
 
 /** Get the dot-path for a variable given the full tree. Root-level → just name, nested → group1.group2.name */
-function varPath(v: Variable, nodes: VariableTreeNode[]): string {
+export function varPath(v: Variable, nodes: VariableTreeNode[]): string {
   return getVariablePath(v.id, nodes) || v.name;
 }
 
 /** Build a JS reference for a variable path: State.variables["chars"].developer.hp */
-function buildJSRef(path: string): string {
+export function buildJSRef(path: string): string {
   const parts = path.split('.');
   return `State.variables[${JSON.stringify(parts[0])}]${parts.slice(1).map(p => `.${p}`).join('')}`;
 }
@@ -111,7 +95,7 @@ export function buildObjectLiteral(group: VariableGroup, allNodes: VariableTreeN
 // ─── Block → SugarCube markup ─────────────────────────────────────────────
 
 /** Escape a string for safe use inside an HTML double-quoted attribute value. */
-function htmlAttr(s: string): string {
+export function htmlAttr(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
@@ -131,22 +115,13 @@ function htmlAttr(s: string): string {
  * `.twee`/HTML or silently mis-parses the macro at runtime. The returned string
  * INCLUDES its surrounding quotes, so substitute it where the quotes used to be.
  */
-function scStr(s: string | undefined | null): string {
+export function scStr(s: string | undefined | null): string {
   return JSON.stringify(s ?? '');
 }
 
-/**
- * Compile-time exhaustiveness guard. In the `default:` branch of an exhaustive
- * `switch (block.type)`, TypeScript narrows the value to `never`; adding a new
- * Block variant that isn't handled makes this a compile error instead of the
- * switch silently falling through and exporting the literal string `undefined`.
- */
-function assertNever(x: never): never {
-  throw new Error(`Unhandled variant in export: ${JSON.stringify(x)}`);
-}
 
 /** Build the SugarCube variable reference string including array accessor. */
-function varRefWithAccessor(path: string, accessor: ArrayAccessor | undefined, vars: Variable[], nodes: VariableTreeNode[]): string {
+export function varRefWithAccessor(path: string, accessor: ArrayAccessor | undefined, vars: Variable[], nodes: VariableTreeNode[]): string {
   if (!accessor || accessor.kind === 'whole') return `$${path}`;
   if (accessor.kind === 'length') return `$${path}.length`;
   if (accessor.kind === 'index') {
@@ -164,7 +139,7 @@ function varRefWithAccessor(path: string, accessor: ArrayAccessor | undefined, v
  * (e.g. `_myScene`). Otherwise resolves the UUID through idToName and returns a
  * quoted passage name (e.g. `"Chapter 2"`).
  */
-function sceneTarget(raw: string, idToName?: Map<string, string>): string {
+export function sceneTarget(raw: string, idToName?: Map<string, string>): string {
   if (raw.startsWith('param:')) return `_${raw.slice('param:'.length)}`;
   return `"${idToName?.get(raw) ?? raw}"`;
 }
@@ -173,7 +148,7 @@ function sceneTarget(raw: string, idToName?: Map<string, string>): string {
  * Build a SugarCube condition expression from the structured fields of a ChoiceOption.
  * Returns '' when no structured condition is set (caller falls back to opt.condition).
  */
-function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: VariableTreeNode[]): string {
+export function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: VariableTreeNode[]): string {
   if (!opt.conditionVariableId || !opt.conditionOperator) return '';
 
   // Plugin param virtual variable (prefix 'param:')
@@ -217,7 +192,7 @@ function choiceConditionExpr(opt: ChoiceOption, vars: Variable[], nodes: Variabl
 }
 
 /** Convert a single ButtonAction to SugarCube macro, handling array operators. */
-function actionToSC(a: ButtonAction, vars: Variable[], nodes: VariableTreeNode[], lineIndent: string, idToName?: Map<string, string>): string {
+export function actionToSC(a: ButtonAction, vars: Variable[], nodes: VariableTreeNode[], lineIndent: string, idToName?: Map<string, string>): string {
   if (a.type === 'open-popup') {
     const target = sceneTarget(a.targetSceneId ?? '', idToName);
     const title = a.title ?? '';
@@ -315,973 +290,46 @@ function wrapBlockEffects(
  */
 export type PassageContext = 'title' | 'menu' | undefined;
 
+// ─── Block dispatch (handler map; replaces the monolithic switch incrementally) ──
+//
+// BlockContext folds the read-only export environment + current indent/passageCtx +
+// a recursion bridge. Per-type handlers live in HANDLERS (a typed map preserving
+// per-handler narrowing); blockToSCInner dispatches to a handler when one exists, else
+// falls back to the legacy switch. Handlers return UN-wrapped output — wrapBlockEffects
+// is applied once by the outer blockToSC.
+export interface BlockContext {
+  readonly chars: Character[];
+  readonly vars: Variable[];
+  readonly nodes: VariableTreeNode[];
+  readonly idToName?: Map<string, string>;
+  readonly project?: Project;
+  readonly indent: string;
+  readonly passageCtx: PassageContext;
+  /** Re-enter the pipeline for a nested block (routes through blockToSC so children get
+   *  wrapBlockEffects). Children never inherit passageCtx — matching the legacy recursion. */
+  readonly recurse: (block: Block, indentOverride?: string) => string;
+}
+
 export function blockToSC(
   block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[],
   indent = '', idToName?: Map<string, string>, project?: Project,
   passageCtx?: PassageContext,
 ): string {
-  const raw = blockToSCInner(block, chars, vars, nodes, indent, idToName, project, passageCtx);
+  const ctx: BlockContext = {
+    chars, vars, nodes, idToName, project, indent, passageCtx,
+    recurse: (b, indentOverride = indent) => blockToSC(b, chars, vars, nodes, indentOverride, idToName, project),
+  };
+  const raw = blockToSCInner(block, ctx);
   if (!raw || block.type === 'condition' || block.type === 'note' || block.type === 'time-manipulation' || block.type === 'save' || block.type === 'quest-set') return raw;
   const b = block as { delay?: BlockDelay; typewriter?: BlockTypewriter };
   return wrapBlockEffects(raw, b.delay, b.typewriter, indent, block.id);
 }
 
-function blockToSCInner(block: Block, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project, passageCtx?: PassageContext): string {
-  switch (block.type) {
-    case 'text': {
-      // Title / menu passages: SugarCube renders ::StoryTitle straight into
-      // `#story-title` (via wiki()) and parses ::StoryMenu line-by-line into
-      // `<<link>>` items. The `<div class="tg-text">` wrapper would either
-      // become literal markup in the title or break menu line-parsing — strip
-      // it for these contexts and emit the user's raw content.
-      if (passageCtx === 'title' || passageCtx === 'menu') {
-        return `${indent}${block.content}`;
-      }
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      if (block.live) {
-        const attr = htmlAttr(block.content);
-        const classes = ['tg-text', 'tg-live', ...extra].join(' ');
-        return `${spotPrefix}${indent}<span class="${classes}" data-wiki="${attr}"${bindAttr}>${block.content}</span>`;
-      }
-      const classes = ['tg-text', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${block.content}</div>`;
-    }
-
-    case 'dialogue': {
-      const char = chars.find(c => c.id === block.characterId);
-
-      // Use runtime $name variable if available, otherwise fall back to static name
-      const nameVarId = char?.varIds?.nameVarId;
-      const nameVar = nameVarId ? vars.find(v => v.id === nameVarId) : null;
-      const baseName = nameVar ? `<<print $${varPath(nameVar, nodes)}>>` : (char?.name ?? 'Unknown');
-      const charNameDisplay = block.nameSuffix
-        ? `${baseName} (${block.nameSuffix})`
-        : baseName;
-
-      // Avatar HTML — static mode or variable-bound mode
-      const avatarVarId = char?.varIds?.avatarVarId;
-      const avatarVar = avatarVarId ? vars.find(v => v.id === avatarVarId) : null;
-      const cfg = char?.avatarConfig;
-
-      let avatarHtml = '';
-      if (cfg?.mode === 'bound' && cfg.variableId) {
-        const boundVar = vars.find(v => v.id === cfg.variableId);
-        const vname = boundVar ? `$${varPath(boundVar, nodes)}` : '$???';
-        const imgTag = (src: string) => `<img class="char-avatar" src="${src}">`;
-        const cases = cfg.mapping.map((m, i) => {
-          const kw = i === 0 ? '<<if' : '<<elseif';
-          const mt = m.matchType ?? 'exact';
-          let cond: string;
-          if (mt === 'range') {
-            const lo = m.rangeMin ?? '0';
-            const hi = m.rangeMax ?? '0';
-            cond = `${vname} >= ${lo} && ${vname} <= ${hi}`;
-          } else {
-            const val = boundVar?.varType === 'string' ? scStr(m.value) : m.value;
-            cond = `${vname} eq ${val}`;
-          }
-          return `${kw} ${cond}>>${imgTag(m.src)}`;
-        });
-        if (cfg.defaultSrc) cases.push(`<<else>>${imgTag(cfg.defaultSrc)}`);
-        if (cases.length > 0) cases.push('<</if>>');
-        avatarHtml = cases.join('');
-      } else if (cfg?.mode === 'static' && cfg.src) {
-        avatarHtml = `<img class="char-avatar" src="${cfg.src}">`;
-      } else if (avatarVar) {
-        avatarHtml = `<<if $${varPath(avatarVar, nodes)}>><img class="char-avatar" @src="$${varPath(avatarVar, nodes)}"><</if>>`;
-      }
-
-      // Inner blocks rendered inside the dialogue bubble after the main text
-      const innerBlocksHtml = (block.innerBlocks ?? [])
-        .map(b => blockToSC(b, chars, vars, nodes, '', idToName, project))
-        .filter(Boolean)
-        .join('');
-
-      const body = `<div class="char-body"><span class="char-name">${charNameDisplay}</span><span class="char-text">${block.text}</span>${innerBlocksHtml}</div>`;
-
-      // Avatar always comes first in DOM for both alignments. The `.dlg-right`
-      // class flips visual order via flex-direction: row-reverse.
-      const inner = avatarHtml + body;
-
-      // Style cascade classes + spot <style> block + data-style-bind
-      const classes = char ? dialogueElementClasses(char, block) : ['dialogue', 'dlg-unknown'];
-      classes.push(block.align === 'right' ? 'dlg-right' : 'dlg-left');
-      const dataBind = char ? dialogueDataStyleBind(char) : '';
-      const dataBindAttr = dataBind ? ` data-style-bind="${dataBind}"` : '';
-      const spotStyleBlock = char ? buildDialogueSpotStyleBlock(block) : '';
-
-      const divContent = `${spotStyleBlock}<div class="${classes.join(' ')}"${dataBindAttr}>${inner}</div>`;
-      if (block.live) {
-        const attr = htmlAttr(divContent);
-        return `${indent}<span class="tg-live" data-wiki="${attr}">${divContent}</span>`;
-      }
-      return `${indent}${divContent}`;
-    }
-
-    case 'choice': {
-      if (block.options.length === 0) return '';
-      const lines = block.options.map(opt => {
-        // Structured condition takes priority; fall back to legacy free-text field
-        const cond = choiceConditionExpr(opt, vars, nodes) || opt.condition.trim();
-        const raw = opt.targetSceneId || '';
-        const target = raw ? sceneTarget(raw, idToName) : '"Start"';
-        const link = `<<link ${scStr(opt.label)} ${target}>><</link>>`;
-        if (cond) return `${indent}  <<if ${cond}>>${link}<</if>>`;
-        return `${indent}  ${link}`;
-      });
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-choice', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${lines.join('\n')}\n${indent}</div>`;
-    }
-
-    case 'condition': {
-      if (block.branches.length === 0) return '';
-      return block.branches
-        .map((branch, i) => branchToSC(branch, chars, vars, nodes, indent, i === 0, idToName, project))
-        .join('\n') + `\n${indent}<</if>>`;
-    }
-
-    case 'for': {
-      let header: string;
-      if (block.mode === 'range') {
-        const value = block.valueVar || '_value';
-        const loopVars = block.keyVar ? `${block.keyVar}, ${value}` : value;
-        const src  = block.source || '[]';
-        header = `<<for ${loopVars} range ${src}>>`;
-      } else if (block.mode === 'while') {
-        header = `<<for ${block.whileCondition ?? 'false'}>>`;
-      } else { // cstyle
-        const init = block.initExpr ?? '';
-        const cond = block.cstyleCondition ?? 'false';
-        const step = block.stepExpr ?? '';
-        header = `<<for ${init}; ${cond}; ${step}>>`;
-      }
-      const body = block.blocks
-        .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
-        .filter(Boolean)
-        .join('\n');
-      return body
-        ? `${indent}${header}\n${body}\n${indent}<</for>>`
-        : `${indent}${header}${indent}<</for>>`;
-    }
-
-    case 'set-object': {
-      const v = vars.find(x => x.id === block.variableId);
-      if (!v) return `${indent}/* variable not found */`;
-      const path = varPath(v, nodes);
-      const literal = buildSetObjectLiteral(block.entries);
-      return `${indent}<<set $${path} = ${literal}>>`;
-    }
-
-    case 'variable-set': {
-      const v = vars.find(x => x.id === block.variableId);
-      if (!v) return `${indent}/* variable not found */`;
-      const path = varPath(v, nodes);
-
-      // ── Array type — special operators ──────────────────────────────────────
-      if (v.varType === 'array') {
-        const accessorKind = block.accessor?.kind ?? 'whole';
-        if (accessorKind === 'index') {
-          const ref = varRefWithAccessor(path, block.accessor, vars, nodes);
-          return `${indent}<<set ${ref} to ${scStr(block.value)}>>`;
-        }
-        switch (block.operator) {
-          case 'push':   return `${indent}<<run $${path}.push(${scStr(block.value)})>>`;
-          case 'remove': return `${indent}<<run $${path}.deleteWith(function(x){return x===${scStr(block.value)};})>>`;
-          case 'clear':  return `${indent}<<set $${path} to []>>`;
-          case '=':      return `${indent}<<set $${path} to ${block.value}>>`;
-          default:       return `${indent}<<set $${path} to ${block.value}>>`;
-        }
-      }
-
-      // Effective mode — backward compat with old randomize boolean
-      const mode = block.valueMode ?? (block.randomize ? 'random' : 'manual');
-
-      // ── Expression mode (numbers) ────────────────────────────────────────────
-      if (mode === 'expression' && block.expression) {
-        if (block.operator === '=') return `${indent}<<set $${path} to ${block.expression}>>`;
-        return `${indent}<<set $${path} ${block.operator} ${block.expression}>>`;
-      }
-
-      // ── Dynamic mode (strings) — if/elseif/else chain ────────────────────────
-      if (mode === 'dynamic' && block.dynamicMapping && block.dynamicMapping.length > 0) {
-        const cv     = vars.find(x => x.id === block.dynamicVariableId);
-        const cvName = cv ? `$${varPath(cv, nodes)}` : '$???';
-
-        const cases = block.dynamicMapping.map((m, i) => {
-          const kw = i === 0 ? '<<if' : '<<elseif';
-          const mt = m.matchType ?? 'exact';
-          let cond: string;
-          if (mt === 'range') {
-            cond = `${cvName} >= ${m.rangeMin ?? '0'} && ${cvName} <= ${m.rangeMax ?? '0'}`;
-          } else {
-            const val = cv?.varType === 'string' ? scStr(m.value) : m.value;
-            cond = `${cvName} eq ${val}`;
-          }
-          return `${indent}${kw} ${cond}>><<set $${path} to ${scStr(m.result)}>>`;
-        });
-
-        if (block.dynamicDefault !== undefined) {
-          cases.push(`${indent}<<else>><<set $${path} to ${scStr(block.dynamicDefault)}>>`);
-        }
-        cases.push(`${indent}<</if>>`);
-        return cases.join('\n');
-      }
-
-      // ── Random value ────────────────────────────────────────────────────────
-      if (mode === 'random' && block.randomConfig) {
-        const cfg = block.randomConfig;
-        switch (cfg.kind) {
-          case 'number': {
-            const expr = `random(${cfg.min}, ${cfg.max})`;
-            // Respect the chosen operator — e.g. $hp -= random(10, 15)
-            if (block.operator === '=') return `${indent}<<set $${path} to ${expr}>>`;
-            return `${indent}<<set $${path} ${block.operator} ${expr}>>`;
-          }
-          case 'boolean':
-            return `${indent}<<set $${path} to either(true, false)>>`;
-          case 'string': {
-            const len = Math.max(1, cfg.length);
-            const expr = `Array(${len}).fill(0).map(()=>"abcdefghijklmnopqrstuvwxyz0123456789".charAt(random(0,35))).join("")`;
-            return `${indent}<<set $${path} to ${expr}>>`;
-          }
-        }
-      }
-
-      // ── Manual value ────────────────────────────────────────────────────────
-      let val = block.value;
-      if (v.varType === 'string' || v.varType === 'datetime') val = scStr(val);
-      if (block.operator === '=') return `${indent}<<set $${path} to ${val}>>`;
-      return `${indent}<<set $${path} ${block.operator} ${val}>>`;
-    }
-
-    case 'image': {
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-image', ...extra].join(' ');
-
-      const w   = block.width > 0 ? ` width="${block.width}"` : '';
-      const alt = block.alt ? ` alt="${block.alt}"` : '';
-      const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
-      const mode = block.mode ?? 'static';
-
-      // ── Bound mode: <<if>>…<<elseif>>…<<else>>…<</if>> chain ────────────
-      if (mode === 'bound' && block.mapping && block.mapping.length > 0) {
-        const bv = vars.find(x => x.id === block.variableId);
-        const vname = bv ? `$${varPath(bv, nodes)}` : '$???';
-
-        const cases = block.mapping.map((m, i) => {
-          const kw = i === 0 ? '<<if' : '<<elseif';
-          const mt = m.matchType ?? 'exact';
-          let cond: string;
-          if (mt === 'range') {
-            cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
-          } else {
-            const val = bv?.varType === 'string' ? scStr(m.value) : m.value;
-            cond = `${vname} eq ${val}`;
-          }
-          return `${indent}${kw} ${cond}>>${imgTag(m.src)}`;
-        });
-
-        if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
-        cases.push(`${indent}<</if>>`);
-        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
-      }
-
-      // ── Static mode ──────────────────────────────────────────────────────
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
-    }
-
-    case 'image-gen': {
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-image', ...extra].join(' ');
-
-      const w   = block.width > 0 ? ` width="${block.width}"` : '';
-      const alt = block.alt ? ` alt="${block.alt}"` : '';
-      const imgTag = (src: string) => `<img src="${src}"${alt}${w} />`;
-      const mode = block.mode ?? 'static';
-
-      if (mode === 'bound' && block.mapping && block.mapping.length > 0) {
-        const bv = vars.find(x => x.id === block.variableId);
-        const vname = bv ? `$${varPath(bv, nodes)}` : '$???';
-
-        const cases = block.mapping.map((m, i) => {
-          const kw = i === 0 ? '<<if' : '<<elseif';
-          const mt = m.matchType ?? 'exact';
-          let cond: string;
-          if (mt === 'range') {
-            cond = `${vname} >= ${m.rangeMin ?? '0'} && ${vname} <= ${m.rangeMax ?? '0'}`;
-          } else {
-            const val = bv?.varType === 'string' ? scStr(m.value) : m.value;
-            cond = `${vname} eq ${val}`;
-          }
-          return `${indent}${kw} ${cond}>>${imgTag(m.src)}`;
-        });
-
-        if (block.defaultSrc) cases.push(`${indent}<<else>>${imgTag(block.defaultSrc)}`);
-        cases.push(`${indent}<</if>>`);
-        return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>\n${cases.join('\n')}\n${indent}</div>`;
-      }
-
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${imgTag(block.src)}</div>`;
-    }
-
-    case 'video': {
-      const attrs = [
-        block.controls ? 'controls' : '',
-        block.autoplay ? 'autoplay' : '',
-        block.loop ? 'loop' : '',
-        block.width > 0 ? `width="${block.width}"` : '',
-      ].filter(Boolean).join(' ');
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-video', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
-    }
-
-    case 'input-field': {
-      const v = vars.find(x => x.id === block.variableId);
-      if (!v) return `${indent}/* variable not found */`;
-      const path = varPath(v, nodes);
-      const vname = `$${path}`;
-      // numberbox for numeric variables, textbox for everything else
-      const macro = v.varType === 'number' ? 'numberbox' : 'textbox';
-      // Use the current variable value as the textbox default so the field
-      // keeps whatever the player typed if the passage is re-rendered (Engine.show).
-      // $varname evaluates to its StoryInit default on first load, and to the
-      // player's input on subsequent re-renders.
-      const defVal = `$${path}`;
-      const inner: string[] = [];
-      if (block.label) inner.push(block.label);
-      inner.push(`<<${macro} "${vname}" ${defVal}>>`);
-
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-input-field', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}>${inner.join('\n')}</div>`;
-    }
-
-    case 'raw':
-      if (!block.code) return '';
-      return block.code.split('\n').map(line => `${indent}${line}`).join('\n');
-
-    case 'include': {
-      const raw = (block as IncludeBlock).passageName.trim();
-      if (!raw) return '';
-      const includeArg = sceneTarget(raw, idToName);
-      const include = `<<include ${includeArg}>>`;
-
-      const cssVars: string[] = [];
-      if (block.maxWidth && block.maxWidth > 0)
-        cssVars.push(`--tg-inc-max-width:${block.maxWidth}px`);
-      if (block.bordered) {
-        const bw = block.borderWidth ?? 1;
-        const bc = block.borderColor ?? '#555555';
-        const br = block.borderRadius ?? 0;
-        cssVars.push(`--tg-inc-border-width:${bw}px`, `--tg-inc-border-color:${bc}`);
-        if (br > 0) cssVars.push(`--tg-inc-radius:${br}px`);
-      }
-      if (block.padding && block.padding > 0)
-        cssVars.push(`--tg-inc-padding:${block.padding}px`);
-      if (block.bgColor)
-        cssVars.push(`--tg-inc-bg:${block.bgColor}`);
-
-      const styleAttr = cssVars.length > 0 ? ` style="${cssVars.join(';')}"` : '';
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-include', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}${styleAttr}>${include}</div>`;
-    }
-
-    case 'divider': {
-      const color     = block.color     ?? '#555555';
-      const thickness = block.thickness ?? 1;
-      const marginV   = block.marginV   ?? 8;
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-divider', ...extra].join(' ');
-      return `${spotPrefix}${indent}<hr class="${classes}"${bindAttr} style="--tg-div-color:${color};--tg-div-thickness:${thickness}px;--tg-div-margin:${marginV}px">`;
-    }
-
-    case 'spacer': {
-      const size = (typeof block.size === 'number' && block.size >= 0) ? block.size : 8;
-      return `${indent}<div class="tg-spacer" style="height:${size}px"></div>`;
-    }
-
-    case 'progress': {
-      // Reuse the progress-bar renderer (CSS-class path). A standalone block needs an
-      // explicit height since `.tg-progress` is height:100% — wrap in a sized div.
-      const h = (typeof block.height === 'number' && block.height > 0) ? block.height : 16;
-      const inner = buildProgressBarSC(block, vars, nodes);
-      return `${indent}<div class="tg-progress-block" style="height:${h}px">${inner}</div>`;
-    }
-
-    case 'audio-volume':
-      return `${indent}${buildAudioVolumeBlockSC(block)}`;
-
-    case 'date-time': {
-      const v = vars.find(x => x.id === block.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      return `${indent}${buildDateTimeCellSC(block, vname)}`;
-    }
-
-    case 'callout': {
-      const icon = (block.icon ?? '').trim();
-      const iconSpan = icon ? `<span class="tg-callout-icon">${icon}</span>` : '';
-      const title = (block.title ?? '').trim();
-      const titleDiv = title ? `<div class="tg-callout-title">${title}</div>` : '';
-      return `${indent}<div class="tg-callout tg-callout-${block.variant}">${iconSpan}<div class="tg-callout-body">${titleDiv}${block.content}</div></div>`;
-    }
-
-    case 'select': {
-      if (block.options.length === 0) return '';
-      const v = vars.find(x => x.id === block.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      const opts = block.options.map(o => `<<option ${scStr(o.label)} ${scStr(o.value)}>>`).join('');
-      const listbox = `<<listbox "${vname}" autoselect>>${opts}<</listbox>>`;
-      const label = block.label ? `${block.label} ` : '';
-      return `${indent}<span class="tg-select">${label}${listbox}</span>`;
-    }
-
-    case 'slider': {
-      // Plain range input (SugarCube has no range macro). A deferred <<script>> seeds
-      // it from the bound variable and writes back on input, refreshing live spans +
-      // watchers — same DOM-defer pattern as the audio-volume block.
-      const v = vars.find(x => x.id === block.variableId);
-      const vpath = v ? varPath(v, nodes) : '';
-      const ref = vpath ? buildJSRef(vpath) : 'State.variables.__tgSliderMissing';
-      const id = `tgsl${block.id.replace(/-/g, '').substring(0, 12)}`;
-      const vid = `${id}v`;
-      const step = (typeof block.step === 'number' && block.step > 0) ? block.step : 1;
-      const def = (v && /^-?\d+(\.\d+)?$/.test(v.defaultValue)) ? v.defaultValue : String(block.min);
-      const slider = `<input id="${id}" type="range" min="${block.min}" max="${block.max}" step="${step}" value="${def}" style="vertical-align:middle">`;
-      const valSpan = block.showValue ? `<span id="${vid}" class="tg-slider-val">${def}</span>` : '';
-      const label = block.label ? `${block.label} ` : '';
-      const script = [
-        '<<script>>',
-        'setTimeout(function(){',
-        `  var s=document.getElementById("${id}"); if(!s) return;`,
-        `  var cur=${ref};`,
-        '  if(cur!=null) s.value=cur;',
-        block.showValue ? `  var d=document.getElementById("${vid}"); if(d) d.textContent=s.value;` : '',
-        '  s.addEventListener("input", function(){',
-        '    var nv=Number(s.value);',
-        `    ${ref}=nv;`,
-        block.showValue ? `    var dd=document.getElementById("${vid}"); if(dd) dd.textContent=nv;` : '',
-        '    if(window.jQuery){window.jQuery(".tg-live[data-wiki]").each(function(){window.jQuery(this).empty().wiki(window.jQuery(this).attr("data-wiki"));});}',
-        '    if(window._tgCheckWatchers) window._tgCheckWatchers();',
-        '  });',
-        '},0);',
-        '<</script>>',
-      ].filter(Boolean).join('');
-      return `${indent}<span class="tg-slider">${label}${slider}${valSpan}</span>${script}`;
-    }
-
-    case 'display-object': {
-      if (block.fields.length === 0) return '';
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-
-      const cols = (typeof block.columns === 'number' && block.columns > 0) ? block.columns : 2;
-      const gridStyleAttr = block.layout === 'grid' ? ` style="--tg-do-cols:${cols}"` : '';
-      const classes = ['tg-do', `tg-do-${block.layout}`, ...extra].join(' ');
-
-      const rowsHtml = block.fields.map(f => {
-        const v = vars.find(x => x.id === f.variableId);
-        const vpath = v ? varPath(v, nodes) : '';
-        const sv = vpath ? `$${vpath}` : '$???';
-        const labelText = ((f.label ?? '').trim() || (v?.name ?? '?')).replace(/</g, '&lt;');
-        const render = f.render ?? 'text';
-
-        let valueMarkup: string;
-        if (render === 'bar') {
-          let maxExpr: string;
-          if (f.maxVariableId) {
-            const mv = vars.find(x => x.id === f.maxVariableId);
-            const mpath = mv ? varPath(mv, nodes) : '';
-            maxExpr = mpath ? `$${mpath}` : '1';
-          } else {
-            maxExpr = (typeof f.maxValue === 'number' && f.maxValue > 0) ? String(f.maxValue) : '1';
-          }
-          valueMarkup =
-            `<<set _tgP to Math.min(100,Math.max(0,${sv}/${maxExpr}*100))>>` +
-            `<<print '<span class="tg-do-bar"><span class="tg-do-bar-fill" style="width:'+_tgP+'%"></span></span>'>>` +
-            `<span class="tg-do-bar-text"><<print ${sv}>>/<<print ${maxExpr}>></span>`;
-        } else if (render === 'bool') {
-          valueMarkup = `<<if ${sv}>>✓<<else>>✗<</if>>`;
-        } else if (render === 'badge') {
-          valueMarkup = `<span class="tg-do-badge"><<print ${sv}>></span>`;
-        } else {
-          valueMarkup = `<<print ${sv}>>`;
-        }
-
-        const valueAttrs = block.live
-          ? ` class="tg-do-value tg-live" data-wiki="${htmlAttr(valueMarkup)}"`
-          : ` class="tg-do-value"`;
-        return `<span class="tg-do-row"><span class="tg-do-label">${labelText}</span><span${valueAttrs}>${valueMarkup}</span></span>`;
-      }).join('');
-
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}${gridStyleAttr}>${rowsHtml}</div>`;
-    }
-
-    case 'section': {
-      const inner = block.blocks
-        .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
-        .filter(Boolean)
-        .join('\n');
-      const title = (block.title ?? '').trim();
-      if (block.collapsible) {
-        // Native <details> disclosure — no JS needed. `open` unless defaultCollapsed.
-        const openAttr = block.defaultCollapsed ? '' : ' open';
-        const summary = `${indent}  <summary class="tg-section-title">${title}</summary>`;
-        return `${indent}<details class="tg-section"${openAttr}>\n${summary}\n${inner}\n${indent}</details>`;
-      }
-      const head = title ? `${indent}  <div class="tg-section-title">${title}</div>\n` : '';
-      return `${indent}<div class="tg-section">\n${head}${inner}\n${indent}</div>`;
-    }
-
-    case 'note':
-      // Developer note — never exported
-      return '';
-
-    case 'save': {
-      // Autosave the player's progress (SugarCube autosave slot) when the passage renders.
-      const sTitle = (block.title ?? '').trim();
-      const saveCall = `${indent}<<run Save.autosave.save(${sTitle ? JSON.stringify(sTitle) : ''})>>`;
-      if (!block.notify) return saveCall;
-      const msg = (block.notifyText ?? '').trim() || '✓';
-      const notify = `<<script>>(function(){var n=$('<div>').text(${JSON.stringify(msg)}).css({position:'fixed',bottom:'1.2em',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.82)',color:'#fff',padding:'.4em .9em',borderRadius:'.4em',zIndex:99999,fontSize:'.9em',opacity:0,transition:'opacity .3s',pointerEvents:'none'}).appendTo('body');setTimeout(function(){n.css('opacity',1);},16);setTimeout(function(){n.css('opacity',0);setTimeout(function(){n.remove();},320);},1500);})();<</script>>`;
-      return `${saveCall}${notify}`;
-    }
-
-    case 'quest-set': {
-      const quest = project?.quests?.find(q => q.id === block.questId);
-      if (!quest) return '';
-      const lines: string[] = [];
-      if (block.parentState) lines.push(`${indent}<<set $quests.${quest.varName}.state to "${block.parentState}">>`);
-      for (const ss of block.stepStates ?? []) {
-        const step = quest.steps.find(st => st.id === ss.stepId);
-        if (step) lines.push(`${indent}<<set $quests.${quest.varName}.steps.${step.varName}.state to "${ss.state}">>`);
-      }
-      if (quest.composite && quest.steps.length > 0) {
-        lines.push(`${indent}<<run window._tgQuestNormalize && window._tgQuestNormalize(${JSON.stringify(quest.varName)})>>`);
-      }
-      return lines.join('\n');
-    }
-
-    case 'quest-show': {
-      const allQuests = project?.quests ?? [];
-      const catFilter = block.filterCategoryIds ?? [];
-      const quests = catFilter.length
-        ? allQuests.filter(q => q.categoryId && catFilter.includes(q.categoryId))
-        : allQuests;
-      if (quests.length === 0) return '';
-      const states: QuestState[] = (block.filterStates && block.filterStates.length) ? block.filterStates : ['active', 'done'];
-      const showDesc = block.showDescription !== false;
-      const showSteps = block.showSteps !== false;
-      const cats = project?.questCategories ?? [];
-      const mark = (path: string) =>
-        `<<if ${path} is "done">>✓<<elseif ${path} is "failed">>✗<<elseif ${path} is "active">>•<<else>>·<</if>>`;
-      const cards = quests.map(q => {
-        const cond = states.map(s => `$quests.${q.varName}.state is "${s}"`).join(' or ');
-        const color = cats.find(c => c.id === q.categoryId)?.color;
-        const titleStyle = color ? ` style="color:${color}"` : '';
-        const parts: string[] = [];
-        parts.push(`<div class="tg-quest-title"${titleStyle}><span class="tg-quest-mark">${mark(`$quests.${q.varName}.state`)}</span> <<= $quests.${q.varName}.name>></div>`);
-        if (showDesc) parts.push(`<<if $quests.${q.varName}.description>><div class="tg-quest-desc"><<= $quests.${q.varName}.description>></div><</if>>`);
-        if (showSteps && q.composite && q.steps.length > 0) {
-          const stepLines = q.steps.map(st =>
-            `<<if $quests.${q.varName}.steps.${st.varName}.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark">${mark(`$quests.${q.varName}.steps.${st.varName}.state`)}</span> <<= $quests.${q.varName}.steps.${st.varName}.name>></div><</if>>`,
-          ).join('');
-          parts.push(`<div class="tg-quest-steps">${stepLines}</div>`);
-        }
-        return `<<if ${cond}>><div class="tg-quest">${parts.join('')}</div><</if>>`;
-      });
-      const cardsSrc = cards.join('');
-      if (block.live) return `${indent}<div class="tg-quests tg-live" data-wiki="${htmlAttr(cardsSrc)}">${cardsSrc}</div>`;
-      return `${indent}<div class="tg-quests">${cardsSrc}</div>`;
-    }
-
-    case 'table':
-      return tableBlockToSC(block, chars, vars, nodes, indent, idToName, project);
-
-    case 'paperdoll': {
-      const char = chars.find(ch => ch.id === block.charId);
-      if (!char?.paperdoll || !char.varName) return '';
-      const html = buildPaperdollCellSC(char.varName, char.paperdoll, block.showLabels, vars, nodes, project?.items);
-      return `${indent}${html}`;
-    }
-
-    case 'inventory': {
-      const char = chars.find(ch => ch.id === block.charId);
-      if (!char?.varName) return '';
-      const title = block.title ?? '';
-      return `${indent}<<tgInventory "${char.varName}"${title ? ` ${scStr(title)}` : ''}>>`;
-    }
-
-    case 'button': {
-      const settings = project?.settings;
-      const classAttr = settings
-        ? buttonElementClasses(block, settings).join(' ')
-        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
-      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildButtonSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const actionLines = block.actions
-        .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
-        .filter(Boolean);
-      if (block.refreshScene) {
-        actionLines.push(`${indent}  <<run Engine.show()>>`);
-      } else {
-        actionLines.push(`${indent}  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>`);
-      }
-      actionLines.push(`${indent}  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>`);
-      actionLines.push(`${indent}  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>`);
-      actionLines.push(`${indent}  <<run UIBar.update()>>`);
-      return (
-        spotPrefix +
-        `${indent}<span class="${classAttr}"${bindAttr}>` +
-        `<<link ${scStr(block.label)}>>\n` +
-        actionLines.join('\n') + '\n' +
-        `${indent}<</link>></span>`
-      );
-    }
-
-    case 'link': {
-      const settings = project?.settings;
-      const classAttr = settings
-        ? buttonElementClasses(block, settings).join(' ')
-        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
-      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildButtonSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const actionLines = block.actions
-        .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
-        .filter(Boolean);
-      const targetActions: string[] = [];
-      if (block.target === 'back') {
-        targetActions.push(`<<run Engine.backward()>>`);
-      } else {
-        const rawTarget = block.targetSceneId ?? '';
-        const gotoArg = rawTarget.startsWith('param:')
-          ? `_${rawTarget.slice('param:'.length)}`          // temp-var ref, unquoted
-          : `"${idToName?.get(rawTarget) ?? rawTarget}"`;   // scene name, quoted
-        targetActions.push(`<<goto ${gotoArg}>>`);
-      }
-      targetActions.push(`<<run UIBar.update()>>`);
-      // StoryMenu: emit just the <<link>> macro on one line, no wrapper span.
-      // SugarCube parses ::StoryMenu line-by-line; each <<link>> becomes a <li>
-      // and gets standard menu styling.
-      if (passageCtx === 'menu') {
-        const inlineActions = block.actions
-          .map(a => actionToSC(a, vars, nodes, '', idToName).trim())
-          .filter(Boolean)
-          .join('');
-        return `${indent}<<link ${scStr(block.label)}>>${inlineActions}${targetActions.join('')}<</link>>`;
-      }
-      actionLines.push(...targetActions.map(a => `${indent}  ${a}`));
-      return (
-        spotPrefix +
-        `${indent}<span class="${classAttr}"${bindAttr}><<link ${scStr(block.label)}>>\n` +
-        actionLines.join('\n') + '\n' +
-        `${indent}<</link>></span>`
-      );
-    }
-
-    case 'menu-link': {
-      // Bare <<link>> — no wrapper span, no styling. Single line so SugarCube's
-      // ::StoryMenu link-sifting recognizes the generated <a>. Built-in targets map
-      // to SugarCube UI dialogs; 'none' runs only the actions.
-      const inlineActions = block.actions
-        .map(a => actionToSC(a, vars, nodes, '', idToName).trim())
-        .filter(Boolean)
-        .join('');
-      let nav = '';
-      switch (block.target) {
-        case 'back':     nav = '<<run Engine.backward()>>'; break;
-        case 'saves':    nav = '<<run UI.saves()>>'; break;
-        case 'restart':  nav = '<<run UI.restart()>>'; break;
-        case 'settings': nav = '<<run UI.settings()>>'; break;
-        case 'scene': {
-          const rawTarget = block.targetSceneId ?? '';
-          const gotoArg = rawTarget.startsWith('param:')
-            ? `_${rawTarget.slice('param:'.length)}`
-            : `"${idToName?.get(rawTarget) ?? rawTarget}"`;
-          nav = `<<goto ${gotoArg}>>`;
-          break;
-        }
-        // 'none': nav stays empty — actions only
-      }
-      return `${indent}<<link ${scStr(block.label)}>>${inlineActions}${nav}<</link>>`;
-    }
-
-    case 'function': {
-      const settings = project?.settings;
-      const classAttr = settings
-        ? buttonElementClasses(block, settings).join(' ')
-        : `tg-btn tg-btn-${block.id.replace(/-/g, '').substring(0, 12)}`;
-      const bindKey = settings ? buttonDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildButtonSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const actionLines = block.actions
-        .map(a => actionToSC(a, vars, nodes, `${indent}  `, idToName))
-        .filter(Boolean);
-      const funcTarget = block.targetSceneId ? sceneTarget(block.targetSceneId, idToName) : '"???"';
-      actionLines.push(`${indent}  <<include ${funcTarget}>>`);
-      actionLines.push(`${indent}  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>`);
-      actionLines.push(`${indent}  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>`);
-      actionLines.push(`${indent}  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>`);
-      actionLines.push(`${indent}  <<run UIBar.update()>>`);
-      return (
-        spotPrefix +
-        `${indent}<span class="${classAttr}"${bindAttr}><<link ${scStr(block.label)}>>\n` +
-        actionLines.join('\n') + '\n' +
-        `${indent}<</link>></span>`
-      );
-    }
-
-    case 'checkbox': {
-      const cb = block as CheckboxBlock;
-      if (cb.options.length === 0) return '';
-      const lines: string[] = [];
-      if (cb.label) lines.push(`${indent}${cb.label}`);
-
-      if (cb.mode === 'flags') {
-        // Each option toggles its own boolean variable
-        for (const opt of cb.options) {
-          const v = vars.find(x => x.id === opt.variableId);
-          const vname = v ? `$${varPath(v, nodes)}` : '$???';
-          lines.push(`${indent}<<checkbox "${vname}" false true autocheck>> ${opt.label}`);
-        }
-      } else {
-        // Array mode: plain HTML checkboxes + script sets initial state and attaches handlers
-        const arrVar = vars.find(x => x.id === cb.variableId);
-        const arrPath = arrVar ? varPath(arrVar, nodes) : '???';
-        const uid = `tgcb_${cb.id.replace(/-/g, '').substring(0, 10)}`;
-        const inputLines = cb.options.map((opt, i) => {
-          const optId = `${uid}_${i}`;
-          return `<input id="${optId}" type="checkbox"> <label for="${optId}">${opt.label}</label>`;
-        });
-        lines.push(`${indent}<span id="${uid}">${inputLines.join('<br>')}</span>`);
-        const handlers = cb.options.map((opt, i) => {
-          const optId = `${uid}_${i}`;
-          const val = scStr(opt.value ?? '');
-          return (
-            `var e${i}=document.getElementById('${optId}');` +
-            `if(e${i}){` +
-            `e${i}.checked=State.variables.${arrPath}.includes(${val});` +
-            `e${i}.addEventListener('change',function(){` +
-            `if(this.checked){State.variables.${arrPath}.push(${val});}` +
-            `else{State.variables.${arrPath}.deleteWith(function(x){return x===${val};});}});}`
-          );
-        }).join('');
-        lines.push(`${indent}<<script>>setTimeout(function(){${handlers}},0);<</script>>`);
-      }
-      const cbSettings = project?.settings;
-      const cbExtra = cbSettings ? simpleBlockCascadeClasses(cb, cbSettings) : [];
-      const cbBindKey = cbSettings ? simpleBlockDataStyleBind(cb, cbSettings) : '';
-      const cbBindAttr = cbBindKey ? ` data-style-bind="${cbBindKey}"` : '';
-      const cbSpotStyle = buildSimpleBlockSpotStyleBlock(cb);
-      const cbSpotPrefix = cbSpotStyle ? `${indent}${cbSpotStyle}\n` : '';
-      const cbClasses = ['tg-checkbox', ...cbExtra].join(' ');
-      return `${cbSpotPrefix}${indent}<div class="${cbClasses}"${cbBindAttr}>${lines.join('\n')}</div>`;
-    }
-
-    case 'radio': {
-      const rb = block as RadioBlock;
-      if (rb.options.length === 0) return '';
-      const v = vars.find(x => x.id === rb.variableId);
-      const vname = v ? `$${varPath(v, nodes)}` : '$???';
-      const lines: string[] = [];
-      if (rb.label) lines.push(`${indent}${rb.label}`);
-      for (const opt of rb.options) {
-        lines.push(`${indent}<<radiobutton "${vname}" ${scStr(opt.value)} autocheck>> ${opt.label}`);
-      }
-      const rbSettings = project?.settings;
-      const rbExtra = rbSettings ? simpleBlockCascadeClasses(rb, rbSettings) : [];
-      const rbBindKey = rbSettings ? simpleBlockDataStyleBind(rb, rbSettings) : '';
-      const rbBindAttr = rbBindKey ? ` data-style-bind="${rbBindKey}"` : '';
-      const rbSpotStyle = buildSimpleBlockSpotStyleBlock(rb);
-      const rbSpotPrefix = rbSpotStyle ? `${indent}${rbSpotStyle}\n` : '';
-      const rbClasses = ['tg-radio', ...rbExtra].join(' ');
-      return `${rbSpotPrefix}${indent}<div class="${rbClasses}"${rbBindAttr}>${lines.join('\n')}</div>`;
-    }
-
-    case 'popup': {
-      const name = (idToName?.get(block.targetSceneId) ?? block.targetSceneId) || '???';
-      const title = block.title ?? '';
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      // Drop the structural `tg-popup` base — it's only the cascade namespace.
-      const dlgClasses = extra.join(' ').trim();
-      const classArg = dlgClasses ? `, "${dlgClasses}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      return `${spotPrefix}${indent}<<run Dialog.setup(${scStr(title)}${classArg}); Dialog.wiki(Story.get("${name}").processText()); Dialog.open();>>`;
-    }
-
-    case 'audio': {
-      return emitAudioPlayback(block as AudioBlock, indent);
-    }
-
-    case 'audio-gen': {
-      const ab = block as AudioGenBlock;
-      // Draft (history/) takes are editor-only — never exported.
-      // Approved (assets/) files use the same SugarCube playback pipeline as AudioBlock.
-      if (!ab.src.startsWith('assets/')) return '';
-      return emitAudioPlayback(ab, indent);
-    }
-
-    case 'video-gen': {
-      // Draft (history/) takes are editor-only — never exported. Approved (assets/)
-      // files render exactly like a Video block.
-      if (!block.src.startsWith('assets/')) return '';
-      const attrs = [
-        block.controls ? 'controls' : '',
-        block.autoplay ? 'autoplay' : '',
-        block.loop ? 'loop' : '',
-        block.width > 0 ? `width="${block.width}"` : '',
-      ].filter(Boolean).join(' ');
-      const settings = project?.settings;
-      const extra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const bindKey = settings ? simpleBlockDataStyleBind(block, settings) : '';
-      const bindAttr = bindKey ? ` data-style-bind="${bindKey}"` : '';
-      const spotStyle = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const classes = ['tg-video', ...extra].join(' ');
-      return `${spotPrefix}${indent}<div class="${classes}"${bindAttr}><video src="${block.src}"${attrs ? ' ' + attrs : ''}></video></div>`;
-    }
-
-    case 'container': {
-      const cb = block as ContainerBlock;
-      if (!cb.containerId) return `${indent}/* Container block: no container selected */`;
-      const container = (project?.containers ?? []).find(c => c.id === cb.containerId);
-      if (!container) return `${indent}/* Container block: container not found */`;
-      const hero = chars.find(c => c.isHero);
-      if (!hero) return `${indent}/* Container block: no main hero defined — set one in Characters tab */`;
-      const heroVarName = hero.varName || hero.name.toLowerCase().replace(/\s+/g, '_');
-      const titleArg = cb.title ? ` ${scStr(cb.title)}` : '';
-      return `${indent}<<tgContainer "${container.varName}" "${heroVarName}"${titleArg}>>`;
-    }
-
-    case 'time-manipulation': {
-      const tb = block as TimeManipulationBlock;
-      const v = vars.find(x => x.id === tb.variableId);
-      if (!v) return `${indent}/* Time manipulation: variable not found */`;
-      const path = varPath(v, nodes);
-      const delta = {
-        years: tb.years || 0,
-        months: tb.months || 0,
-        days: tb.days || 0,
-        hours: tb.hours || 0,
-        minutes: tb.minutes || 0,
-      };
-      return `${indent}<<run tgAddTime("${path}", ${JSON.stringify(delta)})>>`;
-    }
-
-    case 'tabs': {
-      if (block.tabs.length === 0) return '';
-      // Control variable: user-bound number var, or auto-generated `$__tabs_<id>`.
-      // Also compute the path WITHOUT the `$` prefix — runtime JS uses it via
-      // `State.variables[<path>]` to read the value (handles nested dots).
-      const ctrlInfo = (() => {
-        const blockShortId = block.id.replace(/-/g, '');
-        if (block.controlVariableId) {
-          const v = vars.find(x => x.id === block.controlVariableId);
-          if (v) {
-            const p = varPath(v, nodes);
-            return { ref: `$${p}`, path: p };
-          }
-        }
-        const auto = `__tabs_${blockShortId}`;
-        return { ref: `$${auto}`, path: auto };
-      })();
-      const ctrlVar = ctrlInfo.ref;
-      const defaultIdx = block.defaultTabIndex ?? 0;
-      // Cascade scope class — for the per-instance `<style>` block + class on the wrapper.
-      const settings = project?.settings;
-      const cascadeExtra = settings ? simpleBlockCascadeClasses(block, settings) : [];
-      const spotStyle   = buildSimpleBlockSpotStyleBlock(block);
-      const spotPrefix  = spotStyle ? `${indent}${spotStyle}\n` : '';
-      const barClass    = ['tg-tabs-block', ...cascadeExtra].join(' ');
-      // Tab buttons — each rendered as `<span data-idx="N"><<link ...>></span>` so the
-      // runtime active-class JS can find them. Click sets ctrl var + Engine.show()
-      // (re-renders main passage and triggers UIBar.update() automatically).
-      const buttons = block.tabs.map((tab, i) =>
-        `<span data-idx="${i}"><<link ${scStr(tab.label)}>><<set ${ctrlVar} to ${i}>><<run Engine.show()>><</link>></span>`
-      ).join('');
-      const tabBar = `${indent}<div class="${barClass}" data-ctrl="${ctrlInfo.path}">${buttons}</div>`;
-      // Lazy init: if ctrl var is undefined when first rendered, set it to defaultIdx.
-      const init = `${indent}<<if ndef ${ctrlVar}>><<set ${ctrlVar} to ${defaultIdx}>><</if>>`;
-      // Body: <<if>>/<<elseif>> chain rendering active tab's blocks.
-      const bodies = block.tabs.map((tab, i) => {
-        const kw = i === 0 ? '<<if' : '<<elseif';
-        const inner = tab.blocks
-          .map(b => blockToSC(b, chars, vars, nodes, indent + '  ', idToName, project))
-          .filter(Boolean)
-          .join('\n');
-        return `${indent}${kw} ${ctrlVar} eq ${i}>>\n${inner}`;
-      }).join('\n');
-      return `${spotPrefix}${init}\n${tabBar}\n${bodies}\n${indent}<</if>>`;
-    }
-
-    case 'plugin': {
-      const pb = block as PluginBlock;
-      const def = getPluginDef(pb.pluginId);
-      if (!def) return `${indent}<!-- plugin ${pb.pluginId} not found -->`;
-      const setters = def.params
-        .map((p) => `<<set _${p.key} to ${pluginValueLiteral(p, pb.values[p.key], idToName)}>>`)
-        .join('');
-      return `${indent}${setters}<<include "__plug_${def.id}">>`;
-    }
-    default:
-      return assertNever(block);
-  }
+function blockToSCInner(block: Block, ctx: BlockContext): string {
+  return (HANDLERS[block.type] as (b: Block, c: BlockContext) => string)(block, ctx);
 }
 
-function branchToSC(
+export function branchToSC(
   branch: ConditionBranch,
   chars: Character[],
   vars: Variable[],
@@ -1386,7 +434,7 @@ function branchToSC(
 // It does NOT support `function`, `var`, `return`, or IIFEs.
 // <<script>>output.wiki()<</script>> also fails — `output` is a plain DOM node.
 
-function buildProgressBarSC(c: ProgressBlock, vars: Variable[], nodes: VariableTreeNode[]): string {
+export function buildProgressBarSC(c: ProgressBlock, vars: Variable[], nodes: VariableTreeNode[]): string {
   const v = vars.find(x => x.id === c.variableId);
   const vname = v ? varPath(v, nodes) : '???';
   const sv = `$${vname}`;  // TwineScript story variable
@@ -1432,7 +480,7 @@ function buildProgressBarSC(c: ProgressBlock, vars: Variable[], nodes: VariableT
 // from the saved $__tgMasterVol once the DOM node exists. DOM ids derive from the
 // block id so multiple sliders on one passage don't collide.
 
-function buildAudioVolumeBlockSC(b: AudioVolumeBlock): string {
+export function buildAudioVolumeBlockSC(b: AudioVolumeBlock): string {
   const id = `tgvol${b.id.replace(/-/g, '').substring(0, 12)}`;
   const muteId = `${id}m`;
   const slider =
@@ -1461,7 +509,7 @@ function buildAudioVolumeBlockSC(b: AudioVolumeBlock): string {
 
 // ─── Date-Time logic ─────────────────────────────────────────────────────────
 
-function buildDateTimeCellSC(c: DateTimeBlock, vname: string): string {
+export function buildDateTimeCellSC(c: DateTimeBlock, vname: string): string {
   const mode: DateTimeDisplayMode = c.displayMode ?? 'text';
   const pre = c.prefix ?? '';
   const suf = c.suffix ?? '';
@@ -1596,7 +644,7 @@ function tableCellInnerToSC(cell: SidebarCell, chars: Character[], vars: Variabl
     .join('');
 }
 
-function tableBlockToSC(block: TableBlock, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
+export function tableBlockToSC(block: TableBlock, chars: Character[], vars: Variable[], nodes: VariableTreeNode[], indent = '', idToName?: Map<string, string>, project?: Project): string {
   if (block.rows.length === 0) return '';
   const s = block.style;
 
@@ -2555,7 +1603,7 @@ type AudioLike = AudioBlock | AudioGenBlock;
  * Shared between the two block-type cases so the playback pipeline lives in one
  * place (cacheaudio + audio play + stopOthers + cancellable delayed-start).
  */
-function emitAudioPlayback(ab: AudioLike, indent: string): string {
+export function emitAudioPlayback(ab: AudioLike, indent: string): string {
   const trackId = `tga_${ab.id.replace(/-/g, '')}`;
   const vol = Math.round(ab.volume) / 100;
 
@@ -2752,7 +1800,7 @@ export function buildAudioScript(scenes: Scene[], unlockText?: string): string {
  * draw passage connections in its graph view (it scans for [[...]] by regex,
  * while SugarCube never executes the content under `<<if false>>`).
  */
-function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): string[] {
+export function collectSceneTargets(blocks: Block[], idToName?: Map<string, string>): string[] {
   const resolve = (v: string) => idToName?.get(v) ?? v;
   const targets: string[] = [];
   for (const b of blocks) {
@@ -2838,232 +1886,58 @@ export function buildPluginPassageBodies(
 }
 
 export function exportToTwee(project: Project, plugins: PluginBlockDef[] = []): string {
-  setPluginRegistry(plugins);
-  const variableNodes = project.variableNodes;
-  const variables = flattenVariables(variableNodes);
-  const { title, ifid, scenes, characters } = project;
-  const idToName = new Map(scenes.map(s => [s.id, s.name]));
-  const startScene = scenes.find(s => s.tags.includes(START_TAG))?.name ?? scenes[0]?.name ?? 'Start';
-  // Sidebar-as-scene: a scene tagged `sidebar` (singleton) becomes ::StoryCaption.
-  // The scene is NOT emitted as a regular ::SceneName passage (its name is
-  // editor-only — the SugarCube engine reads from `::StoryCaption` directly).
-  const sidebarScene = scenes.find(s => s.tags.includes('sidebar'));
-  // Title-as-scene: a scene tagged `title` (singleton) becomes ::StoryTitle.
-  // Same passage-redirect pattern as sidebar. When absent, fall back to project.title.
-  const titleScene = scenes.find(s => s.tags.includes('title'));
-  // Other singleton system scenes that redirect to named SugarCube passages.
-  const menuScene          = scenes.find(s => s.tags.includes('menu'));
-  const passageHeaderScene = scenes.find(s => s.tags.includes('passage-header'));
-  const passageFooterScene = scenes.find(s => s.tags.includes('passage-footer'));
+  // Thin serializer over the shared compileStory() orchestration. Twee-specific
+  // concerns only: the ::StoryTitle/::StoryData format containers, the
+  // ::StoryStylesheet/::StoryScript wrapping, the [tags] syntax, the Twine-editor
+  // graph hint, and the '(empty scene)' placeholder.
+  const { passages, startName, css, script } = compileStory(project, plugins);
   const parts: string[] = [];
 
-  // StoryTitle — plain-text story title / storage ID. Per SugarCube docs it must be
-  // plain text (no markup/macros) because it seeds the save-storage ID; in Twine 2 it
-  // is unused (title comes from project metadata) but Twee import relies on it. Always
-  // the stable project title — never the (possibly rich) title scene.
-  parts.push(`::StoryTitle\n${title}\n`);
+  // StoryTitle — plain-text title / save-storage ID (no markup); always project.title.
+  parts.push(`::StoryTitle\n${project.title}\n`);
 
-  // StoryDisplayTitle — the *displayed* title in the UI bar (#story-title) + browser
-  // titlebar. Unlike StoryTitle it renders markup/macros/images. Emitted from the
-  // title scene when present & non-empty; otherwise SugarCube falls back to StoryTitle.
-  // PassageContext 'title' strips the `<div class="tg-text">` wrapper from text blocks
-  // (keeps the inline title clean) while image/other blocks render normally.
-  const titleDisplayBody = titleScene
-    ? titleScene.blocks
-        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, 'title'))
-        .filter(Boolean)
-        .join('\n')
-    : '';
-  if (titleDisplayBody) parts.push(`::StoryDisplayTitle\n${titleDisplayBody}\n`);
+  // StoryDisplayTitle — the rich displayed title (from the title scene), when present.
+  const disp = passages.find(p => p.name === 'StoryDisplayTitle');
+  if (disp) parts.push(`::StoryDisplayTitle\n${disp.content}\n`);
 
-  // StoryData
+  // StoryData — format/ifid/start metadata (Twee references the start by NAME).
   const storyData = JSON.stringify({
-    ifid,
+    ifid: project.ifid,
     format: 'SugarCube',
     'format-version': '2.36.1',
-    start: startScene,
+    start: startName,
     zoom: 1,
   }, null, 2);
   parts.push(`::StoryData\n${storyData}\n`);
 
-  // StoryInit — variable initialization
-  const inits: string[] = [];
-  for (const n of variableNodes) {
-    if (n.kind === 'variable') {
-      inits.push(`<<set $${n.name} to ${defaultValueLiteral(n)}>>`);
-    } else if (n.kind === 'group' && hasLeafVariables(n)) {
-      inits.push(`<<set $${n.name} = ${buildObjectLiteral(n, variableNodes)}>>`);
-    }
-  }
-  // Audio: <<cacheaudio>> lines + <<waitforaudio>> to block start until loaded
-  const audioCacheLines = buildAudioCacheLines(scenes);
-  inits.push(...audioCacheLines);
-  if (audioCacheLines.length > 0) inits.push('<<waitforaudio>>');
-  // Audio volume: init master volume variable when any TableBlock contains an
-  // audio-volume cell (recursive scan — table can live in any nested container).
-  const hasAudioVolume = scenes.some(s => hasAudioVolumeCell(s.blocks));
-  if (hasAudioVolume) inits.push('<<set $__tgMasterVol to 1>>');
-  // Initial inventory: push starting items for each character
-  for (const char of characters) {
-    if (!char.varName) continue;
-    const charPath = `$${char.varName}`;
-    // Paperdoll default equipment: set slot variables from defaultItemVarName
-    if (char.paperdoll?.slots?.length) {
-      for (const pdSlot of char.paperdoll.slots) {
-        if (pdSlot.defaultItemVarName) {
-          inits.push(`<<set ${charPath}.equipment.${pdSlot.id} to "${pdSlot.defaultItemVarName}">>`);
-        }
-      }
-    }
-    if (!char.initialInventory?.length) continue;
-    for (const slot of char.initialInventory) {
-      // Mark item as equipped if it matches a paperdoll default
-      const isDefaultEquipped = char.paperdoll?.slots?.some(
-        ps => ps.defaultItemVarName === slot.itemVarName
-      ) ?? false;
-      inits.push(`<<run ${charPath}.inventory.push({ item: "${slot.itemVarName}", qty: ${slot.quantity}, equipped: ${isDefaultEquipped} })>>`);
-    }
-  }
-  // Custom init markup — user-supplied SugarCube macros appended at the very end of
-  // the autogenerated init lines. Must be SugarCube markup (<<run setup.X = …>>), NOT
-  // raw JS (no [script] tag on StoryInit).
-  const customInit = (project.settings?.customInit ?? '').trim();
-  if (customInit) inits.push(customInit);
-  if (inits.length > 0) {
-    // NOTE: StoryInit must NOT have [script] tag — its content is SugarCube
-    // markup (<<set>>), not raw JavaScript. The [script] tag would cause Twine
-    // to interpret the macros as JS and throw "Unexpected token '<<'".
-    parts.push(`::StoryInit\n${inits.join('\n')}\n`);
+  const init = passages.find(p => p.name === 'StoryInit');
+  if (init) parts.push(`::StoryInit\n${init.content}\n`);
+
+  if (css)    parts.push(`::StoryStylesheet [stylesheet]\n${css}\n`);
+  if (script) parts.push(`::StoryScript [script]\n${script}\n`);
+
+  // System passages in twee's canonical order, looked up by name on the shared list.
+  for (const name of ['StoryCaption', 'StoryMenu', 'PassageHeader', 'PassageFooter']) {
+    const p = passages.find(x => x.name === name);
+    if (p) parts.push(`::${name}\n${p.content}\n`);
   }
 
-  // Sidebar systemConfig — width / position / hidden / collapse / bgColor.
-  // Reads `sidebarScene.systemConfig` (kind 'sidebar') and emits both CSS and a
-  // Config.ui.stowBarInitially line if needed.
-  const { css: sidebarCfgCSS, script: sidebarCfgScript } = buildSidebarSystemConfigOutput(sidebarScene, variables, variableNodes);
-  // Title systemConfig — #story-title text color + font.
-  const titleCfgCSS = buildTitleSystemConfigCSS(titleScene);
-
-  // StoryStylesheet
-  const charCSS      = buildAllDialogueCss(characters);
-  const cellCSS      = buildCellSharedCSS(scenes);  // progress bars, cell images, lightbox
-  const tabsCSS      = buildTabsBlockCSS(scenes);    // TabsBlock tab bar
-  const sectionCSS   = buildSectionCSS(scenes);      // SectionBlock container
-  const calloutCSS   = buildCalloutCSS(scenes);      // CalloutBlock notice box
-  const doCSS        = buildDisplayObjectCSS(scenes); // DisplayObject layouts
-  const questCSS     = buildQuestShowCSS(scenes);     // Show Quests block
-  const buttonCSS    = buildButtonsCascadeCss(scenes, project.settings);
-  const simpleCSS    = buildSimpleBlocksCascadeCss(scenes, project.settings);
-  const tipCSS       = buildTooltipCSS();
-  const containerCSS = buildContainerCSS();
-  const paperdollCSS = buildPaperdollCSS(project);
-  const inventoryCSS = buildInventoryCSS(project);
-  const generatedCSS = [charCSS, cellCSS, tabsCSS, sectionCSS, calloutCSS, doCSS, questCSS, buttonCSS, simpleCSS, tipCSS, containerCSS, paperdollCSS, inventoryCSS, sidebarCfgCSS, titleCfgCSS].filter(Boolean).join('\n\n');
-  const userCSS      = (project.customCss ?? '').trim();
-  const allCSS       = userCSS
-    ? (generatedCSS ? `${generatedCSS}\n\n/* User CSS */\n${userCSS}` : userCSS)
-    : generatedCSS;
-  if (allCSS) parts.push(`::StoryStylesheet [stylesheet]\n${allCSS}\n`);
-
-  // StoryScript (lightbox + input debounce) — single passage
-  const storyScript = [
-    sidebarCfgScript,
-    buildDateTimeScript(),
-    buildLightboxScript(scenes),
-    buildTabsBlockScript(scenes),
-    buildInputScript(scenes),
-    buildLiveScript(scenes),
-    buildWatcherScript(project.watchers ?? [], variables, variableNodes, idToName),
-    buildQuestScript(project.quests ?? []),
-    buildAudioScript(scenes, project.settings?.audioUnlockText),
-    buildInventoryScript(project),
-    buildContainerScript(project),
-    buildPaperdollScript(project),
-    hasScenesWithBg(scenes) ? buildSceneBgScript() : '',
-    hasStyleBindings(project) ? buildStyleBindScript(project) : '',
-    buildPopupClassSyncScript(scenes),
-    buildPassageLifecycleScript(project.settings),
-    buildSavesConfigScript(project.settings),
-    hasAudioVolume ? [
-      '// Audio volume: restore from saved state on load',
-      '$(document).on(":passagedisplay", function() {',
-      '  var v = State.variables.__tgMasterVol;',
-      '  if (v != null) { SimpleAudio.volume(v); }',
-      '});',
-    ].join('\n') : '',
-    buildPurlSignatureScript(),
-  ].filter(Boolean).join('\n\n');
-  const userScript = (project.customScript ?? '').trim();
-  const fullScript = userScript
-    ? (storyScript ? `${storyScript}\n\n/* User script */\n${userScript}` : userScript)
-    : storyScript;
-  if (fullScript) parts.push(`::StoryScript [script]\n${fullScript}\n`);
-
-  // StoryCaption — emit only when a sidebar-tagged scene exists.
-  const captionSC = sidebarScene
-    ? sidebarScene.blocks
-        .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
-        .filter(Boolean)
-        .join('\n')
-    : '';
-  if (captionSC) parts.push(`::StoryCaption\n${captionSC}\n`);
-
-  // StoryMenu / PassageHeader / PassageFooter — singleton system scenes mapped to
-  // named SugarCube passages. Emit each only when its scene exists AND has non-empty body.
-  // `menu` context strips link/text wrappers because SugarCube parses ::StoryMenu line-by-line
-  // into `<li><<link>></li>` items. Header/footer render into the page like regular passages.
-  const systemPassagePairs: Array<[Scene | undefined, string, PassageContext]> = [
-    [menuScene,          'StoryMenu',     'menu'],
-    [passageHeaderScene, 'PassageHeader', undefined],
-    [passageFooterScene, 'PassageFooter', undefined],
-  ];
-  for (const [sc, passageName, ctx] of systemPassagePairs) {
-    if (!sc) continue;
-    const body = sc.blocks
-      .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project, ctx))
-      .filter(Boolean)
-      .join('\n');
-    if (body) parts.push(`::${passageName}\n${body}\n`);
-  }
-
-  // Scene passages
-  for (const scene of scenes) {
-    if (sidebarScene && scene.id === sidebarScene.id) continue; // sidebar scene → StoryCaption only
-    if (titleScene   && scene.id === titleScene.id)   continue; // title scene   → StoryTitle only
-    if (menuScene          && scene.id === menuScene.id)          continue; // → StoryMenu
-    if (passageHeaderScene && scene.id === passageHeaderScene.id) continue; // → PassageHeader
-    if (passageFooterScene && scene.id === passageFooterScene.id) continue; // → PassageFooter
-    const exportTags = scene.tags.filter(t => t !== START_TAG);
-    const tags = exportTags.length > 0 ? ` [${exportTags.join(' ')}]` : '';
-
-    // Scene background — prepended to passage body
-    const bgMarkup = scene.background
-      ? exportSceneBg(scene.background, variables, variableNodes)
+  // Scene passages — [tags] syntax, '(empty scene)' fallback, and the Twine-editor
+  // graph hint (<<if false>>[[Target]]<</if>>) built from navTargets. The graph hint is
+  // twee-only: it lets Twine's editor regex-find links to draw the story map; SugarCube
+  // ignores <<if false>> content and standalone HTML never imports into the editor.
+  for (const p of passages) {
+    if (p.kind !== 'scene') continue;
+    const tags = p.tags.length > 0 ? ` [${p.tags.join(' ')}]` : '';
+    const graphHint = p.navTargets && p.navTargets.length > 0
+      ? `\n<<if false>>${p.navTargets.map(t => `[[${t}]]`).join('')}<</if>>`
       : '';
-
-    const blocksBody = scene.blocks
-      .map(b => blockToSC(b, characters, variables, variableNodes, '', idToName, project))
-      .filter(Boolean)
-      .join('\n');
-
-    const body = [bgMarkup, blocksBody].filter(Boolean).join('\n');
-
-    // Graph hint: <<if false>>[[Target1]][[Target2]]<</if>>
-    // Twine's editor finds [[...]] by regex to draw connections.
-    // SugarCube never executes content inside a false <<if>> condition.
-    const navTargets = collectSceneTargets(scene.blocks, idToName);
-    const graphHint = navTargets.length > 0
-      ? `\n<<if false>>${navTargets.map(t => `[[${t}]]`).join('')}<</if>>`
-      : '';
-
-    parts.push(`::${scene.name}${tags}\n${body || '(empty scene)'}${graphHint}\n`);
+    parts.push(`::${p.name}${tags}\n${p.content || '(empty scene)'}${graphHint}\n`);
   }
 
-  // ── Hidden plugin passages ────────────────────────────────────────────────
-  // Each plugin referenced by the scenes (and its plugin deps) emits a `__plug_<id>`
-  // passage. Body assembly + param scoping is shared with the HTML/Play exporter via
-  // buildPluginPassageBodies so the two formats can't diverge.
-  for (const { id, body } of buildPluginPassageBodies(scenes, characters, variables, variableNodes, idToName, project)) {
-    parts.push(`::__plug_${id} [nobr]\n${body}\n`);
+  // Hidden plugin passages.
+  for (const p of passages) {
+    if (p.kind === 'plugin') parts.push(`::${p.name} [nobr]\n${p.content}\n`);
   }
 
   return parts.join('\n\n') + '\n';
@@ -3571,7 +2445,7 @@ function buildBoundMappingHtml(
  * Build SugarCube HTML for a paperdoll grid cell in the sidebar panel.
  * Generates a static CSS-grid container with <<if>> expressions for each slot.
  */
-function buildPaperdollCellSC(
+export function buildPaperdollCellSC(
   charVarName: string,
   pd: import('../types').PaperdollConfig,
   showLabels?: boolean,
