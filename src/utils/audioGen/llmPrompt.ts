@@ -2,29 +2,10 @@ import type { Project, Scene } from '../../types';
 import { generateText } from '../llm';
 import { buildSceneContext } from '../llm/promptBuilder';
 import type { LLMProvider, LLMMode } from '../llm';
+import { getCharacterIdsInScene, type LlmOptions } from '../llm/genShared';
 
 export type { LLMProvider };
-
-export interface LlmOptions {
-  provider: LLMProvider;
-  urlOrApiKey: string;
-  model: string;
-  apiKey?: string;
-  maxTokens: number;
-  temperature: number;
-  systemPrompt: string;
-}
-
-function getCharacterIdsInScene(scene: Scene, targetBlockId: string): Set<string> {
-  const ids = new Set<string>();
-  for (const block of scene.blocks) {
-    if (block.id === targetBlockId) break;
-    if (block.type === 'dialogue' && block.characterId) {
-      ids.add(block.characterId);
-    }
-  }
-  return ids;
-}
+export type { LlmOptions };
 
 function buildLyricsUserPrompt(currentText: string, mode: LLMMode): string {
   const trimmed = currentText.trim();

@@ -56,7 +56,7 @@ export function StyleOverrideEditor({
   value, onChange, variableNodes, allowBound = true, fieldsSchema = [], rawCssHelp,
 }: Props) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
   const v = value ?? emptyOverride();
   const enabled = v.enabled;
   const mode: StyleMode = v.mode ?? 'static';
@@ -168,7 +168,7 @@ function StaticEditor({
   onRawCssChange: (rawCss: string) => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
   return (
     <>
       <FieldsEditor fields={fields} schema={fieldsSchema} onChange={onFieldsChange} />
@@ -197,7 +197,7 @@ function BoundEditor({
   onDefaultRawCssChange: (rawCss: string) => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
 
   const addVariant = () => {
     const entry: StyleMappingEntry = {
@@ -305,7 +305,7 @@ function VariantRow({
   onMoveDown?: () => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
   const [expanded, setExpanded] = useState(true);
 
   const isRange = entry.matchType === 'range';
@@ -432,7 +432,7 @@ function FieldsEditor({
   onChange: (fields: Record<string, StyleFieldValue>) => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
 
   // Schema-less mode (e.g. Divider) — nothing to render, RawCssEditor handles all customisation.
   if (schema.length === 0) return null;
@@ -440,7 +440,7 @@ function FieldsEditor({
   return (
     <div className="grid grid-cols-2 gap-2">
       {schema.map(f => {
-        const label = tt.fields?.[f.labelKey] ?? f.labelKey;
+        const label = tt.fields?.[f.labelKey as keyof typeof tt.fields] ?? f.labelKey;
         return (
           <div key={f.key}>
             <label className="block text-[11px] text-slate-400 mb-1">{label}</label>
@@ -521,7 +521,7 @@ function EnumInput({
   onChange: (v: string | undefined) => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
   return (
     <div className="flex flex-wrap gap-0.5">
       <button
@@ -545,7 +545,7 @@ function EnumInput({
           }`}
           onClick={() => onChange(opt.value)}
         >
-          {tt.options?.[opt.labelKey] ?? opt.labelKey}
+          {tt.options?.[opt.labelKey as keyof typeof tt.options] ?? opt.labelKey}
         </button>
       ))}
     </div>
@@ -559,7 +559,7 @@ function TristateInput({
   onChange: (v: boolean | undefined) => void;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
+  const tt = t.styleOverride;
   return (
     <div className="flex gap-0.5">
       <button
@@ -610,8 +610,8 @@ function RawCssEditor({
   help?: StyleRawCssHelp;
 }) {
   const t = useT();
-  const tt = t.styleOverride as any;
-  const placeholder = (help?.placeholderKey && tt[help.placeholderKey]) || tt.rawCssPlaceholder;
+  const tt = t.styleOverride;
+  const placeholder = (help?.placeholderKey && (tt[help.placeholderKey as keyof typeof tt] as string)) || tt.rawCssPlaceholder;
   return (
     <div>
       <label className="block text-[11px] text-slate-400 mb-1">{tt.rawCssLabel}</label>
@@ -634,7 +634,7 @@ function RawCssEditor({
                 <li key={sel.name}>
                   <code className="text-indigo-300 font-mono">{sel.name}</code>
                   {' — '}
-                  {tt.selectors?.[sel.descKey] ?? sel.descKey}
+                  {tt.selectors?.[sel.descKey as keyof typeof tt.selectors] ?? sel.descKey}
                 </li>
               ))}
             </ul>

@@ -5,6 +5,7 @@ import {
   normalizeBaseUrl,
   runComfyWorkflow,
   withTemplateInjected,
+  pickOutputFile,
 } from '../comfy/client';
 
 export type { ComfyProgress };
@@ -45,18 +46,12 @@ function extractFirstImage(outputs: Record<string, any>): { filename: string; su
   // Prefer a SAVED image (type "output") over a temp/preview one — a workflow may
   // have both a SaveImage and a PreviewImage. Picking the saved file is also required
   // for folder-read (temp files live in ComfyUI's temp dir, not its output folder).
-  const pick = (list: any[]): { filename: string; subfolder?: string; type?: string } | null => {
-    const files = list.filter((it: any) => it && typeof it === 'object' && typeof it.filename === 'string');
-    if (files.length === 0) return null;
-    const chosen = files.find((it: any) => it.type === 'output') ?? files[0];
-    return { filename: chosen.filename, subfolder: chosen.subfolder, type: chosen.type };
-  };
   // 1) Standard `images` outputs (SaveImage / PreviewImage).
   const images: any[] = [];
   for (const out of Object.values(outputs)) {
     if (Array.isArray(out?.images)) images.push(...out.images);
   }
-  const fromImages = pick(images);
+  const fromImages = pickOutputFile(images);
   if (fromImages) return fromImages;
   // 2) Fallback: any reported file descriptor under any key (custom save nodes
   //    report under `gifs` / `result` / a node-specific key instead of `images`).
@@ -65,7 +60,7 @@ function extractFirstImage(outputs: Record<string, any>): { filename: string; su
     if (!out || typeof out !== 'object') continue;
     for (const val of Object.values(out)) if (Array.isArray(val)) any.push(...val);
   }
-  return pick(any);
+  return pickOutputFile(any);
 }
 
 async function generateWithComfy(params: ImageGenerateParams, signal?: AbortSignal): Promise<ImageGenerateResult> {
