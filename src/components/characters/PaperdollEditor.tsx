@@ -187,7 +187,7 @@ export function PaperdollEditor({
           <div className="h-full min-h-[260px] flex flex-col items-center justify-center gap-2 text-slate-600">
             <span className="text-3xl inline-flex"><EmojiIcon name="hamburger" size={20} /></span>
             <p className="text-xs text-center max-w-[220px]">
-              {(t.characters as any).paperdollEmptyHint ?? 'Click a slot to edit it, or an empty cell to add one.'}
+              {t.characters.paperdollEmptyHint ?? 'Click a slot to edit it, or an empty cell to add one.'}
             </p>
           </div>
         )}
@@ -446,7 +446,7 @@ function SlotDetail({
         onClick={onDelete}
         className="text-xs text-slate-500 hover:text-red-400 transition-colors cursor-pointer text-left self-start"
       >
-        <span className="inline-flex items-center gap-1"><EmojiIcon name="close" size={20} /> {(t.characters as any).paperdollDeleteSlot ?? 'Delete slot'}</span>
+        <span className="inline-flex items-center gap-1"><EmojiIcon name="close" size={20} /> {t.characters.paperdollDeleteSlot ?? 'Delete slot'}</span>
       </button>
     </div>
   );

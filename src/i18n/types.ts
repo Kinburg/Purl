@@ -842,6 +842,23 @@ export interface Translations {
   // ─── Characters ─────────────────────────────────────────────────────────────
   characters: {
     defaultName: string;
+    tabBasics: string;
+    tabAvatar: string;
+    tabInventory: string;
+    tabVariables: string;
+    modalSubtitle: string;
+    previewLabel: string;
+    previewMeta: string;
+    previewColors: string;
+    sectionIdentity: string;
+    sectionColors: string;
+    sectionLlm: string;
+    llmDescrLabel: string;
+    llmTempLabel: string;
+    sectionAvatarMode: string;
+    sectionAvatarMapping: string;
+    paperdollEmptyHint: string;
+    paperdollDeleteSlot: string;
     confirmDelete: (name: string) => string;
     empty: string;
     add: string;

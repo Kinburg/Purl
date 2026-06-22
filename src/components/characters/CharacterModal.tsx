@@ -19,7 +19,7 @@ import { AvatarGenModal } from './AvatarGenModal';
 import { PaperdollEditor } from './PaperdollEditor';
 import { ImageMappingEditor, ImageAssetPicker } from '../shared/ImageMappingEditor';
 import {
-  ModalShell, Toggle, INPUT_CLS,
+  ModalShell, INPUT_CLS,
 } from '../shared/ModalShell';
 import { EmojiIcon } from '../shared/EmojiIcons';
 
@@ -240,10 +240,10 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
   };
 
   const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
-    { id: 'basics',    label: (t.characters as any).tabBasics    ?? 'Basics',              icon: <IconUser /> },
-    { id: 'avatar',    label: (t.characters as any).tabAvatar    ?? 'Avatar',              icon: <IconImage /> },
-    { id: 'inventory', label: (t.characters as any).tabInventory ?? 'Inventory & Paperdoll', icon: <IconBag /> },
-    { id: 'variables', label: (t.characters as any).tabVariables ?? 'Variables',           icon: <IconVar /> },
+    { id: 'basics',    label: t.characters.tabBasics    ?? 'Basics',              icon: <IconUser /> },
+    { id: 'avatar',    label: t.characters.tabAvatar    ?? 'Avatar',              icon: <IconImage /> },
+    { id: 'inventory', label: t.characters.tabInventory ?? 'Inventory & Paperdoll', icon: <IconBag /> },
+    { id: 'variables', label: t.characters.tabVariables ?? 'Variables',           icon: <IconVar /> },
   ];
 
   return (
@@ -266,7 +266,7 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
             {trimmedName && <span className="text-slate-400 font-normal ml-2">— {trimmedName}</span>}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            {(t.characters as any).modalSubtitle ?? 'Identity, appearance, inventory and variables'}
+            {t.characters.modalSubtitle ?? 'Identity, appearance, inventory and variables'}
           </p>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-slate-100 transition-colors p-1 -m-1 cursor-pointer" aria-label="Close">
@@ -347,7 +347,7 @@ export function CharacterModal({ mode, charId, initial, takenNames, takenVarName
         <aside className="w-72 shrink-0 border-l border-slate-700 p-5 flex flex-col gap-4 bg-slate-900/30 overflow-y-auto">
           <div>
             <h3 className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-3">
-              {(t.characters as any).previewLabel ?? 'Preview'}
+              {t.characters.previewLabel ?? 'Preview'}
             </h3>
             <CharacterPreview char={draft} avatarCfg={avatarCfg} charId={charId} />
           </div>
@@ -569,7 +569,7 @@ function PreviewMeta({
     <div className="flex flex-col gap-3">
       <div>
         <h3 className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
-          {(t.characters as any).previewMeta ?? 'Details'}
+          {t.characters.previewMeta ?? 'Details'}
         </h3>
         <dl className="flex flex-col gap-1.5 text-[11px]">
           {rows.map(([k, v], i) => (
@@ -606,7 +606,7 @@ function PreviewMeta({
       </div>
       <div>
         <h3 className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
-          {(t.characters as any).previewColors ?? 'Colors'}
+          {t.characters.previewColors ?? 'Colors'}
         </h3>
         <div className="grid grid-cols-4 gap-1.5">
           {[
@@ -660,7 +660,7 @@ function BasicsTab({
 
   return (
     <>
-      <Section title={(t.characters as any).sectionIdentity ?? 'Identity'}>
+      <Section title={t.characters.sectionIdentity ?? 'Identity'}>
         <TwoCol>
           <Field label={t.characters.fieldName} error={nameError}>
             <input
@@ -696,7 +696,7 @@ function BasicsTab({
         </label>
       </Section>
 
-      <Section title={(t.characters as any).sectionColors ?? 'Colors'}>
+      <Section title={t.characters.sectionColors ?? 'Colors'}>
         <div className="grid grid-cols-2 gap-3">
           <ColorSwatch label={t.characters.fieldNameColor}  value={nameColor}   onChange={onNameColorChange} />
           <ColorSwatch label={t.characters.fieldTextColor}  value={textColor}   onChange={onTextColorChange} />
@@ -716,8 +716,8 @@ function BasicsTab({
         />
       </Section>
 
-      <Section title={(t.characters as any).sectionLlm ?? 'LLM'}>
-        <Field label={(t.characters as any).llmDescrLabel ?? 'LLM Description'}>
+      <Section title={t.characters.sectionLlm ?? 'LLM'}>
+        <Field label={t.characters.llmDescrLabel ?? 'LLM Description'}>
           <textarea
             className={INPUT_CLS + ' resize-none'}
             rows={3}
@@ -726,7 +726,7 @@ function BasicsTab({
             onChange={e => onLlmDescrChange(e.target.value)}
           />
         </Field>
-        <Field label={(t.characters as any).llmTempLabel ?? 'LLM Temperature'}>
+        <Field label={t.characters.llmTempLabel ?? 'LLM Temperature'}>
           <input
             type="number" step="0.1" min="0" max="2"
             className={INPUT_CLS}
@@ -776,7 +776,7 @@ function AvatarTab({
 
   return (
     <>
-      <Section title={(t.characters as any).sectionAvatarMode ?? 'Avatar source'}>
+      <Section title={t.characters.sectionAvatarMode ?? 'Avatar source'}>
         <div className="flex gap-2 flex-wrap">
           <ModeBtn active={cfg.mode === 'static'} onClick={() => onChange({ ...cfg, mode: 'static' })}>
             {t.characters.avatarStatic}
@@ -813,7 +813,7 @@ function AvatarTab({
               placeholder={t.characters.selectVariable}
             />
           </Section>
-          <Section title={(t.characters as any).sectionAvatarMapping ?? 'Value → image mapping'}>
+          <Section title={t.characters.sectionAvatarMapping ?? 'Value → image mapping'}>
             <ImageMappingEditor
               mapping={cfg.mapping}
               onChange={mapping => onChange({ ...cfg, mapping })}
@@ -885,7 +885,7 @@ function InventoryPaperdollTab({
 
   return (
     <>
-      <Section title={(t.characters as any).initialInventorySection ?? t.characters.initialInventorySection}>
+      <Section title={t.characters.initialInventorySection ?? t.characters.initialInventorySection}>
         <InitialInventory slots={initialInventory} items={items} onChange={setInitialInventory} />
       </Section>
 
@@ -1049,9 +1049,6 @@ function Field({
     </div>
   );
 }
-
-// Re-export Toggle for parity (unused in this file but avoids unused-import warning elsewhere)
-export const _Toggle = Toggle;
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Icons

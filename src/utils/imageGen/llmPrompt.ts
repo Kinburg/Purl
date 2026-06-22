@@ -2,30 +2,10 @@ import type { Project, Scene } from '../../types';
 import { generateText } from '../llm';
 import { buildSceneContext } from '../llm/promptBuilder';
 import type { LLMProvider, LLMMode } from '../llm';
+import { getCharacterIdsInScene, type LlmOptions } from '../llm/genShared';
 
 export type { LLMProvider };
-
-export interface LlmOptions {
-  provider: LLMProvider;
-  urlOrApiKey: string;
-  model: string;
-  apiKey?: string;
-  maxTokens: number;
-  temperature: number;
-  systemPrompt: string;
-}
-
-/** Collect unique character IDs that appear as dialogue speakers before the target block. */
-function getCharacterIdsInScene(scene: Scene, targetBlockId: string): Set<string> {
-  const ids = new Set<string>();
-  for (const block of scene.blocks) {
-    if (block.id === targetBlockId) break;
-    if (block.type === 'dialogue' && block.characterId) {
-      ids.add(block.characterId);
-    }
-  }
-  return ids;
-}
+export type { LlmOptions };
 
 /** Build a mode-specific user prompt for image prompt generation. */
 function buildImageGenUserPrompt(currentPrompt: string, mode: LLMMode): string {

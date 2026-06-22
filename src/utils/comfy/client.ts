@@ -327,3 +327,15 @@ export function buildComfyViewUrl(
   });
   return `${normalizeBaseUrl(baseUrl)}/view?${params.toString()}`;
 }
+
+/**
+ * From a list of ComfyUI file descriptors, prefer a saved ("output") file over a
+ * temp/preview one; returns the chosen {filename, subfolder?, type?} or null.
+ * Shared by the image and video result extractors (imageGen/videoGen providers).
+ */
+export function pickOutputFile(list: any[]): { filename: string; subfolder?: string; type?: string } | null {
+  const files = list.filter((it: any) => it && typeof it === 'object' && typeof it.filename === 'string');
+  if (files.length === 0) return null;
+  const chosen = files.find((it: any) => it.type === 'output') ?? files[0];
+  return { filename: chosen.filename, subfolder: chosen.subfolder, type: chosen.type };
+}

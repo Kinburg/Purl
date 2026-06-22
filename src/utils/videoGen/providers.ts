@@ -4,6 +4,7 @@ import {
   normalizeBaseUrl,
   runComfyWorkflow,
   withTemplateInjected,
+  pickOutputFile,
 } from '../comfy/client';
 
 export type { ComfyProgress };
@@ -51,12 +52,6 @@ export interface VideoGenerateResult {
  * "output") is always preferred over a temp/preview one.
  */
 function extractFirstVideo(outputs: Record<string, any>): { filename: string; subfolder?: string; type?: string } | null {
-  const pick = (list: any[]): { filename: string; subfolder?: string; type?: string } | null => {
-    const files = list.filter((it: any) => it && typeof it === 'object' && typeof it.filename === 'string');
-    if (files.length === 0) return null;
-    const chosen = files.find((it: any) => it.type === 'output') ?? files[0];
-    return { filename: chosen.filename, subfolder: chosen.subfolder, type: chosen.type };
-  };
   // 1) Known video/image output keys.
   const known: any[] = [];
   for (const out of Object.values(outputs)) {
@@ -65,7 +60,7 @@ function extractFirstVideo(outputs: Record<string, any>): { filename: string; su
       if (Array.isArray((out as any)[key])) known.push(...(out as any)[key]);
     }
   }
-  const fromKnown = pick(known);
+  const fromKnown = pickOutputFile(known);
   if (fromKnown) return fromKnown;
   // 2) Fallback: any reported file descriptor under any key (custom save nodes).
   const any: any[] = [];
@@ -73,7 +68,7 @@ function extractFirstVideo(outputs: Record<string, any>): { filename: string; su
     if (!out || typeof out !== 'object') continue;
     for (const val of Object.values(out)) if (Array.isArray(val)) any.push(...val);
   }
-  return pick(any);
+  return pickOutputFile(any);
 }
 
 function detectVideoExt(filename: string): string {
