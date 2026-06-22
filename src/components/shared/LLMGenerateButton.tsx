@@ -92,7 +92,7 @@ export function LLMGenerateButton({ sceneId, blockId, currentValue, onGenerated,
       setPos({ top: rect.bottom + 2, left: Math.max(4, left) });
     }
     setOpen(true);
-  }, [open, loading]);
+  }, [open, loading, llmT.generationStopped]);
 
   useEffect(() => {
     if (!open) return;

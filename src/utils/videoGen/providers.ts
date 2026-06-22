@@ -7,8 +7,6 @@ import {
   pickOutputFile,
 } from '../comfy/client';
 
-export type { ComfyProgress };
-
 export interface VideoGenerateParams {
   baseUrl: string;
   workflow: Record<string, any>;

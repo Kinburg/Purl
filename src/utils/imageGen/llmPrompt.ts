@@ -1,10 +1,9 @@
 import type { Project, Scene } from '../../types';
 import { generateText } from '../llm';
 import { buildSceneContext } from '../llm/promptBuilder';
-import type { LLMProvider, LLMMode } from '../llm';
+import type { LLMMode } from '../llm';
 import { getCharacterIdsInScene, type LlmOptions } from '../llm/genShared';
 
-export type { LLMProvider };
 export type { LlmOptions };
 
 /** Build a mode-specific user prompt for image prompt generation. */
@@ -42,7 +41,6 @@ export async function generateImagePromptWithLlm(
   blockId: string,
   currentPrompt: string,
   llmMode: LLMMode = 'hint',
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _styleHints: string[] = [],
   signal?: AbortSignal,
 ): Promise<string> {
@@ -121,7 +119,6 @@ export async function generateAvatarPromptWithLlm(
   slotLabel: string,
   currentPrompt: string,
   llmMode: LLMMode = 'hint',
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _styleHints: string[] = [],
   signal?: AbortSignal,
   referencePrompt?: string,
@@ -341,50 +338,6 @@ export async function generateLoreFromDescriptionWithLlm(
     options.provider, options.urlOrApiKey, options.model,
     systemPrompt, project, dummyScene, '__no_block__', currentLore ?? '',
     { maxTokens: Math.max(options.maxTokens, 600), temperature: options.temperature, filterThought: true, rawUserPrompt: userPrompt },
-    'hint', signal, undefined, options.apiKey,
-  );
-  return (result ?? '').trim();
-}
-
-/**
- * Generates a text-to-image prompt for a visual novel sidebar header / cover art using an LLM.
- */
-export async function generateHeaderImagePromptWithLlm(
-  options: LlmOptions,
-  project: Project,
-  description: string,
-  lore: string,
-  currentPrompt: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  const sysParts: string[] = [
-    'You are an expert at writing text-to-image prompts for visual novel cover art and sidebar headers.',
-    'Write a prompt for a wide banner/cover image that captures the mood, setting, and essence of the story.',
-    'Focus on: environment, atmosphere, color palette, lighting, composition, and key visual motifs.',
-    'Do NOT include specific characters unless they are central to the visual identity.',
-    'Do NOT include art style, rendering style, or medium — those are appended separately by the user.',
-    'Keep the prompt 2–4 sentences.',
-    'Output ONLY the prompt text in English. No markdown, no quotes, no commentary.',
-  ];
-
-  if (description.trim()) {
-    sysParts.push(`Story description:\n${description.trim()}`);
-  }
-  if (lore.trim()) {
-    sysParts.push(`World/Setting:\n${lore.trim()}`);
-  }
-
-  const systemPrompt = sysParts.join('\n\n');
-  const userPrompt = currentPrompt.trim()
-    ? `Improve or refine this image prompt for the story header:\n${currentPrompt.trim()}`
-    : 'Generate a detailed header image prompt for this visual novel.';
-
-  const dummyScene: Scene = { id: '__header_img__', name: '', tags: [], blocks: [] };
-
-  const result = await generateText(
-    options.provider, options.urlOrApiKey, options.model,
-    systemPrompt, project, dummyScene, '__no_block__', currentPrompt,
-    { maxTokens: options.maxTokens, temperature: options.temperature, filterThought: true, rawUserPrompt: userPrompt },
     'hint', signal, undefined, options.apiKey,
   );
   return (result ?? '').trim();

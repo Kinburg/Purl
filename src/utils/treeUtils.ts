@@ -35,23 +35,6 @@ export function getNodePath(id: string, nodes: VariableTreeNode[], prefix: strin
   return '';
 }
 
-/** Flattens all variables with their computed dot-paths */
-export function flattenVariablesWithPaths(
-  nodes: VariableTreeNode[],
-  prefix: string[] = []
-): Array<Variable & { path: string }> {
-  const result: Array<Variable & { path: string }> = [];
-  for (const n of nodes) {
-    if (n.kind === 'variable') {
-      result.push({ ...n, path: [...prefix, n.name].join('.') });
-    }
-    if (n.kind === 'group') {
-      result.push(...flattenVariablesWithPaths(n.children, [...prefix, n.name]));
-    }
-  }
-  return result;
-}
-
 /** Checks if a group (or its nested sub-groups) contains at least one variable leaf */
 export function hasLeafVariables(group: VariableGroup, filterType?: VariableType): boolean {
   return group.children.some(n =>
@@ -61,7 +44,7 @@ export function hasLeafVariables(group: VariableGroup, filterType?: VariableType
 }
 
 /** Checks if a name collides with any sibling node (variable or group) */
-export function hasSiblingNameConflict(
+function hasSiblingNameConflict(
   name: string,
   siblings: VariableTreeNode[],
   excludeId?: string

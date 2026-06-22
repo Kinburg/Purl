@@ -10,7 +10,7 @@ function varName(vars: Variable[], id: string): string {
  * Recursively handles nested blocks inside ConditionBlock branches.
  * All array accesses are guarded against undefined to tolerate legacy data.
  */
-export function blockSearchText(block: Block, vars: Variable[]): string {
+function blockSearchText(block: Block, vars: Variable[]): string {
   try {
     switch (block.type) {
       case 'text':

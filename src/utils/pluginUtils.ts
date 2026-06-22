@@ -27,7 +27,7 @@ export function uniqueSlug(base: string, existing: Set<string>): string {
 
 const PARAM_KEY_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-export function isValidParamKey(key: string): boolean {
+function isValidParamKey(key: string): boolean {
   return PARAM_KEY_RE.test(key);
 }
 

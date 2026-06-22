@@ -45,7 +45,7 @@ export interface TemplateTokens {
   frames?: number;
 }
 
-export async function requestJson(url: string, init?: {
+async function requestJson(url: string, init?: {
   method?: string;
   headers?: Record<string, string>;
   body?: string;
@@ -172,7 +172,7 @@ export function withTemplateInjected(
   return clone;
 }
 
-export async function pollComfyHistory(
+async function pollComfyHistory(
   baseUrl: string,
   promptId: string,
   signal?: AbortSignal,
@@ -209,7 +209,7 @@ export async function pollComfyHistory(
   }
 }
 
-export function connectComfyWebSocket(
+function connectComfyWebSocket(
   baseUrl: string,
   clientId: string,
   onProgress: (p: ComfyProgress) => void,

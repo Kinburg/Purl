@@ -21,7 +21,7 @@ export function findGroupById(nodes: VariableTreeNode[], id: string): VariableGr
  * Default DisplayField for a freshly-discovered group leaf — picks a sensible
  * renderer by varType (boolean→bool, number→bar with max 100, else text).
  */
-export function generateFieldFor(v: Variable): DisplayField {
+function generateFieldFor(v: Variable): DisplayField {
   return {
     id: crypto.randomUUID(),
     variableId: v.id,

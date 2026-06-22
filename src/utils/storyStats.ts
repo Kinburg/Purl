@@ -4,7 +4,7 @@ import { extractSceneStrings } from './i18nUtils';
 import { collectNavRefs } from './navTargets';
 import { flattenVariables } from './treeUtils';
 
-export interface SceneWordCount {
+interface SceneWordCount {
   id: string;
   name: string;
   words: number;

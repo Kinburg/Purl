@@ -16,7 +16,7 @@ import { collectNavRefs } from './navTargets';
 
 export type IssueSeverity = 'error' | 'warning' | 'info';
 
-export type ValidationCode =
+type ValidationCode =
   | 'no-start'          // no scene tagged `start`
   | 'multiple-start'    // more than one `start` scene
   | 'duplicate-name'    // two scenes share a name (SugarCube passages must be unique)

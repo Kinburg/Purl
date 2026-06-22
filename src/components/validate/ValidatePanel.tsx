@@ -56,7 +56,10 @@ export function ValidatePanel() {
   const ranManual   = mode === 'manual' && manual !== null;
   const stale       = mode === 'manual' && manual !== null && manual.project !== project;
   const showResults = mode === 'live' || ranManual;
-  const issues      = mode === 'live' ? (liveIssues ?? []) : (manual?.issues ?? []);
+  const issues = useMemo(
+    () => (mode === 'live' ? (liveIssues ?? []) : (manual?.issues ?? [])),
+    [mode, liveIssues, manual],
+  );
 
   const counts = useMemo(() => ({
     error:   issues.filter(i => i.severity === 'error').length,

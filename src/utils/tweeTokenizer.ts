@@ -13,7 +13,7 @@
  * decides what to do with each token.
  */
 
-export interface MacroBranch {
+interface MacroBranch {
   type: 'if' | 'elseif' | 'else';
   condition: string;   // empty for 'else'
   body: Token[];
@@ -295,6 +295,6 @@ export function stringifyToken(tok: Token): string {
   }
 }
 
-export function stringifyTokens(tokens: Token[]): string {
+function stringifyTokens(tokens: Token[]): string {
   return tokens.map(stringifyToken).join('');
 }

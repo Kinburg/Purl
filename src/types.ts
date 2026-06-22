@@ -314,7 +314,7 @@ export interface VariableSetBlock {
   dynamicDefault?: string;  // fallback string when no mapping entry matches
 }
 
-export type ImageMode = 'static' | 'bound';
+type ImageMode = 'static' | 'bound';
 
 export interface ImageBlock {
   id: string;
@@ -334,7 +334,7 @@ export interface ImageBlock {
   customStyle?: BlockStyleOverride;
 }
 
-export interface ImageGenHistoryEntry {
+interface ImageGenHistoryEntry {
   id: string;
   src: string;          // relative path in assets/
   prompt: string;
@@ -343,9 +343,9 @@ export interface ImageGenHistoryEntry {
   provider: string;
 }
 
-export type ImageGenPromptMode = 'manual' | 'llm';
+type ImageGenPromptMode = 'manual' | 'llm';
 export type ImageGenProvider = 'comfyui' | 'pollinations';
-export type ImageGenSeedMode = 'manual' | 'random';
+type ImageGenSeedMode = 'manual' | 'random';
 
 export interface ImageGenBlock {
   id: string;
@@ -407,8 +407,8 @@ export interface VideoBlock {
 
 // ── Audio block ──────────────────────────────────────────────────────────────
 
-export type AudioTrigger = 'immediate' | 'delay';
-export type AudioOnLeave = 'stop' | 'persist';
+type AudioTrigger = 'immediate' | 'delay';
+type AudioOnLeave = 'stop' | 'persist';
 
 export interface AudioBlock {
   id: string;
@@ -424,7 +424,7 @@ export interface AudioBlock {
 
 // ── Audio generation (ComfyUI) ───────────────────────────────────────────────
 
-export interface AudioGenHistoryEntry {
+interface AudioGenHistoryEntry {
   id: string;
   src: string;            // relative path under history/ (or assets/ after approve)
   stylePrompt: string;    // saved style prompt at the time of generation (includes any chip-inserted tags)
@@ -492,7 +492,7 @@ export interface AudioGenBlock {
 
 // ── Video generation (ComfyUI) ───────────────────────────────────────────────
 
-export interface VideoGenHistoryEntry {
+interface VideoGenHistoryEntry {
   id: string;
   src: string;            // relative path under history/ (or assets/ after approve)
   prompt: string;
@@ -588,7 +588,7 @@ export interface VarSetAction {
 }
 
 /** Opens a SugarCube Dialog with the specified popup-tagged scene. */
-export interface OpenPopupAction {
+interface OpenPopupAction {
   id: string;
   type: 'open-popup';
   /** Scene id (UUID) of the 'popup'-tagged scene to open. */
@@ -1101,7 +1101,7 @@ export interface SliderBlock {
 
 // ─── DisplayObject block ─────────────────────────────────────────────────────
 
-export type DisplayObjectSource = 'group' | 'manual';
+type DisplayObjectSource = 'group' | 'manual';
 export type DisplayObjectLayout = 'list' | 'inline' | 'table' | 'cards' | 'grid' | 'bars';
 export type DisplayFieldRender  = 'text' | 'bar' | 'bool' | 'badge';
 
@@ -1610,7 +1610,7 @@ export interface ItemIconConfig {
 }
 
 /** A user-defined extra property on an item (e.g. damage, weight, duration) */
-export interface ItemCustomProp {
+interface ItemCustomProp {
   id: string;
   name: string;
   varType: 'number' | 'string' | 'boolean';
@@ -1712,7 +1712,7 @@ export interface QuestStep {
 }
 
 /** Refs to a step's auto-created variable nodes (sync + cleanup). */
-export interface QuestStepVarIds {
+interface QuestStepVarIds {
   groupId: string;
   nameVarId: string;
   descVarId: string;
@@ -1785,7 +1785,7 @@ export type VariableTreeNode = VariableGroup | Variable;
 
 // ─── Asset ───────────────────────────────────────────────────────────────────
 
-export type AssetType = 'image' | 'video' | 'audio';
+type AssetType = 'image' | 'video' | 'audio';
 
 /** A leaf node in the asset tree — represents a single media file on disk */
 export interface Asset {

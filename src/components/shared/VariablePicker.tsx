@@ -209,7 +209,7 @@ export function PickerTree({
   );
 }
 
-export function typeColor(t: VariableType): string {
+function typeColor(t: VariableType): string {
   switch (t) {
     case 'number': return 'text-sky-400';
     case 'string': return 'text-emerald-400';
@@ -221,7 +221,7 @@ export function typeColor(t: VariableType): string {
 }
 
 /** Check if any leaf variable in this group matches the filter text */
-export function groupMatchesFilter(group: VariableGroup, filterText: string, filterType?: VariableType, filter?: (v: Variable) => boolean): boolean {
+function groupMatchesFilter(group: VariableGroup, filterText: string, filterType?: VariableType, filter?: (v: Variable) => boolean): boolean {
   return group.children.some(n => {
     if (n.kind === 'variable') {
       if (filterType && n.varType !== filterType) return false;

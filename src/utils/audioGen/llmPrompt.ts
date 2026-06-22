@@ -1,10 +1,9 @@
 import type { Project, Scene } from '../../types';
 import { generateText } from '../llm';
 import { buildSceneContext } from '../llm/promptBuilder';
-import type { LLMProvider, LLMMode } from '../llm';
+import type { LLMMode } from '../llm';
 import { getCharacterIdsInScene, type LlmOptions } from '../llm/genShared';
 
-export type { LLMProvider };
 export type { LlmOptions };
 
 function buildLyricsUserPrompt(currentText: string, mode: LLMMode): string {

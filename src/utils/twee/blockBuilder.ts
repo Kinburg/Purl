@@ -71,7 +71,7 @@ function buildVarPathMap(nodes: VariableTreeNode[], prefix: string[], out: Map<s
  * Find an existing variable by dotted path, or create one (with groups as needed)
  * and return its id. Newly created variables default to type `'string'`, `defaultValue=''`.
  */
-export function ensureVariable(
+function ensureVariable(
   path: string[],
   ctx: BuildContext,
   inferredType: VariableType = 'string',

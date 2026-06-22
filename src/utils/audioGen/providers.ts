@@ -6,8 +6,6 @@ import {
   withTemplateInjected,
 } from '../comfy/client';
 
-export type { ComfyProgress };
-
 export interface AudioGenerateParams {
   baseUrl: string;
   workflow: Record<string, any>;

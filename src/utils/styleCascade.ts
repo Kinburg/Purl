@@ -44,7 +44,7 @@ import { getVariablePath } from './treeUtils';
 // ─── Field schemas (shared with StyleOverrideEditor) ─────────────────────────
 
 /** Type of a single editable field in a style override. */
-export type StyleFieldType = 'color' | 'number' | 'boolean' | 'enum';
+type StyleFieldType = 'color' | 'number' | 'boolean' | 'enum';
 
 /**
  * Schema describing one editable field of `BlockStyleOverride.fields`.
@@ -430,7 +430,7 @@ function dialogueFieldsToDecls(fields: Record<string, string | number | boolean>
  * Naive but safe: if user wrote `body { … }` we'd produce
  *   `<scope> body { … }` — selector matches nothing, no global pollution.
  */
-export function autoScopeRawCss(scopeSelector: string, rawCss: string): string {
+function autoScopeRawCss(scopeSelector: string, rawCss: string): string {
   const trimmed = rawCss.trim();
   if (!trimmed) return '';
 
@@ -541,15 +541,15 @@ function charClassId(charId: string): string {
   return charId.replace(/[^a-zA-Z0-9]/g, '');
 }
 
-export function dialogueBaseClass(charId: string): string {
+function dialogueBaseClass(charId: string): string {
   return `dlg-${charClassId(charId)}`;
 }
 
-export function dialogueVariantClass(charId: string, variantKey: string): string {
+function dialogueVariantClass(charId: string, variantKey: string): string {
   return `dlg-${charClassId(charId)}-v-${variantKey}`;
 }
 
-export function dialogueSpotClass(blockId: string): string {
+function dialogueSpotClass(blockId: string): string {
   return `dlg-spot-${blockId.replace(/[^a-zA-Z0-9]/g, '')}`;
 }
 
@@ -560,7 +560,7 @@ export function dialogueSpotClass(blockId: string): string {
  * In static (or absent) common-custom: one set of rules under `.dlg-{charId}`.
  * In bound common-custom: one set per variant under `.dlg-{charId}-v-{N|default}`.
  */
-export function buildDialogueCharCss(char: Character): string {
+function buildDialogueCharCss(char: Character): string {
   const baseCls = dialogueBaseClass(char.id);
   const std = dialogueStdFields(char);
   const cs = char.customDialogueStyle;
@@ -681,7 +681,7 @@ export function dialogueDataStyleBind(char: Character): string {
 
 // ─── Button family (Button / Link / Function) ────────────────────────────────
 
-export type ButtonFamilyType = 'button' | 'link' | 'function';
+type ButtonFamilyType = 'button' | 'link' | 'function';
 type ButtonFamilyBlock = ButtonBlock | LinkBlock | FunctionBlock;
 
 function buttonShortId(blockId: string): string {
@@ -689,22 +689,22 @@ function buttonShortId(blockId: string): string {
 }
 
 /** Per-instance Std class — same shape as today's `tg-btn-{id}`. */
-export function buttonInstanceClass(blockId: string): string {
+function buttonInstanceClass(blockId: string): string {
   return `tg-btn-${buttonShortId(blockId)}`;
 }
 
 /** Common (per-block-type project default) class. */
-export function buttonDefaultClass(type: ButtonFamilyType): string {
+function buttonDefaultClass(type: ButtonFamilyType): string {
   return `tg-btn-default-${type}`;
 }
 
 /** Bound variant class for a given type and variant key (idx or 'default'). */
-export function buttonDefaultVariantClass(type: ButtonFamilyType, variantKey: string): string {
+function buttonDefaultVariantClass(type: ButtonFamilyType, variantKey: string): string {
   return `tg-btn-default-${type}-v-${variantKey}`;
 }
 
 /** Spot (per-block) class. */
-export function buttonSpotClass(blockId: string): string {
+function buttonSpotClass(blockId: string): string {
   return `tg-btn-spot-${buttonShortId(blockId)}`;
 }
 
@@ -788,7 +788,7 @@ function buildButtonRulesForScope(
 }
 
 /** Collect all button/link/function blocks from a scene tree (recurses into IF branches). */
-export function collectButtonFamilyBlocks(blocks: Block[]): ButtonFamilyBlock[] {
+function collectButtonFamilyBlocks(blocks: Block[]): ButtonFamilyBlock[] {
   const result: ButtonFamilyBlock[] = [];
   for (const b of blocks) {
     if (b.type === 'button' || b.type === 'link' || b.type === 'function') result.push(b);
@@ -947,7 +947,7 @@ export function buildBlockTypesCSS(): string {
 // The block's existing wrapper class (`tg-text`, `tg-include`, etc.) stays the
 // structural base.
 
-export type SimpleBlockType =
+type SimpleBlockType =
   | 'text' | 'image' | 'image-gen' | 'video' | 'video-gen' | 'include' | 'divider'
   | 'checkbox' | 'radio' | 'input-field' | 'choice' | 'popup' | 'tabs'
   | 'display-object';
@@ -1422,57 +1422,22 @@ const SIMPLE_BLOCK_CONFIGS: Record<SimpleBlockType, SimpleBlockConfig> = {
   'display-object': { baseClass: 'tg-do',        buildRules: buildDisplayObjectRules(),                            schema: DISPLAY_OBJECT_FIELD_SCHEMA },
 };
 
-/** Returns the structural base class for a simple block type. */
-export function simpleBlockBaseClass(type: SimpleBlockType): string {
-  return SIMPLE_BLOCK_CONFIGS[type].baseClass;
-}
-
 function simpleShortId(id: string): string {
   return id.replace(/-/g, '').substring(0, 12);
 }
 
-export function simpleBlockDefaultClass(type: SimpleBlockType): string {
+function simpleBlockDefaultClass(type: SimpleBlockType): string {
   return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-default`;
 }
 
-export function simpleBlockDefaultVariantClass(type: SimpleBlockType, variantKey: string): string {
+function simpleBlockDefaultVariantClass(type: SimpleBlockType, variantKey: string): string {
   return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-default-v-${variantKey}`;
 }
 
-export function simpleBlockSpotClass(type: SimpleBlockType, blockId: string): string {
+function simpleBlockSpotClass(type: SimpleBlockType, blockId: string): string {
   return `${SIMPLE_BLOCK_CONFIGS[type].baseClass}-spot-${simpleShortId(blockId)}`;
 }
 
-
-/** Collect simple-block instances from a scene tree. */
-export function collectSimpleBlocks(blocks: Block[]): SimpleBlockBlock[] {
-  const result: SimpleBlockBlock[] = [];
-  for (const b of blocks) {
-    if (b.type === 'text' || b.type === 'image' || b.type === 'image-gen' || b.type === 'video' || b.type === 'video-gen'
-        || b.type === 'include' || b.type === 'divider'
-        || b.type === 'checkbox' || b.type === 'radio' || b.type === 'input-field'
-        || b.type === 'choice' || b.type === 'popup' || b.type === 'tabs'
-        || b.type === 'display-object') {
-      result.push(b as SimpleBlockBlock);
-    }
-    if (b.type === 'condition') {
-      for (const br of b.branches) result.push(...collectSimpleBlocks(br.blocks));
-    }
-    if (b.type === 'dialogue') {
-      result.push(...collectSimpleBlocks(b.innerBlocks ?? []));
-    }
-    if (b.type === 'tabs') {
-      for (const tab of b.tabs) result.push(...collectSimpleBlocks(tab.blocks));
-    }
-    if (b.type === 'section') {
-      result.push(...collectSimpleBlocks(b.blocks));
-    }
-    if (b.type === 'table') {
-      for (const row of b.rows) for (const cell of row.cells) result.push(...collectSimpleBlocks(cell.blocks));
-    }
-  }
-  return result;
-}
 
 /**
  * Emit per-type Common rules (and bound variants) for all simple block types.
@@ -1614,11 +1579,6 @@ export function simpleBlockDataStyleBind(block: SimpleBlockBlock, settings: Proj
   const cs = settings.defaultBlockStyles?.[type];
   if (cs?.enabled && (cs.mode ?? 'static') === 'bound') return `default-${type}`;
   return '';
-}
-
-/** Returns the field schema for a simple block type (used by editor UI to pick fields). */
-export function simpleBlockSchema(type: SimpleBlockType): ReadonlyArray<StyleFieldDescriptor> {
-  return SIMPLE_BLOCK_CONFIGS[type].schema;
 }
 
 // ─── Runtime style-bind script ───────────────────────────────────────────────

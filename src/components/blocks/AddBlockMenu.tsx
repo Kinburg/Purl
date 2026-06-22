@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useProjectStore, DEFAULT_PANEL_STYLE } from '../../store/projectStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
@@ -17,7 +17,7 @@ function PluginGlyph({ icon, size }: { icon?: string; size: number }) {
 
 // ── Block factory ─────────────────────────────────────────────────────────────
 
-export function makeBlock(type: BlockType): Block {
+function makeBlock(type: BlockType): Block {
   const id = crypto.randomUUID();
   switch (type) {
     case 'text':         return { id, type, content: '' };
@@ -130,7 +130,7 @@ export function makeBlock(type: BlockType): Block {
   }
 }
 
-export function makePluginBlock(def: PluginBlockDef): PluginBlock {
+function makePluginBlock(def: PluginBlockDef): PluginBlock {
   const values: Record<string, string> = {};
   for (const p of def.params) values[p.key] = p.default ?? '';
   return { id: crypto.randomUUID(), type: 'plugin', pluginId: def.id, values };
@@ -395,14 +395,14 @@ export function AddBlockMenu({ sceneId, onAdd, excludeTypes = [], initialOpen, o
   const [selection, setSelection] = useState<SelectionItem[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(false);
     setSearch('');
     setSelection([]);
     setHighlighted(null);
     setActiveCategory('content');
     onClose?.();
-  };
+  }, [onClose]);
 
   useEffect(() => {
     if (open) setTimeout(() => searchRef.current?.focus(), 50);
@@ -414,7 +414,7 @@ export function AddBlockMenu({ sceneId, onAdd, excludeTypes = [], initialOpen, o
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open]);
+  }, [open, close]);
 
   const excluded = new Set(excludeTypes);
   const allBlockEntries = buildBlockEntries(t).filter((e) => !excluded.has(e.type));

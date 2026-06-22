@@ -7,7 +7,7 @@ import { useEditorPrefsStore } from '../store/editorPrefsStore';
  * folder (Preferences → Behavior → Projects), or the built-in default
  * (Documents/Purl/Projects) when unset.
  */
-export async function defaultProjectsParent(): Promise<string> {
+async function defaultProjectsParent(): Promise<string> {
   const configured = useEditorPrefsStore.getState().projectsDir;
   if (configured) return configured;
   try {
@@ -45,7 +45,7 @@ async function findFreeSubdir(parent: string, base: string): Promise<string> {
  * (overwrite / create a new suffixed folder / cancel). An empty or missing
  * folder is used as-is without prompting. Returns null only if the user cancels.
  */
-export async function resolveProjectSubdir(parent: string, title: string): Promise<string | null> {
+async function resolveProjectSubdir(parent: string, title: string): Promise<string | null> {
   const base = safeName(title);
   const target = joinPath(parent, base);
   if (await dirExistsNonEmpty(target)) {

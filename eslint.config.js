@@ -31,7 +31,13 @@ export default defineConfig([
       "react-hooks/purity": "off",
       // Allow exporting constants alongside components (common pattern in Vite projects).
       "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }],
-      "@typescript-eslint/no-unused-vars": "warn"
+      // Honor the `_`-prefix convention for intentionally-unused params/vars/destructure-drops.
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }]
     },
     languageOptions: {
       ecmaVersion: 2020,
