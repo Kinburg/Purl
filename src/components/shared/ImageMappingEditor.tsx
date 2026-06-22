@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { ImageBoundMapping, Asset, AssetTreeNode, AssetGroup } from '../../types';
+import type { ImageBoundMapping, AssetTreeNode, AssetGroup } from '../../types';
 import { useT } from '../../i18n';
 
 import { EmojiIcon } from './EmojiIcons';
@@ -533,6 +533,3 @@ export function ImageMappingEditor({
     </div>
   );
 }
-
-// Keep Asset re-exported for any callers that import it from here
-export type { Asset };

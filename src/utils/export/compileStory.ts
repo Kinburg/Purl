@@ -28,7 +28,7 @@ import {
 // restore script). Leaf builders (blockToSC, buildAudioScript, …) stay in exportToTwee
 // / styleCascade; only the ORCHESTRATION lives here.
 
-export interface CompiledPassage {
+interface CompiledPassage {
   name: string;
   /** Format-neutral tags (no `[ ]` / no `tags=""` syntax); START_TAG already removed. */
   tags: string[];

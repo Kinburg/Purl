@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- context module: the provider and its hooks share private contexts and live together by design */
 import { createContext, useContext, type ReactNode } from 'react';
 import type { VariableTreeNode, PluginParam } from '../../types';
 import { useProjectStore } from '../../store/projectStore';
@@ -51,9 +52,4 @@ export function useVariableNodes(): VariableTreeNode[] {
   const scope = useContext(VariableScopeContext);
   const projectNodes = useProjectStore((s) => s.project.variableNodes);
   return scope ?? projectNodes;
-}
-
-/** True when editing a block inside a scoped container (e.g. plugin body). */
-export function useIsScopedVariables(): boolean {
-  return useContext(VariableScopeContext) !== null;
 }

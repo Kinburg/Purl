@@ -15,7 +15,7 @@ const DEFAULT_PRESET_STYLES = [
   'Fantasy',
 ];
 
-export interface PresetGroup {
+interface PresetGroup {
   /** Localized header text shown above the chip row. */
   label: string;
   items: string[];

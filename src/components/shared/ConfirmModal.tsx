@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located confirm hook (useConfirm) + its modal; splitting a tiny utility isn't worth the churn */
 import { useState } from 'react';
 import { useT } from '../../i18n';
 
@@ -10,7 +11,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
-export function ConfirmModal({
+function ConfirmModal({
   message,
   confirmLabel,
   cancelLabel,

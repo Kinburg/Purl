@@ -252,14 +252,6 @@ export const INPUT_CLS =
     'w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-xs text-slate-200 ' +
     'placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors';
 
-export const INPUT_ERR_CLS =
-    'w-full px-2 py-1.5 bg-slate-700 border border-red-500 rounded text-xs text-slate-200 ' +
-    'placeholder-slate-500 focus:outline-none focus:border-red-400 transition-colors';
-
-export const INPUT_READONLY_CLS =
-    'w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-500 ' +
-    'font-mono cursor-not-allowed';
-
 // ─── Toggle switch ──────────────────────────────────────────────────────────
 
 export function Toggle({value, onChange, disabled}: { value: boolean; onChange: () => void; disabled?: boolean }) {
@@ -362,56 +354,6 @@ function EyeOffIcon() {
             <path strokeLinecap="round" strokeLinejoin="round"
                   d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
         </svg>
-    );
-}
-
-// ─── Tabs (horizontal, compact) ─────────────────────────────────────────────
-
-export interface TabDef<T extends string = string> {
-    id: T;
-    label: ReactNode;
-    icon?: ReactNode;
-    count?: number;
-    hidden?: boolean;
-}
-
-export function ModalTabs<T extends string>({
-                                                tabs, active, onChange,
-                                            }: {
-    tabs: TabDef<T>[];
-    active: T;
-    onChange: (id: T) => void;
-}) {
-    const visible = tabs.filter(t => !t.hidden);
-    return (
-        <div className="flex items-stretch gap-0 px-2 border-b border-slate-700 shrink-0 overflow-x-auto">
-            {visible.map(tab => {
-                const isActive = tab.id === active;
-                return (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => onChange(tab.id)}
-                        className={[
-                            'relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors cursor-pointer border-b-2',
-                            isActive
-                                ? 'text-white border-indigo-500'
-                                : 'text-slate-400 border-transparent hover:text-slate-200',
-                        ].join(' ')}
-                    >
-                        {tab.icon && <span className="text-sm leading-none">{tab.icon}</span>}
-                        <span>{tab.label}</span>
-                        {typeof tab.count === 'number' && tab.count > 0 && (
-                            <span className={`text-[10px] font-mono px-1 rounded ${
-                                isActive ? 'bg-indigo-500/30 text-indigo-200' : 'bg-slate-700 text-slate-400'
-                            }`}>
-                {tab.count}
-              </span>
-                        )}
-                    </button>
-                );
-            })}
-        </div>
     );
 }
 

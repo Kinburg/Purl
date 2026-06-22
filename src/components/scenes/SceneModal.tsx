@@ -5,7 +5,7 @@ import {
   SYSTEM_TAGS, SYSTEM_TAG_COLORS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME,
   START_TAG, START_TAG_COLOR,
 } from '../../types';
-import type { SystemTag, SystemSceneConfig, SidebarSceneConfig, TitleSceneConfig, BoundBool, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
+import type { SystemTag, SystemSceneConfig, SidebarSceneConfig, TitleSceneConfig, BoundBool, BoundNumber, BoundString, SceneBackground, SceneBgSize, SceneBgImageType, AvatarConfig } from '../../types';
 import {
   ModalShell, ColorSwatchInput, INPUT_CLS,
 } from '../shared/ModalShell';
@@ -17,7 +17,7 @@ import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface SceneData {
+interface SceneData {
   name: string;
   tags: string[];
   notes?: string;
@@ -1082,11 +1082,11 @@ function BoundNumberRow({
   label, value, unit, variableNodes, onChange, onUnitChange, defaultLabel, staticDefault, step,
 }: {
   label: string;
-  value: import('../../types').BoundNumber | undefined;
+  value: BoundNumber | undefined;
   /** When omitted, no em/px unit selector is shown (the value is a plain px number). */
   unit?: 'em' | 'px';
   variableNodes: import('../../types').VariableTreeNode[];
-  onChange: (v: import('../../types').BoundNumber | undefined) => void;
+  onChange: (v: BoundNumber | undefined) => void;
   onUnitChange?: (u: 'em' | 'px') => void;
   /** Label for the "default" pill. Defaults to the width-specific "Default (17.5em)". */
   defaultLabel?: string;
@@ -1165,9 +1165,9 @@ function BoundColorRow({
   label, value, variableNodes, onChange,
 }: {
   label: string;
-  value: import('../../types').BoundString | undefined;
+  value: BoundString | undefined;
   variableNodes: import('../../types').VariableTreeNode[];
-  onChange: (v: import('../../types').BoundString | undefined) => void;
+  onChange: (v: BoundString | undefined) => void;
 }) {
   const sc = useT().sidebarConfig;
   const mode: 'default' | 'static' | 'bound' =
@@ -1216,9 +1216,9 @@ function BoundPositionRow({
   label, value, variableNodes, onChange,
 }: {
   label: string;
-  value: import('../../types').BoundString | undefined;
+  value: BoundString | undefined;
   variableNodes: import('../../types').VariableTreeNode[];
-  onChange: (v: import('../../types').BoundString | undefined) => void;
+  onChange: (v: BoundString | undefined) => void;
 }) {
   const sc = useT().sidebarConfig;
   const mode: 'default' | 'static' | 'bound' =

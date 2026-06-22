@@ -14,30 +14,26 @@ import type {
 // SugarCube text, a post-processing pass rewrites those markers into either
 // `_<key>` (TwineScript temp-var form) or `State.temporary["<key>"]` (JS form).
 
-export const PARAM_ID_PREFIX = 'param:';
+const PARAM_ID_PREFIX = 'param:';
 
 /** Unique prefix used when emitting a variable path for a plugin param.
  *  Must contain only [A-Za-z_0-9] so both `$...` and `State.variables["..."]`
  *  emissions remain syntactically valid before we post-process them. */
-export const PARAM_PATH_MARKER_PREFIX = '__tgParam__';
+const PARAM_PATH_MARKER_PREFIX = '__tgParam__';
 
 export function isParamId(id: string | undefined | null): boolean {
   return !!id && id.startsWith(PARAM_ID_PREFIX);
 }
 
-export function paramKeyFromId(id: string): string | null {
-  return isParamId(id) ? id.slice(PARAM_ID_PREFIX.length) : null;
-}
-
-export function paramIdFromKey(key: string): string {
+function paramIdFromKey(key: string): string {
   return PARAM_ID_PREFIX + key;
 }
 
-export function paramPathMarker(key: string): string {
+function paramPathMarker(key: string): string {
   return PARAM_PATH_MARKER_PREFIX + key;
 }
 
-export function varTypeFromParamKind(kind: PluginParamKind): VariableType {
+function varTypeFromParamKind(kind: PluginParamKind): VariableType {
   switch (kind) {
     case 'number':   return 'number';
     case 'bool':     return 'boolean';

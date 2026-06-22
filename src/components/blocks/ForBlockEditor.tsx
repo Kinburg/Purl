@@ -39,8 +39,6 @@ const MODES: { value: ForLoopMode; label: string; desc: string }[] = [
   { value: 'cstyle', label: 'C-style', desc: 'init; condition; step' },
 ];
 
-function uid(): string { return crypto.randomUUID(); }
-
 // ─── Body block dispatcher (recursive — supports nested condition / for) ────
 
 function NestedBody({
@@ -352,6 +350,3 @@ export function ForBlockEditor({
     </div>
   );
 }
-
-// Unused but satisfies the import for `uid` if needed elsewhere later.
-export const _internal = { uid };

@@ -19,7 +19,7 @@
     "build": "tsc -b && vite build",
     "dist": "npm run build && electron-builder",
     "typecheck": "tsc -b",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "knip": "knip",
     "test": "vitest run",

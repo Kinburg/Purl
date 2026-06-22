@@ -64,6 +64,9 @@ export function DisplayObjectBlockEditor({
     if (!fieldsEqual(next, block.fields)) {
       patch({ fields: next });
     }
+    // `patch` deliberately omitted: the effect tracks data changes, not the per-render
+    // callback identity; the fieldsEqual guard above prevents update loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSyncing, block.groupId, block.fields, variableNodes]);
 
   const patchField = (id: string, p: Partial<DisplayField>) =>

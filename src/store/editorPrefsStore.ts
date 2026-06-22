@@ -34,7 +34,7 @@ export const BUILTIN_PANEL_PRESETS: PanelLayoutPreset[] = [
   { id: '__bp_constructor',   builtIn: true, name: 'Constructor',  layout: { previewVisible: false, graphVisible: false, playVisible: false, editorWeight: 100, playWeight: 38, rightWeight: 34, previewSizePct: 50 } },
 ];
 
-export interface EditorPrefs {
+interface EditorPrefs {
   // ── Autosave ──────────────────────────────────────────────────────────────
   autosave:         boolean;
   autosaveInterval: number;   // minutes: 1 | 5 | 10 | 30

@@ -69,10 +69,6 @@ const TYPE_INFO = (() => {
   return m;
 })();
 
-export function categoryOf(type: BlockType): CategoryKey | null {
-  return TYPE_INFO.get(type)?.cat ?? null;
-}
-
 export interface BlockPalette { accent: string; fill: string; }
 
 /** Shade `base` by the block's position in its family: spread lightness, centred on the base. */

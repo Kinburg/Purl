@@ -437,7 +437,7 @@ function BehaviorTab() {
   useEffect(() => {
     if (!api?.getTitleBarStyle) return;
     api.getTitleBarStyle().then(s => setTitleBarStyleState(s));
-  }, []);
+  }, [api]);
 
   // Built-in default projects folder — shown as the placeholder when none is set.
   const [defaultProjectsDir, setDefaultProjectsDir] = useState('');

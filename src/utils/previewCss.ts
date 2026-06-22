@@ -40,7 +40,7 @@ function removeStyle(id: string): void {
  * Build the combined CSS string used both for direct preview injection and as
  * the single source of truth tested by snapshot/manual checks.
  */
-export function buildPreviewCSS(project: Project): string {
+function buildPreviewCSS(project: Project): string {
   const parts = [
     buildBlockTypesCSS(),
     buildAllDialogueCss(project.characters),
@@ -56,8 +56,4 @@ export function injectPreviewCSS(project: Project): void {
   const css = buildPreviewCSS(project);
   if (css) upsertStyle('purl-preview-css', css);
   else     removeStyle('purl-preview-css');
-}
-
-export function removeAllPreviewCSS(): void {
-  removeStyle('purl-preview-css');
 }
