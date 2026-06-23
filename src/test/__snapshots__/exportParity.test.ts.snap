@@ -1,0 +1,3084 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`export golden master (demo) — guards the compileStory refactor > buildPassages(demo) is byte-stable 1`] = `
+{
+  "combinedCSS": "/* ═══ Global ═══ */
+body, #story { background-color: #0f172a !important; }
+
+/* ═══ Dialogue ═══ */
+.dialogue { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; font-style: italic; }
+.dialogue.dlg-right { flex-direction: row-reverse; }
+.char-avatar { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.char-body { flex: 1; padding: 8px 12px; border-radius: 4px; }
+.char-name { font-weight: bold; display: block; margin-bottom: 4px; }
+.char-text { display: block; margin: 0 !important; padding: 0; }
+
+.dialogue.dlg-chartraveler .char-body { background: #1e293b; border-left: 4px solid #475569; }
+.dialogue.dlg-right.dlg-chartraveler .char-body { border-left: none; border-right: 4px solid #475569; }
+.dialogue.dlg-chartraveler .char-name { color: #cbd5e1; }
+.dialogue.dlg-chartraveler .char-text { color: #e2e8f0; }
+
+.dialogue.dlg-charelara .char-body { background: #2e1065; border-left: 4px solid #a855f7; }
+.dialogue.dlg-right.dlg-charelara .char-body { border-left: none; border-right: 4px solid #a855f7; }
+.dialogue.dlg-charelara .char-name { color: #d8b4fe; }
+.dialogue.dlg-charelara .char-text { color: #ede9fe; }
+
+.dialogue.dlg-chardoran .char-body { background: #422006; border-left: 4px solid #d97706; }
+.dialogue.dlg-right.dlg-chardoran .char-body { border-left: none; border-right: 4px solid #d97706; }
+.dialogue.dlg-chardoran .char-name { color: #fbbf24; }
+.dialogue.dlg-chardoran .char-text { color: #fef3c7; }
+
+/* ═══ Cell utilities (lightbox / progress) ═══ */
+.tg-progress { width: 100%; height: 100%; background: var(--tg-bar-empty, #333); border-radius: 2px; overflow: hidden; display: flex; align-items: center; }
+.tg-progress-vert { flex-direction: column-reverse; align-items: stretch; }
+.tg-bar { height: 100%; background: var(--tg-bar-fill, #4a90d9); transition: width 0.3s, height 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--tg-bar-text, inherit); }
+/* lightbox */
+.tg-lb { cursor: pointer !important; }
+#tg-lb-ov { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); align-items: center; justify-content: center; cursor: zoom-out; }
+#tg-lb-ov.on { display: flex; }
+#tg-lb-ov img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 6px; box-shadow: 0 8px 48px rgba(0,0,0,.8); cursor: default; }
+#tg-lb-x { position: absolute; top: 12px; right: 18px; color: #fff; font-size: 2em; line-height: 1; cursor: pointer; opacity: .7; user-select: none; transition: opacity .15s; }
+#tg-lb-x:hover { opacity: 1; }
+
+/* ═══ TabsBlock ═══ */
+.tg-tabs-block { display: flex; gap: 2px; margin-bottom: 6px; flex-wrap: wrap; }
+.tg-tabs-block > span { display: inline-flex; }
+.tg-tabs-block a { flex: 0 0 auto; padding: 3px 10px; border: 1px solid #555; border-radius: 3px; cursor: pointer; text-decoration: none; color: inherit; font-size: 0.85em; transition: background 0.15s; }
+.tg-tabs-block a:hover { background: rgba(255,255,255,0.1); }
+.tg-tabs-block a.tg-tabs-active { background: rgba(99,102,241,0.25); border-color: #818cf8; }
+
+/* ═══ SectionBlock ═══ */
+.tg-section { margin: 6px 0; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }
+.tg-section-title { font-weight: 600; font-size: 0.9em; opacity: 0.85; margin-bottom: 4px; }
+details.tg-section > summary.tg-section-title { cursor: pointer; user-select: none; list-style: revert; margin-bottom: 0; }
+details.tg-section[open] > summary.tg-section-title { margin-bottom: 4px; }
+
+/* ═══ Callout ═══ */
+.tg-callout { display: flex; gap: 8px; margin: 8px 0; padding: 8px 10px; border-radius: 4px; border-left: 3px solid var(--tg-co-accent); background: var(--tg-co-bg); }
+.tg-callout-icon { flex-shrink: 0; font-size: 1.1em; line-height: 1.5; }
+.tg-callout-body { flex: 1; min-width: 0; }
+.tg-callout-title { font-weight: 600; margin-bottom: 2px; }
+.tg-callout-info    { --tg-co-accent: #3b82f6; --tg-co-bg: rgba(59,130,246,0.12); }
+.tg-callout-success { --tg-co-accent: #22c55e; --tg-co-bg: rgba(34,197,94,0.12); }
+.tg-callout-warning { --tg-co-accent: #f59e0b; --tg-co-bg: rgba(245,158,11,0.12); }
+.tg-callout-danger  { --tg-co-accent: #ef4444; --tg-co-bg: rgba(239,68,68,0.12); }
+.tg-callout-note    { --tg-co-accent: #94a3b8; --tg-co-bg: rgba(148,163,184,0.12); }
+
+/* ═══ DisplayObject ═══ */
+/* DisplayObject — shared sub-elements */
+.tg-do { display: block; }
+.tg-do-row { display: flex; gap: 8px; align-items: baseline; }
+.tg-do-label { opacity: 0.75; }
+.tg-do-value { flex: 1; min-width: 0; }
+.tg-do-bar { display: inline-block; vertical-align: middle; width: 100%; height: 10px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
+.tg-do-bar-fill { display: block; height: 100%; background: #4a90d9; transition: width 0.3s; }
+.tg-do-bar-text { font-size: 0.85em; opacity: 0.8; margin-left: 4px; white-space: nowrap; }
+.tg-do-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; background: rgba(255,255,255,0.1); font-size: 0.85em; }
+/* list — vertical rows, label left / value right */
+.tg-do-list { display: flex; flex-direction: column; gap: 4px; }
+.tg-do-list .tg-do-row { justify-content: space-between; }
+.tg-do-list .tg-do-value { flex: 0 1 auto; text-align: right; }
+/* inline — flowing label:value · label:value */
+.tg-do-inline { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.tg-do-inline .tg-do-row { display: inline-flex; gap: 4px; }
+.tg-do-inline .tg-do-row:not(:last-child)::after { content: "·"; margin-left: 12px; opacity: 0.4; }
+/* table — two aligned columns via display:contents */
+.tg-do-table { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; row-gap: 4px; }
+.tg-do-table .tg-do-row { display: contents; }
+.tg-do-table .tg-do-label { text-align: right; }
+/* cards — boxed tiles */
+.tg-do-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.tg-do-cards .tg-do-row { flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 5px; background: rgba(255,255,255,0.06); min-width: 60px; }
+.tg-do-cards .tg-do-label { font-size: 0.78em; opacity: 0.7; }
+.tg-do-cards .tg-do-value { font-size: 1.05em; flex: none; text-align: center; }
+/* grid — N configurable columns via --tg-do-cols */
+.tg-do-grid { display: grid; grid-template-columns: repeat(var(--tg-do-cols, 2), minmax(0, 1fr)); gap: 4px 12px; }
+.tg-do-grid .tg-do-row { justify-content: space-between; }
+/* bars — vertical list, each row is a labeled bar */
+.tg-do-bars { display: flex; flex-direction: column; gap: 6px; }
+.tg-do-bars .tg-do-row { flex-direction: column; align-items: stretch; gap: 2px; }
+.tg-do-bars .tg-do-label { font-size: 0.85em; }
+.tg-do-bars .tg-do-value { display: flex; align-items: center; gap: 6px; }
+
+/* ═══ Quests ═══ */
+.tg-quests { display:flex; flex-direction:column; gap:.6em; }
+.tg-quest { padding:.5em .7em; border-left:3px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); border-radius:.3em; }
+.tg-quest-title { font-weight:600; }
+.tg-quest-desc { opacity:.8; font-size:.92em; margin-top:.2em; }
+.tg-quest-steps { margin-top:.35em; display:flex; flex-direction:column; gap:.15em; padding-left:.3em; }
+.tg-quest-step { opacity:.9; font-size:.92em; }
+.tg-quest-mark { display:inline-block; width:1.1em; text-align:center; opacity:.85; }
+
+/* ═══ Buttons ═══ */
+.tg-btn { display: inline-block; }
+.tg-btn a { display: inline-block; text-decoration: none; cursor: pointer; transition: filter 0.15s; }
+.tg-btn a:hover { filter: brightness(1.2); }
+
+.tg-btn-b_town_l1 a { background: #3b82f6; color: #fff; border: 1px solid #2563eb; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l1 { display: inline-block; }
+.tg-btn-b_town_l1 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l2 a { background: #d97706; color: #fff; border: 1px solid #b45309; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l2 { display: inline-block; }
+.tg-btn-b_town_l2 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l6 a { background: #334155; color: #fff; border: 1px solid #1e293b; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l6 { display: inline-block; }
+.tg-btn-b_town_l6 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l3 a { background: #0d9488; color: #fff; border: 1px solid #0f766e; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l3 { display: inline-block; }
+.tg-btn-b_town_l3 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l4 a { background: #7c3aed; color: #fff; border: 1px solid #6d28d9; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l4 { display: inline-block; }
+.tg-btn-b_town_l4 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l5 a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l5 { display: inline-block; }
+.tg-btn-b_town_l5 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_talk_bt a { background: #22c55e; color: #06281a; border: 1px solid #16a34a; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_talk_bt { display: inline-block; }
+.tg-btn-b_ws_talk_bt a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_gift_fn a { background: #7c3aed; color: #fff; border: 1px solid #6d28d9; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_gift_fn { display: inline-block; }
+.tg-btn-b_ws_gift_fn a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_gift_ro a { background: #ec4899; color: #fff; border: 1px solid #db2777; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_gift_ro { display: inline-block; }
+.tg-btn-b_ws_gift_ro a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_help a { background: #334155; color: #cbd5e1; border: 1px solid #1e293b; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_help { display: inline-block; }
+.tg-btn-b_ws_help a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_back { display: inline-block; }
+.tg-btn-b_ws_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_shop_links a { background: #3b82f6; color: #fff; border: 1px solid #2563eb; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_shop_links { display: inline-block; }
+.tg-btn-b_shop_links a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_shop_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_shop_back { display: inline-block; }
+.tg-btn-b_shop_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_docks_grop a { background: #d97706; color: #fff; border: 1px solid #b45309; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_docks_grop { display: inline-block; }
+.tg-btn-b_docks_grop a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_docks_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_docks_back { display: inline-block; }
+.tg-btn-b_docks_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_wd_use a { background: #16a34a; color: #fff; border: 1px solid #15803d; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_wd_use { display: inline-block; }
+.tg-btn-b_wd_use a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_wd_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_wd_back { display: inline-block; }
+.tg-btn-b_wd_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ql_finish a { background: #a855f7; color: #fff; border: 1px solid #9333ea; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ql_finish { display: inline-block; }
+.tg-btn-b_ql_finish a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ql_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ql_back { display: inline-block; }
+.tg-btn-b_ql_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_set_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_set_back { display: inline-block; }
+.tg-btn-b_set_back a { display: inline-block; width: auto; text-align: left; }
+
+/* ═══ Tooltips ═══ */
+.tg-tip { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }
+.tg-tip .tg-tip-text { display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #e2e8f0; padding: 6px 8px; border-radius: 4px; font-size: 0.85em; z-index: 100; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.4); max-width: 240px; text-align: center; }
+.tg-tip:hover .tg-tip-text { display: block; }
+.tg-tip-img { display: block; max-width: 100%; height: auto; border-radius: 3px; margin-bottom: 4px; }
+.tg-tip-text .tg-tip-img:last-child { margin-bottom: 0; }
+
+/* ═══ Containers ═══ */
+.tg-container { font-family: inherit; }
+.tg-cont-header { font-size: 1.05em; font-weight: bold; margin-bottom: 8px; }
+.tg-cont-body { display: flex; gap: 16px; align-items: flex-start; }
+.tg-cont-grid { display: grid; grid-template-columns: repeat(4, 64px); gap: 4px; align-content: start; }
+.tg-cont-cell { width: 64px; height: 64px; border: 2px solid rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; position: relative; transition: border-color 0.15s, background 0.15s; box-sizing: border-box; }
+.tg-cont-cell:hover { border-color: rgba(255,255,255,0.4); }
+.tg-cont-cell.tg-selected { border-color: #6366f1; background: rgba(99,102,241,0.18); }
+.tg-cont-cell img { width: 36px; height: 36px; object-fit: contain; }
+.tg-cell-qty { position: absolute; bottom: 2px; right: 4px; font-size: 10px; opacity: 0.8; }
+.tg-cell-name { font-size: 10px; text-align: center; overflow: hidden; max-width: 60px; white-space: nowrap; text-overflow: ellipsis; }
+.tg-cont-detail { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; min-height: 140px; }
+.tg-detail-placeholder { color: rgba(255,255,255,0.3); font-size: 12px; padding-top: 8px; }
+.tg-detail-icon { margin-bottom: 6px; }
+.tg-detail-icon img { width: 56px; height: 56px; object-fit: contain; }
+.tg-detail-name { font-weight: bold; margin-bottom: 2px; }
+.tg-detail-desc { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+.tg-detail-meta { font-size: 12px; margin-bottom: 10px; color: rgba(255,255,255,0.7); }
+.tg-detail-action { display: inline-block; padding: 5px 18px; background: #6366f1; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-size: 13px; transition: background 0.15s; }
+.tg-detail-action:hover:not(:disabled) { background: #4f46e5; }
+.tg-detail-action:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; }
+.tg-cont-empty { color: rgba(255,255,255,0.3); font-size: 13px; padding: 16px 0; }
+
+/* ═══ Paperdoll ═══ */
+.tg-pd-slot:hover { border-color: rgba(99,102,241,0.8) !important; }
+.tg-pd-menu { position: fixed; z-index: 10000; background: #1a1a2e; border: 1px solid rgba(99,102,241,0.5); border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); padding: 4px; min-width: 160px; max-height: 60vh; overflow-y: auto; }
+.tg-pd-menu-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 3px; cursor: pointer; color: #e2e8f0; font-size: 13px; transition: background 0.1s; }
+.tg-pd-menu-item:hover { background: rgba(99,102,241,0.25); }
+.tg-pd-menu-item.tg-pd-menu-unequip { color: #f87171; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 2px; padding-bottom: 6px; }
+.tg-pd-menu-icon { width: 24px; height: 24px; object-fit: contain; display: inline-block; flex-shrink: 0; }
+.tg-pd-menu-label { flex: 1; white-space: nowrap; }
+.tg-pd-menu-empty { padding: 8px 10px; color: rgba(255,255,255,0.4); font-size: 12px; text-align: center; }
+
+/* ═══ Inventory ═══ */
+.tg-inv-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tg-inv-tab { padding: 4px 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: transparent; color: #e2e8f0; cursor: pointer; font-size: 12px; transition: background 0.1s, border-color 0.1s; }
+.tg-inv-tab:hover { border-color: rgba(255,255,255,0.4); }
+.tg-inv-tab.tg-active { background: rgba(99,102,241,0.25); border-color: #6366f1; }
+.tg-cont-cell.tg-inv-equipped { box-shadow: inset 0 0 0 2px #10b981; }
+.tg-cont-cell.tg-inv-equipped::after { content: "✔"; position: absolute; top: 2px; right: 4px; font-size: 11px; color: #10b981; text-shadow: 0 0 2px rgba(0,0,0,0.6); }
+.tg-detail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.tg-detail-action.tg-inv-drop { background: #dc2626; }
+.tg-detail-action.tg-inv-drop:hover:not(:disabled) { background: #b91c1c; }
+
+/* ═══ Block Types ═══ */
+.tg-text { }
+.tg-image { text-align: center; }
+.tg-image img { display: inline-block; vertical-align: middle; max-width: 100%; }
+.tg-video { text-align: center; }
+.tg-video video { display: inline-block; vertical-align: middle; max-width: 100%; }
+.tg-divider { border: none; border-top: var(--tg-div-thickness, 1px) solid var(--tg-div-color, #555555); margin: var(--tg-div-margin, 8px) 0; }
+.tg-input-field { }
+.tg-checkbox { }
+.tg-radio { }
+.tg-include { max-width: var(--tg-inc-max-width, none); border: var(--tg-inc-border-width, 0px) solid var(--tg-inc-border-color, transparent); border-radius: var(--tg-inc-radius, 0); padding: var(--tg-inc-padding, 0); background-color: var(--tg-inc-bg, transparent); }
+.tg-table { display: flex; flex-direction: column; gap: var(--tg-tbl-gap, 4px); margin: 0; padding: 0; }
+
+/* ═══ Sidebar systemConfig ═══ */
+/* Sidebar systemConfig */
+body.tg-sidebar-hidden #ui-bar { display: none !important; }
+body.tg-sidebar-hidden #story  { margin-left: 0 !important; margin-right: 0 !important; }
+body.tg-no-collapse #ui-bar-toggle { display: none !important; }
+body.tg-no-history #history-jumpto, #history-backward, #history-forward { display: none !important; }
+body.tg-no-saves #menu-item-saves { display: none !important; }
+#ui-bar { font-family: Georgia, serif; }
+#story-caption > * + * { margin-top: 10px; }
+
+/* ═══ Title systemConfig ═══ */
+/* Title systemConfig */
+#story-title { color: #fbbf24; font-family: Georgia, serif; }",
+  "passages": [
+    {
+      "content": "The Clockwork Heart",
+      "name": "StoryDisplayTitle",
+      "pid": 1,
+      "tags": "",
+      "x": 180,
+      "y": 100,
+    },
+    {
+      "content": "<<set $sidePanel = { hidden: false, width: 18, position: "\\"left\\"", initiallyCollapsed: false, allowCollapse: true, bgColor: "\\"\\"", show_history: true, show_saves: true }>>
+<<set $affection to 0>>
+<<set $playerName to "Traveler">>
+<<set $gameTime to new Date(2025,5,8,8,0)>>
+<<set $worldState to {}>>
+<<set $difficulty to "Normal">>
+<<set $theme to "brass">>
+<<set $textSpeed to 60>>
+<<set $partyMembers to ["Elara Voss","Doran Pike"]>>
+<<set $showHints to true>>
+<<set $subscribeNews to false>>
+<<set $metElara to false>>
+<<set $foundPurse to false>>
+<<set $gaveRose to false>>
+<<set $traveler = { name: "Traveler", styles: { bgColor: "#1e293b", borderColor: "#475569", nameColor: "#cbd5e1", textColor: "#e2e8f0", avatar: "", llm_descr: "", llm_temperature: 0 }, inventory: [], money: 30, equipment: { head: "goggles", hand: "", trinket: "pocketwatch" } }>>
+<<set $elara = { name: "Elara Voss", styles: { bgColor: "#2e1065", borderColor: "#a855f7", nameColor: "#d8b4fe", textColor: "#ede9fe", avatar: "assets/chars/elara.png", llm_descr: "A brilliant, slightly distracted clockwork inventor. Warm but guarded.", llm_temperature: 0 }, inventory: [], money: 0 }>>
+<<set $doran = { name: "Doran Pike", styles: { bgColor: "#422006", borderColor: "#d97706", nameColor: "#fbbf24", textColor: "#fef3c7", avatar: "assets/chars/doran.png", llm_descr: "A jovial, shrewd merchant who always has \\"just the thing\\".", llm_temperature: 0 }, inventory: [], money: 0 }>>
+<<set $items = { goggles: { name: "Brass Goggles", icon: "assets/Items/goggles.png", price: 40, description: "Polished brass goggles with amber lenses.", stackable: false, slot: "head" }, pocketwatch: { name: "Pocket Watch", icon: "assets/Items/watch.png", price: 120, description: "A ticking heirloom that never seems to stop.", stackable: false, slot: "trinket" }, lantern: { name: "Aether Lantern", icon: "assets/Items/lantern.png", price: 65, description: "A handheld lantern lit by humming aether.", stackable: false, slot: "hand" }, tonic: { name: "Healing Tonic", icon: "assets/Items/tonic.png", price: 15, description: "Restores a little vigor. Tastes of copper.", stackable: true }, gear: { name: "Copper Gear", icon: "assets/Items/gear.png", price: 8, description: "A small, oddly warm copper gear.", stackable: true }, rose: { name: "Clockwork Rose", icon: "assets/Items/rose.png", price: 150, description: "A delicate, humming rose made of brass and ruby glass.", stackable: false, slot: "trinket" } }>>
+<<set $containers = { emporium: { items: [{item:"lantern",qty:3,price:65},{item:"tonic",qty:-1,price:15},{item:"gear",qty:5,price:8}] }, debris: { items: [{item:"rose",qty:1}] } }>>
+<<set $quests = { missingGear: { name: "The Missing Gear", description: "Elara's masterwork is one gear short of ticking.", state: "active", category: "Main", steps: { talkElara: { name: "Speak with Elara", description: "Find the inventor in her workshop.", state: "active" }, getGear: { name: "Acquire a copper gear", description: "Buy one from Doran.", state: "hidden" }, returnGear: { name: "Return the gear", description: "Bring it back to Elara.", state: "hidden" } } } }>>
+<<cacheaudio "tga_b_start_audio" "assets/audio/ambient_harbor.mp3">>
+<<waitforaudio>>
+<<set $__tgMasterVol to 1>>
+<<set $traveler.equipment.head to "goggles">>
+<<set $traveler.equipment.trinket to "pocketwatch">>
+<<run $traveler.inventory.push({ item: "goggles", qty: 1, equipped: true })>>
+<<run $traveler.inventory.push({ item: "pocketwatch", qty: 1, equipped: true })>>
+<<run $traveler.inventory.push({ item: "tonic", qty: 2, equipped: false })>>",
+      "name": "StoryInit",
+      "pid": 2,
+      "tags": "",
+      "x": 360,
+      "y": 100,
+    },
+    {
+      "content": "<div class="tg-section">
+  <div class="tg-section-title">Status</div>
+  <span style="display:flex;justify-content:center;align-items:center;width:100%;flex-wrap:wrap"><<print tgRenderDigitalCalendar($gameTime)>></span>
+  <div class="tg-text">Affection</div>
+  <div class="tg-progress-block" style="height:12px"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<print '<span class="tg-progress" style="--tg-bar-empty:#312e81;--tg-bar-fill:'+'#ec4899'+';--tg-bar-text:#fce7f3">'+'<span class="tg-bar" style="width:'+_tgP+'%">'+$affection+'/100'+'</span></span>'>></div>
+  <div class="tg-do tg-do-list"><span class="tg-do-row"><span class="tg-do-label">Name</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;print $playerName&gt;&gt;"><<print $playerName>></span></span><span class="tg-do-row"><span class="tg-do-label">Coin</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;print $traveler.money&gt;&gt;"><<print $traveler.money>></span></span><span class="tg-do-row"><span class="tg-do-label">Affection</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;set _tgP to Math.min(100,Math.max(0,$affection/100*100))&gt;&gt;&lt;&lt;print '&lt;span class=&quot;tg-do-bar&quot;&gt;&lt;span class=&quot;tg-do-bar-fill&quot; style=&quot;width:'+_tgP+'%&quot;&gt;&lt;/span&gt;&lt;/span&gt;'&gt;&gt;&lt;span class=&quot;tg-do-bar-text&quot;&gt;&lt;&lt;print $affection&gt;&gt;/&lt;&lt;print 100&gt;&gt;&lt;/span&gt;"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<print '<span class="tg-do-bar"><span class="tg-do-bar-fill" style="width:'+_tgP+'%"></span></span>'>><span class="tg-do-bar-text"><<print $affection>>/<<print 100>></span></span></span></div>
+</div>
+<div class="tg-quests tg-live" data-wiki="&lt;&lt;if $quests.missingGear.state is &quot;active&quot;&gt;&gt;&lt;div class=&quot;tg-quest&quot;&gt;&lt;div class=&quot;tg-quest-title&quot; style=&quot;color:#a855f7&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.name&gt;&gt;&lt;/div&gt;&lt;div class=&quot;tg-quest-steps&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.talkElara.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.getGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.returnGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;/div&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;"><<if $quests.missingGear.state is "active">><div class="tg-quest"><div class="tg-quest-title" style="color:#a855f7"><span class="tg-quest-mark"><<if $quests.missingGear.state is "done">>✓<<elseif $quests.missingGear.state is "failed">>✗<<elseif $quests.missingGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.name>></div><div class="tg-quest-steps"><<if $quests.missingGear.steps.talkElara.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.talkElara.state is "done">>✓<<elseif $quests.missingGear.steps.talkElara.state is "failed">>✗<<elseif $quests.missingGear.steps.talkElara.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.talkElara.name>></div><</if>><<if $quests.missingGear.steps.getGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.getGear.state is "done">>✓<<elseif $quests.missingGear.steps.getGear.state is "failed">>✗<<elseif $quests.missingGear.steps.getGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.getGear.name>></div><</if>><<if $quests.missingGear.steps.returnGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.returnGear.state is "done">>✓<<elseif $quests.missingGear.steps.returnGear.state is "failed">>✗<<elseif $quests.missingGear.steps.returnGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.returnGear.name>></div><</if>></div></div><</if>></div>",
+      "name": "StoryCaption",
+      "pid": 3,
+      "tags": "",
+      "x": 540,
+      "y": 100,
+    },
+    {
+      "content": "<<link "Settings">><<goto "Settings">><</link>>
+<<link "Journal">><<goto "Journal">><</link>>
+<<link "Saves">><<run UI.saves()>><</link>>
+<<link "Restart">><<run UI.restart()>><</link>>",
+      "name": "StoryMenu",
+      "pid": 4,
+      "tags": "",
+      "x": 720,
+      "y": 100,
+    },
+    {
+      "content": "<div style="text-align:center;opacity:.6;font-variant:small-caps">Cogsworth</div>",
+      "name": "PassageHeader",
+      "pid": 5,
+      "tags": "",
+      "x": 900,
+      "y": 100,
+    },
+    {
+      "content": "<hr class="tg-divider" style="--tg-div-color:#334155;--tg-div-thickness:1px;--tg-div-margin:6px">
+<div class="tg-text">//A Purl demonstration story.//</div>",
+      "name": "PassageFooter",
+      "pid": 6,
+      "tags": "",
+      "x": 1080,
+      "y": 100,
+    },
+    {
+      "content": "<<audio "tga_b_start_audio" volume 0.55 loop play>>
+<div class="tg-callout tg-callout-info"><div class="tg-callout-body"><div class="tg-callout-title">How to play</div>Click choices and links to move through the story. Your stats live in the sidebar.</div></div>
+<<type 25ms>><div class="tg-text">Steam hisses from the cobbled streets of **Cogsworth**. A telegram in your pocket reads only: //come quickly — E.//</div><</type>>
+<div class="tg-input-field">What do they call you?
+<<textbox "$playerName" $playerName>></div>
+<<set $worldState = { townName: "Cogsworth", day: 1, foggy: true, exits: ["north","docks"], meta: { chapter: 1 } }>>
+<<run Save.autosave.save("Arrival")>><<script>>(function(){var n=$('<div>').text("Progress saved").css({position:'fixed',bottom:'1.2em',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.82)',color:'#fff',padding:'.4em .9em',borderRadius:'.4em',zIndex:99999,fontSize:'.9em',opacity:0,transition:'opacity .3s',pointerEvents:'none'}).appendTo('body');setTimeout(function(){n.css('opacity',1);},16);setTimeout(function(){n.css('opacity',0);setTimeout(function(){n.remove();},320);},1500);})();<</script>>
+<hr class="tg-divider" style="--tg-div-color:#475569;--tg-div-thickness:1px;--tg-div-margin:12px">
+<div class="tg-choice">
+  <<link "Head into town" "TownSquare">><</link>>
+</div>
+<<run Dialog.setup("Welcome"); Dialog.wiki(Story.get("PopupWelcome").processText()); Dialog.open();>>",
+      "name": "Start",
+      "pid": 7,
+      "tags": "",
+      "x": 180,
+      "y": 220,
+    },
+    {
+      "content": "<div class="tg-text">The town square churns with gears and gossip. Three lanes branch away from the fountain.</div>
+<<run tgAddTime("gameTime", {"years":0,"months":0,"days":0,"hours":1,"minutes":0})>>
+<div class="tg-spacer" style="height:10px"></div>
+<div class="tg-section">
+  <div class="tg-section-title">Where to?</div>
+  <span class="tg-btn tg-btn-b_town_l1"><<link "Elara's Workshop">>
+    <<goto "Workshop">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l2"><<link "Doran's Emporium">>
+    <<goto "Emporium">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l6"><<link "The Foggy Docks">>
+    <<goto "Docks">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l3"><<link "Your satchel & gear">>
+    <<goto "Satchel">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l4"><<link "Quest journal">>
+    <<goto "Journal">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l5"><<link "Settings">>
+    <<goto "Settings">>
+    <<run UIBar.update()>>
+  <</link>></span>
+</div>",
+      "name": "TownSquare",
+      "pid": 8,
+      "tags": "",
+      "x": 360,
+      "y": 220,
+    },
+    {
+      "content": "<div class="tg-image"><img src="assets/chars/elara_full.png" alt="Elara at her workbench" width="320" /></div>
+<<set $metElara to true>>
+<<type 20ms>><div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">You came! Oh — mind the springs. My heart-engine is //this// close, but it's missing a single copper gear.</span></div></div><</type>>
+<<if $quests.missingGear.steps.talkElara.state == "active">>
+  <<set $quests.missingGear.steps.talkElara.state to "done">>
+  <<set $quests.missingGear.steps.getGear.state to "active">>
+  <<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<</if>>
+<div class="tg-progress-block" style="height:14px"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<set _tgC to 'rgb('+Math.round(99+(137)*_tgP/100)+','+Math.round(102+(-30)*_tgP/100)+','+Math.round(241+(-88)*_tgP/100)+')'>><<print '<span class="tg-progress" style="--tg-bar-empty:#312e81;--tg-bar-fill:'+_tgC+';--tg-bar-text:#ede9fe">'+'<span class="tg-bar" style="width:'+_tgP+'%">'+$affection+'/100'+'</span></span>'>></div>
+<<if ndef $__tabs_b_ws_tabs>><<set $__tabs_b_ws_tabs to 0>><</if>>
+<div class="tg-tabs-block" data-ctrl="__tabs_b_ws_tabs"><span data-idx="0"><<link "Talk">><<set $__tabs_b_ws_tabs to 0>><<run Engine.show()>><</link>></span><span data-idx="1"><<link "Gift">><<set $__tabs_b_ws_tabs to 1>><<run Engine.show()>><</link>></span><span data-idx="2"><<link "Lore">><<set $__tabs_b_ws_tabs to 2>><<run Engine.show()>><</link>></span></div>
+<<if $__tabs_b_ws_tabs eq 0>>
+  <span class="tg-btn tg-btn-b_ws_talk_bt"><<link "Compliment her work (+5)">>
+    <<set $affection += 5>>
+    <<run Engine.show()>>
+    <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+    <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <<if $affection >= 20>>
+    <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">A warm smile. "You always know what to say."</span></div></div>
+  <<else>>
+    <div class="tg-text">She nods politely, eyes still on her gears.</div>
+  <</if>>
+<<elseif $__tabs_b_ws_tabs eq 1>>
+  <<if tgInvHas($traveler, "gear")>>
+    <span class="tg-btn tg-btn-b_ws_gift_fn"><<link "Offer a copper gear">>
+      <<include "GiveGift">>
+      <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+    <div class="tg-text">//Giving the gear here advances your quest.//</div>
+    <div class="tg-spacer" style="height:10px"></div>
+  <</if>>
+  <<if tgInvHas($traveler, "rose")>>
+    <span class="tg-btn tg-btn-b_ws_gift_ro"><<link "Offer the Clockwork Rose">>
+      <<include "GiveRose">>
+      <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+    <div class="tg-text">//Offer the rare treasure found at the docks.//</div>
+    <div class="tg-spacer" style="height:10px"></div>
+  <</if>>
+  <<if !tgInvHas($traveler, "gear") && !tgInvHas($traveler, "rose")>>
+    <div class="tg-text">You don't have any suitable gifts in your satchel right now. Elara needs a copper gear for her engine, but maybe you can find something else in Cogsworth...</div>
+  <</if>>
+<<elseif $__tabs_b_ws_tabs eq 2>>
+  <div class="tg-text">The heart-engine, she explains, could power the whole harbor — if only it ticked.</div>
+  <div class="tg-video"><video src="assets/vid/heart_engine.mp4" controls width="360"></video></div>
+<</if>>
+<span class="tg-btn tg-btn-b_ws_help"><<link "Help">>
+  <<run Dialog.setup("How gifting works"); Dialog.wiki(Story.get("PopupHelp").processText()); Dialog.open();>>
+  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_ws_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Workshop",
+      "pid": 9,
+      "tags": "",
+      "x": 540,
+      "y": 220,
+    },
+    {
+      "content": "<div class="dialogue dlg-chardoran dlg-right"><<if $doran.styles.avatar>><img class="char-avatar" @src="$doran.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $doran.name>></span><span class="char-text">Welcome, welcome! Gears, lanterns, tonics — I've got just the thing.</span></div></div>
+<<tgContainer "emporium" "traveler" "Doran's Emporium">>
+<<if $quests.missingGear.steps.getGear.state == "active">>
+  <<set $quests.missingGear.steps.getGear.state to "done">>
+  <<set $quests.missingGear.steps.returnGear.state to "active">>
+  <<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<</if>>
+<hr class="tg-divider" style="--tg-div-color:#555555;--tg-div-thickness:1px;--tg-div-margin:8px">
+<span class="tg-btn tg-btn-b_shop_links"><<link "Return to the workshop">>
+  <<goto "Workshop">>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_shop_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Emporium",
+      "pid": 10,
+      "tags": "",
+      "x": 720,
+      "y": 220,
+    },
+    {
+      "content": "<<if tgIsEquipped($traveler, "lantern")>>
+  <div class="tg-text">The bright blue-white beam of your Aether Lantern cuts through the thick green smog. You walk along the creaking timber pier. Near a rusted, derelict crane, you spot a pile of discarded clockwork scrap. Something gold glints deep within the heap.</div>
+  <<tgContainer "debris" "traveler" "Rusted Debris">>
+<<else>>
+  <div class="tg-text">The thick green fog wraps around the harbor like a wet shroud. You hear waves lapping against the timber piers, but you can't see two steps in front of you. Exploring the docks in this blackness is suicide. You need a light source to pierce this gloom — perhaps Doran at the Emporium has something?</div>
+  <<if $foundPurse>>
+    <div class="tg-text">You have already recovered the soggy leather pouch containing 40 gold coins.</div>
+  <<else>>
+    <span class="tg-btn tg-btn-b_docks_grop"><<link "Grope blindly in the dark water">>
+      <<set $foundPurse to true>>
+      <<set $traveler.money += 40>>
+      <<run Engine.show()>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+  <</if>>
+<</if>>
+<span class="tg-btn tg-btn-b_docks_back"><<link "Return to Town Square">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Docks",
+      "pid": 11,
+      "tags": "",
+      "x": 900,
+      "y": 220,
+    },
+    {
+      "content": "<div class="tg-text">You lay out your belongings and the gear you carry.</div>
+<div style="display:flex;justify-content:center;width:100%"><div class="tg-paperdoll" style="display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px);gap:2px"><div class="tg-pd-slot" style="grid-row:1;grid-column:1;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','head','head',event)"><<if $traveler.equipment.head neq "">><img @src="$items[$traveler.equipment.head].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Head</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div><div class="tg-pd-slot" style="grid-row:1;grid-column:2;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','hand','hand',event)"><<if $traveler.equipment.hand neq "">><img @src="$items[$traveler.equipment.hand].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Hand</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div><div class="tg-pd-slot" style="grid-row:1;grid-column:3;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','trinket','trinket',event)"><<if $traveler.equipment.trinket neq "">><img @src="$items[$traveler.equipment.trinket].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Trinket</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div></div></div>
+<<tgInventory "traveler" "Satchel">>
+<<for _member range $partyMembers>>
+  <div class="tg-text">• <<print _member>></div>
+<</for>>
+<span class="tg-btn tg-btn-b_wd_use"><<link "Drink a Healing Tonic">>
+  <<include "tg_use_tonic">>
+  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_wd_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Satchel",
+      "pid": 12,
+      "tags": "",
+      "x": 180,
+      "y": 340,
+    },
+    {
+      "content": "<div class="tg-text">## Quest Journal</div>
+<div class="tg-quests tg-live" data-wiki="&lt;&lt;if $quests.missingGear.state is &quot;active&quot; or $quests.missingGear.state is &quot;done&quot;&gt;&gt;&lt;div class=&quot;tg-quest&quot;&gt;&lt;div class=&quot;tg-quest-title&quot; style=&quot;color:#a855f7&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;if $quests.missingGear.description&gt;&gt;&lt;div class=&quot;tg-quest-desc&quot;&gt;&lt;&lt;= $quests.missingGear.description&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;div class=&quot;tg-quest-steps&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.talkElara.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.getGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.returnGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;/div&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;"><<if $quests.missingGear.state is "active" or $quests.missingGear.state is "done">><div class="tg-quest"><div class="tg-quest-title" style="color:#a855f7"><span class="tg-quest-mark"><<if $quests.missingGear.state is "done">>✓<<elseif $quests.missingGear.state is "failed">>✗<<elseif $quests.missingGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.name>></div><<if $quests.missingGear.description>><div class="tg-quest-desc"><<= $quests.missingGear.description>></div><</if>><div class="tg-quest-steps"><<if $quests.missingGear.steps.talkElara.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.talkElara.state is "done">>✓<<elseif $quests.missingGear.steps.talkElara.state is "failed">>✗<<elseif $quests.missingGear.steps.talkElara.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.talkElara.name>></div><</if>><<if $quests.missingGear.steps.getGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.getGear.state is "done">>✓<<elseif $quests.missingGear.steps.getGear.state is "failed">>✗<<elseif $quests.missingGear.steps.getGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.getGear.name>></div><</if>><<if $quests.missingGear.steps.returnGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.returnGear.state is "done">>✓<<elseif $quests.missingGear.steps.returnGear.state is "failed">>✗<<elseif $quests.missingGear.steps.returnGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.returnGear.name>></div><</if>></div></div><</if>></div>
+<div class="tg-spacer" style="height:16px"></div>
+<<if $quests.missingGear.steps.returnGear.state === "active" && tgInvHas($traveler, "gear")>>
+  <span class="tg-btn tg-btn-b_ql_finish"><<link "Bring the gear to Elara">>
+    <<goto "Finale">>
+    <<run UIBar.update()>>
+  <</link>></span>
+<</if>>
+<span class="tg-btn tg-btn-b_ql_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Journal",
+      "pid": 13,
+      "tags": "",
+      "x": 360,
+      "y": 340,
+    },
+    {
+      "content": "<div class="tg-text">## Settings</div>
+<div class="tg-radio">Difficulty
+<<radiobutton "$difficulty" "Easy" autocheck>> Gentle
+<<radiobutton "$difficulty" "Normal" autocheck>> Balanced
+<<radiobutton "$difficulty" "Hard" autocheck>> Clockwork</div>
+<span class="tg-select">Interface theme <<listbox "$theme" autoselect>><<option "Brass" "brass">><<option "Copper" "copper">><<option "Iron" "iron">><</listbox>></span>
+<span class="tg-slider">Text speed <input id="tgslb_set_speed" type="range" min="0" max="100" step="5" value="60" style="vertical-align:middle"><span id="tgslb_set_speedv" class="tg-slider-val">60</span></span><<script>>setTimeout(function(){  var s=document.getElementById("tgslb_set_speed"); if(!s) return;  var cur=State.variables["textSpeed"];  if(cur!=null) s.value=cur;  var d=document.getElementById("tgslb_set_speedv"); if(d) d.textContent=s.value;  s.addEventListener("input", function(){    var nv=Number(s.value);    State.variables["textSpeed"]=nv;    var dd=document.getElementById("tgslb_set_speedv"); if(dd) dd.textContent=nv;    if(window.jQuery){window.jQuery(".tg-live[data-wiki]").each(function(){window.jQuery(this).empty().wiki(window.jQuery(this).attr("data-wiki"));});}    if(window._tgCheckWatchers) window._tgCheckWatchers();  });},0);<</script>>
+<div class="tg-checkbox">Preferences
+<<checkbox "$showHints" false true autocheck>> Show gameplay hints
+<<checkbox "$subscribeNews" false true autocheck>> Subscribe to the Cogsworth Courier</div>
+<span class="tg-audio-volume" style="display:flex;align-items:center;gap:6px;width:100%"><button id="tgvolb_set_volm" onclick="var S=SugarCube.SimpleAudio;S.mute(!S.mute());this.textContent=S.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A)" style="border:none;background:none;cursor:pointer;font-size:1.2em">&#x1F50A;</button><input id="tgvolb_set_vol" type="range" min="0" max="100" value="100" style="flex:1;min-width:0" oninput="var x=this.value/100;SugarCube.SimpleAudio.volume(x);SugarCube.State.variables.__tgMasterVol=x;document.querySelectorAll('video').forEach(function(el){el.volume=x;})" /></span><<script>>setTimeout(function(){  var v=State.variables.__tgMasterVol;  var s=document.getElementById("tgvolb_set_vol");  if(s&&v!=null)s.value=Math.round(v*100);  var m=document.getElementById("tgvolb_set_volm");if(m)m.textContent=SugarCube.SimpleAudio.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A);},0);<</script>>
+<hr class="tg-divider" style="--tg-div-color:#555555;--tg-div-thickness:1px;--tg-div-margin:8px">
+<div class="tg-table" style="--tg-tbl-gap:4px;--tg-tbl-border-color:#334155;--tg-tbl-border-width:1px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color);padding:2px"><div style="display:flex;overflow:hidden;align-items:stretch;margin:0;height:28px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px"><div class="tg-text">**Control**</div></span><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px;border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><div class="tg-text">**Effect**</div></span></div><div style="display:flex;overflow:hidden;align-items:stretch;margin:0;height:28px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px"><div class="tg-text">Choice</div></span><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px;border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><div class="tg-text">Branches the story</div></span></div></div>
+<div class="tg-include" style="--tg-inc-border-width:1px;--tg-inc-border-color:#475569;--tg-inc-radius:6px;--tg-inc-padding:8px"><<include "SharedTip">></div>
+<small style="opacity:.7">Built with Purl — a no-code SugarCube studio.</small>
+<span class="tg-btn tg-btn-b_set_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>",
+      "name": "Settings",
+      "pid": 14,
+      "tags": "",
+      "x": 540,
+      "y": 340,
+    },
+    {
+      "content": "<<set $quests.missingGear.state to "done">>
+<<set $quests.missingGear.steps.returnGear.state to "done">>
+<<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<<if $gaveRose>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">Elara holds the Clockwork Rose, its gears ticking softly in unison with the heart-engine. She looks up at you, her eyes shining. "The engine is perfect, but this rose... it makes this workshop feel like a home. Thank you for bringing light back into my life."</span></div></div>
+  <div class="tg-callout tg-callout-success"><div class="tg-callout-body"><div class="tg-callout-title">A perfect ending</div>The clockwork rose blooms, and the heart-engine sings a song of a new dawn.</div></div>
+<<elseif $affection >= 15>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">The engine ticks — then //sings//. She takes your hand. "Stay a while?"</span></div></div>
+  <div class="tg-callout tg-callout-success"><div class="tg-callout-body"><div class="tg-callout-title">A warm ending</div>The clockwork heart beats in time with two others.</div></div>
+<<else>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">The engine ticks to life. "Thank you, friend. Truly."</span></div></div>
+  <div class="tg-callout tg-callout-note"><div class="tg-callout-body"><div class="tg-callout-title">A quiet ending</div>Cogsworth hums a little brighter tonight.</div></div>
+<</if>>
+<<run Save.autosave.save("The end")>>
+<hr class="tg-divider" style="--tg-div-color:#a855f7;--tg-div-thickness:2px;--tg-div-margin:16px">
+<<link "↺ Play again">><<run UI.restart()>><</link>>",
+      "name": "Finale",
+      "pid": 15,
+      "tags": "",
+      "x": 720,
+      "y": 340,
+    },
+    {
+      "content": "<<set $affection += 10>>
+<<tgInvRemove $traveler "gear" 1>>
+<div class="tg-text">Elara turns the gear over, eyes bright. "Where did you—? Never mind. //Thank you.//"</div>",
+      "name": "GiveGift",
+      "pid": 16,
+      "tags": "func",
+      "x": 900,
+      "y": 460,
+    },
+    {
+      "content": "<<set $affection += 20>>
+<<set $gaveRose to true>>
+<<tgInvRemove $traveler "rose" 1>>
+<<set $traveler.equipment.trinket to "">>
+<div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">Elara gasps, her fingers gently tracing the brass petals. "A clockwork rose... I thought these were lost when the Great Foundry burned. It's beautiful... thank you."</span></div></div>",
+      "name": "GiveRose",
+      "pid": 17,
+      "tags": "func",
+      "x": 180,
+      "y": 580,
+    },
+    {
+      "content": "<div class="tg-text">You uncork the tonic and drink. Warmth spreads through your fingers.</div>",
+      "name": "tg_use_tonic",
+      "pid": 18,
+      "tags": "func",
+      "x": 360,
+      "y": 580,
+    },
+    {
+      "content": "<div class="tg-text">Welcome to **The Clockwork Heart** — a tiny demo built to show off Purl. Explore freely; nothing here can break.</div>",
+      "name": "PopupWelcome",
+      "pid": 19,
+      "tags": "popup",
+      "x": 540,
+      "y": 580,
+    },
+    {
+      "content": "<div class="tg-text">Gifting the **Copper Gear** to Elara in the Gift tab advances your quest and raises her affection.</div>",
+      "name": "PopupHelp",
+      "pid": 20,
+      "tags": "popup",
+      "x": 720,
+      "y": 580,
+    },
+    {
+      "content": "<div class="tg-text">//Tip: your choices and gifts shape which ending you reach.//</div>",
+      "name": "SharedTip",
+      "pid": 21,
+      "tags": "func",
+      "x": 900,
+      "y": 580,
+    },
+  ],
+  "scriptContent": "// Sidebar systemConfig — startup
+$(document).one(':storyready', function() { if (State.variables.sidePanel.initiallyCollapsed) UIBar.stow(); });
+Config.saves.isAllowed = function() { return !!State.variables.sidePanel.show_saves; };
+// Sidebar systemConfig — runtime sync (re-runs on every passage render)
+window._tgSyncSidebar = function() {
+  document.body.classList.toggle('tg-sidebar-hidden', !!State.variables.sidePanel.hidden);
+  (function() { var w = State.variables.sidePanel.width, p = State.variables.sidePanel.position; var bar = document.getElementById('ui-bar'); var story = document.getElementById('story'); if (!bar || !story) return; var wStr = (typeof w === 'number' && w > 0) ? (w + 'em') : ''; var right = (p === 'right'); bar.style.width = wStr; bar.style.left  = right ? 'auto' : ''; bar.style.right = right ? '0'    : ''; story.style.marginLeft  = right ? '0' : (wStr || ''); story.style.marginRight = right ? (wStr || '17.5em') : ''; })();
+  (function() { var c = State.variables.sidePanel.bgColor; var bar = document.getElementById('ui-bar'); if (bar) bar.style.background = (typeof c === 'string' ? c : ''); })();
+  document.body.classList.toggle('tg-no-collapse', !State.variables.sidePanel.allowCollapse);
+  document.body.classList.toggle('tg-no-history', !State.variables.sidePanel.show_history);
+  document.body.classList.toggle('tg-no-saves', !State.variables.sidePanel.show_saves);
+};
+$(document).on(':storyready :passagedisplay', window._tgSyncSidebar);
+
+// ── Date-Time Utils ──
+window.tgAddTime = function(varPath, delta) {
+  var parts = varPath.split(".");
+  var obj = State.variables;
+  for (var i = 0; i < parts.length - 1; i++) { obj = obj[parts[i]]; }
+  var key = parts[parts.length - 1];
+  var val = obj[key];
+
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return;
+
+  if (delta.minutes) date.setMinutes(date.getMinutes() + delta.minutes);
+  if (delta.hours)   date.setHours(date.getHours() + delta.hours);
+  if (delta.days)    date.setDate(date.getDate() + delta.days);
+  if (delta.months)  date.setMonth(date.getMonth() + delta.months);
+  if (delta.years)   date.setFullYear(date.getFullYear() + delta.years);
+
+  var pad = function(n) { return n < 10 ? "0" + n : n; };
+  obj[key] = date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+};
+
+window.tgFormatDate = function(val, format) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return val;
+  var DAYS_L  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var DAYS_S  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var MONS_L  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var MONS_S  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var o = {
+    "dddd": DAYS_L[date.getDay()],
+    "ddd":  DAYS_S[date.getDay()],
+    "MMMM": MONS_L[date.getMonth()],
+    "MMM":  MONS_S[date.getMonth()],
+    "DD":   ("0" + date.getDate()).slice(-2),
+    "MM":   ("0" + (date.getMonth() + 1)).slice(-2),
+    "YYYY": String(date.getFullYear()),
+    "HH":   ("0" + date.getHours()).slice(-2),
+    "mm":   ("0" + date.getMinutes()).slice(-2)
+  };
+  return format.replace(/dddd|ddd|MMMM|MMM|DD|MM|YYYY|HH|mm/g, function(m) { return o[m]; });
+};
+
+window.tgRenderClock = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var h = date.getHours() % 12 + date.getMinutes() / 60;
+  var m = date.getMinutes();
+  var PI = Math.PI;
+  var toR = function(deg) { return deg * PI / 180; };
+  var hA = toR(h / 12 * 360 - 90);
+  var mA = toR(m / 60 * 360 - 90);
+  var fx = function(r, a) { return (50 + r * Math.cos(a)).toFixed(1); };
+  var fy = function(r, a) { return (50 + r * Math.sin(a)).toFixed(1); };
+  var marks = "";
+  for (var i = 0; i < 12; i++) {
+    var a = toR(i / 12 * 360 - 90);
+    marks += '<line x1="' + fx(43,a) + '" y1="' + fy(43,a) + '" x2="' + fx(48,a) + '" y2="' + fy(48,a) + '" stroke="currentColor" stroke-width="2"/>';
+  }
+  return '<svg viewBox="0 0 100 100" width="60" height="60" style="display:inline-block;vertical-align:middle">' +
+    '<circle cx="50" cy="50" r="49" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+    marks +
+    '<line x1="50" y1="50" x2="' + fx(30,hA) + '" y2="' + fy(30,hA) + '" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+    '<line x1="50" y1="50" x2="' + fx(40,mA) + '" y2="' + fy(40,mA) + '" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<circle cx="50" cy="50" r="3" fill="currentColor"/>' +
+    '</svg>';
+};
+
+window.tgRenderDigital = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var pad = function(n) { return ("0" + n).slice(-2); };
+  return '<span style="font-family:monospace;font-size:1.4em;letter-spacing:0.05em;display:inline-block;background:rgba(0,0,0,0.35);padding:2px 8px;border-radius:4px">' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + '</span>';
+};
+
+window.tgRenderCalendar = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DAYS   = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  var yr = date.getFullYear(), mo = date.getMonth(), dy = date.getDate();
+  var first = (new Date(yr, mo, 1).getDay() + 6) % 7;
+  var total = new Date(yr, mo + 1, 0).getDate();
+  var s = '<table style="border-collapse:collapse;font-size:0.78em;display:inline-table;vertical-align:middle">';
+  s += '<caption style="text-align:center;padding-bottom:2px;font-weight:bold">' + MONTHS[mo] + " " + yr + '</caption><thead><tr>';
+  for (var d = 0; d < 7; d++) s += '<th style="padding:1px 3px;text-align:center;opacity:0.6">' + DAYS[d] + '</th>';
+  s += '</tr></thead><tbody><tr>';
+  for (var i = 0; i < first; i++) s += '<td></td>';
+  for (var i = 1; i <= total; i++) {
+    if ((i + first - 1) % 7 === 0 && i > 1) s += '</tr><tr>';
+    var cur = (i === dy);
+    s += '<td style="padding:1px 3px;text-align:center' + (cur ? ";font-weight:bold;outline:1px solid currentColor;border-radius:50%" : "") + '">' + i + '</td>';
+  }
+  s += '</tr></tbody></table>';
+  return s;
+};
+
+window.tgRenderClockCalendar = function(val) {
+  return '<span style="display:inline-flex;align-items:center;gap:8px">' + window.tgRenderClock(val) + window.tgRenderCalendar(val) + '</span>';
+};
+
+window.tgRenderDigitalCalendar = function(val) {
+  return '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:4px">' + window.tgRenderCalendar(val) + window.tgRenderDigital(val) + '</span>';
+};
+
+window.tgOpenLightbox = function(src) {
+  var o = document.getElementById('tg-lb-ov');
+  if (!o) {
+    o = document.createElement('div');
+    o.id = 'tg-lb-ov';
+    o.innerHTML = '<span id="tg-lb-x">✕</span><img id="tg-lb-img">';
+    document.body.appendChild(o);
+    var cl = function() { o.classList.remove('on'); };
+    o.addEventListener('click', function(e) {
+      if (e.target === o || e.target.id === 'tg-lb-x') cl();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') cl();
+    });
+  }
+  document.getElementById('tg-lb-img').src = src;
+  o.classList.add('on');
+};
+
+// Tabs — mark active anchor based on State.variables[data-ctrl]
+function _tgUpdateTabs() {
+  document.querySelectorAll('.tg-tabs-block[data-ctrl]').forEach(function(bar) {
+    var ctrl = bar.getAttribute('data-ctrl');
+    if (!ctrl) return;
+    var val = ctrl.split('.').reduce(function(o, k) { return o && o[k]; }, State.variables);
+    bar.querySelectorAll('[data-idx]').forEach(function(span) {
+      var a = span.querySelector('a');
+      if (a) a.classList.toggle('tg-tabs-active', Number(span.getAttribute('data-idx')) === val);
+    });
+  });
+}
+$(document).on(':storyready :passagedisplay', _tgUpdateTabs);
+
+/* TG: auto-refresh sidebar + live blocks when textbox/numberbox values change */
+/* change fires on Enter / blur / stepper-arrow — the moment SugarCube commits the value */
+$(document).on("change.tg-inp", ".macro-textbox, .macro-numberbox", function() {
+  UIBar.update();
+  $('.tg-live[data-wiki]').each(function() { $(this).empty().wiki($(this).attr('data-wiki')); });
+});
+/* input fires on every keystroke — debounced for live block preview */
+$(document).on("input.tg-inp", ".macro-textbox, .macro-numberbox", (function() {
+  var t;
+  return function() {
+    clearTimeout(t);
+    t = setTimeout(function() {
+      UIBar.update();
+  $('.tg-live[data-wiki]').each(function() { $(this).empty().wiki($(this).attr('data-wiki')); });
+    }, 200);
+  };
+})());
+
+/* TG: periodic re-render of live blocks every 200ms */
+$(document).on(":passagedisplay", function() {
+  clearInterval(window._tgLiveTimer);
+  if ($(".tg-live[data-wiki]").length) {
+    window._tgLiveTimer = setInterval(function() {
+      $(".tg-live[data-wiki]").each(function() {
+        $(this).empty().wiki($(this).attr("data-wiki"));
+      });
+    }, 200);
+  }
+});
+$(document).on(":passagehide", function() {
+  clearInterval(window._tgLiveTimer);
+});
+
+/* TG: watchers — global check function + :passagedisplay hook */
+window._tgCheckWatchers = function() {
+  window._tgWPrev = window._tgWPrev || {};
+  if (!State || !State.variables) return;
+  (function() { // Affection milestone
+    var _cond = !!(State.variables["affection"] >= 30);
+    var _prev = window._tgWPrev["w_affection_glow"];
+    window._tgWPrev["w_affection_glow"] = _cond;
+    if (!_cond || _prev) return;
+    State.variables["subscribeNews"] = true;
+  })();
+};
+$(document).on(":passagedisplay", window._tgCheckWatchers);
+
+/* Quests: chain auto-advance + parent auto-complete */
+window._tgQuests = {"missingGear":{ordered:true,auto:true,steps:["talkElara","getGear","returnGear"]}};
+window._tgQuestNormalize = function(q){
+  var cfg = window._tgQuests[q]; if (!cfg) return;
+  var root = State.variables.quests; if (!root) return;
+  var Q = root[q]; if (!Q || !Q.steps) return;
+  if (cfg.ordered) {
+    for (var i = 0; i < cfg.steps.length; i++) {
+      var st = Q.steps[cfg.steps[i]];
+      if (!st) continue;
+      if (st.state === "done") continue;
+      if (st.state === "hidden") st.state = "active";
+      break;
+    }
+  }
+  if (cfg.auto) {
+    var allDone = cfg.steps.every(function(s){ var x = Q.steps[s]; return x && x.state === "done"; });
+    if (allDone && Q.state !== "done") Q.state = "done";
+  }
+};
+
+// Audio: passageinit handler + autoplay unlock
+var _tgAudioPlayMap = {"Start":[{"id":"tga_b_start_audio","volume":0.55,"loop":true}]};
+$(document).one(":passageend", function() {
+  if (typeof _tgAudioPlayMap === "undefined") return;
+  var ts = _tgAudioPlayMap[State.passage];
+  if (!ts || !ts.length) return;
+  var blocked = ts.some(function(t) {
+    var tr = SimpleAudio.tracks.get(t.id);
+    return tr && !tr.isPlaying();
+  });
+  if (!blocked) return;
+  var ov = document.createElement("div");
+  ov.id = "tg-audio-unlock";
+  ov.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);cursor:pointer";
+  ov.innerHTML = '<div style="pointer-events:none;color:#fff;font-size:1.4em;text-align:center;line-height:1.6">▶ Click to begin</div>';
+  ov.addEventListener("click", function() {
+    ov.remove();
+    var ts2 = _tgAudioPlayMap[State.passage];
+    if (ts2) ts2.forEach(function(t) {
+      var tr = SimpleAudio.tracks.get(t.id);
+      if (tr && !tr.isPlaying()) tr.volume(t.volume).loop(t.loop).play();
+    });
+  }, { once: true });
+  document.body.appendChild(ov);
+});
+
+// ── Inventory macros ──
+Macro.add("tgInvAdd", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    var qty = this.args[2] != null ? this.args[2] : 1;
+    if (!charVar || !charVar.inventory) return;
+    var items = State.variables["items"];
+    var item = items ? items[itemName] : null;
+    if (item && item.stackable) {
+      var ex = charVar.inventory.find(function(e) { return e.item === itemName; });
+      if (ex) { ex.qty += qty; return; }
+    }
+    charVar.inventory.push({ item: itemName, qty: qty, equipped: false });
+  }
+});
+
+Macro.add("tgInvRemove", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    var qty = this.args[2] != null ? this.args[2] : 1;
+    if (!charVar || !charVar.inventory) return;
+    var idx = charVar.inventory.findIndex(function(e) { return e.item === itemName; });
+    if (idx === -1) return;
+    charVar.inventory[idx].qty -= qty;
+    if (charVar.inventory[idx].qty <= 0) charVar.inventory.splice(idx, 1);
+  }
+});
+
+// Inventory helpers usable in <<if>> expressions
+window.tgInvHas = function(charVar, itemName) {
+  if (!charVar || !charVar.inventory) return false;
+  return charVar.inventory.some(function(e) { return e.item === itemName; });
+};
+window.tgInvCount = function(charVar, itemName) {
+  if (!charVar || !charVar.inventory) return 0;
+  var entry = charVar.inventory.find(function(e) { return e.item === itemName; });
+  return entry ? entry.qty : 0;
+};
+
+// ── Inventory UI (tgInventory) ──
+window._tgInvState = window._tgInvState || {};
+window._tgInvDialog = function(title, bodyHtml) {
+  if (typeof Dialog === "undefined") { alert(bodyHtml.replace(/<[^>]+>/g, "")); return; }
+  Dialog.setup(title);
+  Dialog.wiki(bodyHtml);
+  Dialog.open();
+};
+
+window._tgInvNormSlot = function(s) {
+  return String(s || "").toLowerCase().replace(/\\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+};
+
+window._tgInvCharHasSlot = function(ch, slotName) {
+  if (!ch || !ch.equipment) return false;
+  var norm = window._tgInvNormSlot(slotName);
+  var keys = Object.keys(ch.equipment);
+  for (var i = 0; i < keys.length; i++) {
+    if (window._tgInvNormSlot(keys[i]) === norm) return true;
+  }
+  return false;
+};
+
+window._tgInvRender = function(wrap) {
+  var charName = wrap.dataset.char;
+  var ch = State.variables[charName];
+  if (!ch) return;
+  if (!ch.inventory) ch.inventory = [];
+  var state = window._tgInvState[wrap.id] || { cat: "all", selected: "" };
+  window._tgInvState[wrap.id] = state;
+  var items = State.variables["items"] || {};
+  var filtered = ch.inventory.filter(function(e) {
+    if (state.cat === "all") return true;
+    var it = items[e.item] || {};
+    return (it.category || "misc") === state.cat;
+  });
+  var grid = wrap.querySelector(".tg-cont-grid");
+  var detail = wrap.querySelector(".tg-cont-detail");
+  var empty = wrap.querySelector(".tg-inv-empty");
+  // Tabs
+  wrap.querySelectorAll(".tg-inv-tab").forEach(function(t) {
+    t.classList.toggle("tg-active", t.dataset.cat === state.cat);
+  });
+  if (!filtered.length) {
+    if (grid) grid.innerHTML = "";
+    if (empty) empty.style.display = "";
+    if (detail) detail.innerHTML = '<div class="tg-detail-placeholder">' + (state.cat === "all" ? "Inventory is empty" : "No items in this category") + '</div>';
+    return;
+  }
+  if (empty) empty.style.display = "none";
+  var cellsHtml = filtered.map(function(e) {
+    var it = items[e.item] || {};
+    var name = it.name || e.item;
+    var icon = it.icon ? '<img src="' + it.icon + '" alt="">' : '<span style="font-size:28px;line-height:1">📦</span>';
+    var eqCls = e.equipped ? " tg-inv-equipped" : "";
+    var sel = (state.selected === e.item) ? " tg-selected" : "";
+    return '<div class="tg-cont-cell' + eqCls + sel + '" data-item="' + e.item + '" onclick="window._tgInvCellClick(this)">' + icon + '<span class="tg-cell-qty">&times;' + e.qty + '</span><span class="tg-cell-name">' + name + '</span></div>';
+  }).join("");
+  if (grid) grid.innerHTML = cellsHtml;
+  // Detail panel
+  if (!detail) return;
+  var selEntry = state.selected ? ch.inventory.find(function(x) { return x.item === state.selected; }) : null;
+  if (!selEntry) {
+    detail.innerHTML = '<div class="tg-detail-placeholder">Select an item</div>';
+    return;
+  }
+  var it = items[selEntry.item] || {};
+  var name = it.name || selEntry.item;
+  var desc = it.description || "";
+  var icon = it.icon ? '<img src="' + it.icon + '">' : "";
+  var html = "";
+  if (icon) html += '<div class="tg-detail-icon">' + icon + '</div>';
+  html += '<div class="tg-detail-name">' + name + '</div>';
+  if (desc) html += '<div class="tg-detail-desc">' + desc + '</div>';
+  html += '<div class="tg-detail-meta">Qty: ' + selEntry.qty + (selEntry.equipped ? " &nbsp;|&nbsp; Equipped" : "") + '</div>';
+  html += '<div class="tg-detail-actions">';
+  var cat = it.category || "misc";
+  if (cat === "wearable") {
+    if (selEntry.equipped) {
+      html += '<button class="tg-detail-action" onclick="window._tgInvUnequip(this)">Unequip</button>';
+    } else {
+      html += '<button class="tg-detail-action" onclick="window._tgInvEquip(this)">Equip</button>';
+    }
+  } else if (cat === "consumable") {
+    html += '<button class="tg-detail-action" onclick="window._tgInvUse(this)">Use</button>';
+  }
+  html += '<button class="tg-detail-action tg-inv-drop" onclick="window._tgInvDrop(this)">Drop</button>';
+  html += '</div>';
+  detail.innerHTML = html;
+};
+
+window._tgInvTabClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var st = window._tgInvState[wrap.id] || (window._tgInvState[wrap.id] = { cat: "all", selected: "" });
+  st.cat = el.dataset.cat || "all";
+  st.selected = "";
+  window._tgInvRender(wrap);
+};
+
+window._tgInvCellClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var st = window._tgInvState[wrap.id] || (window._tgInvState[wrap.id] = { cat: "all", selected: "" });
+  st.selected = el.dataset.item;
+  window._tgInvRender(wrap);
+};
+
+window._tgInvCtx = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return null;
+  var st = window._tgInvState[wrap.id];
+  if (!st || !st.selected) return null;
+  var ch = State.variables[wrap.dataset.char];
+  if (!ch) return null;
+  var items = State.variables["items"] || {};
+  var it = items[st.selected] || {};
+  return { wrap: wrap, ch: ch, st: st, it: it, itemName: st.selected };
+};
+
+window._tgInvEquip = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var slot = ctx.it.targetSlot || ctx.it.slot;
+  if (!slot) { window._tgInvDialog("Cannot equip", "This item has no target slot."); return; }
+  if (!window._tgInvCharHasSlot(ctx.ch, slot)) {
+    window._tgInvDialog("Cannot equip", 'Paperdoll has no slot named "' + slot + '".');
+    return;
+  }
+  if (!ctx.ch.equipment) ctx.ch.equipment = {};
+  var norm = window._tgInvNormSlot(slot);
+  var targetKey = slot;
+  Object.keys(ctx.ch.equipment).forEach(function(k) {
+    if (window._tgInvNormSlot(k) === norm) targetKey = k;
+  });
+  var prev = ctx.ch.equipment[targetKey];
+  if (prev) {
+    var pe = ctx.ch.inventory.find(function(e) { return e.item === prev; });
+    if (pe) pe.equipped = false;
+  }
+  ctx.ch.equipment[targetKey] = ctx.itemName;
+  var e = ctx.ch.inventory.find(function(x) { return x.item === ctx.itemName; });
+  if (e) e.equipped = true;
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvUnequip = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx || !ctx.ch.equipment) return;
+  Object.keys(ctx.ch.equipment).forEach(function(k) {
+    if (ctx.ch.equipment[k] === ctx.itemName) ctx.ch.equipment[k] = "";
+  });
+  var e = ctx.ch.inventory.find(function(x) { return x.item === ctx.itemName; });
+  if (e) e.equipped = false;
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvUse = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var idx = ctx.ch.inventory.findIndex(function(e) { return e.item === ctx.itemName; });
+  if (idx === -1) return;
+  ctx.ch.inventory[idx].qty -= 1;
+  if (ctx.ch.inventory[idx].qty <= 0) {
+    ctx.ch.inventory.splice(idx, 1);
+    ctx.st.selected = "";
+  }
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvDrop = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var wrapId = ctx.wrap.id;
+  var itemName = ctx.itemName;
+  var name = ctx.it.name || itemName;
+  var entry = ctx.ch.inventory.find(function(e) { return e.item === itemName; });
+  if (!entry) return;
+  var qty = entry.qty;
+  if (typeof Dialog === "undefined") {
+    if (!confirm("Drop " + qty + "× " + name + "?")) return;
+    window._tgInvDoDrop(wrapId, itemName);
+    return;
+  }
+  Dialog.setup("Drop item");
+  var body = '<p>Drop ' + qty + '× ' + name + '?</p>' +
+             '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">' +
+             '<button class="tg-detail-action" onclick="Dialog.close()">Cancel</button>' +
+             '<button class="tg-detail-action tg-inv-drop" onclick="Dialog.close();window._tgInvDoDrop(\\'' + wrapId + '\\',\\'' + itemName + '\\')">Drop</button>' +
+             '</div>';
+  Dialog.wiki(body);
+  Dialog.open();
+};
+
+window._tgInvDoDrop = function(wrapId, itemName) {
+  var wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  var ch = State.variables[wrap.dataset.char];
+  if (!ch || !ch.inventory) return;
+  var idx = ch.inventory.findIndex(function(e) { return e.item === itemName; });
+  if (idx === -1) return;
+  var entry = ch.inventory[idx];
+  if (entry.equipped && ch.equipment) {
+    Object.keys(ch.equipment).forEach(function(k) {
+      if (ch.equipment[k] === itemName) ch.equipment[k] = "";
+    });
+  }
+  ch.inventory.splice(idx, 1);
+  var st = window._tgInvState[wrap.id];
+  if (st) st.selected = "";
+  window._tgInvRender(wrap);
+  UIBar.update();
+};
+
+// <<tgInventory "charVarName" ["Title"]>>
+Macro.add("tgInventory", {
+  handler: function() {
+    var charName = this.args[0];
+    var title    = this.args[1] || "";
+    var ch = State.variables[charName];
+    if (!ch) { this.error("tgInventory: character not found: " + charName); return; }
+    if (!ch.inventory) ch.inventory = [];
+    var wrapId = "tg-inv-" + charName + "-" + (Math.random().toString(36).substr(2, 6));
+    var tabs = [
+      { cat: "all",        label: "All" },
+      { cat: "wearable",   label: "👕 Wearable" },
+      { cat: "consumable", label: "🧪 Consumable" },
+      { cat: "misc",       label: "📦 Misc" },
+    ];
+    var tabsHtml = '<div class="tg-inv-tabs">' + tabs.map(function(t) {
+      return '<button type="button" class="tg-inv-tab' + (t.cat === "all" ? " tg-active" : "") + '" data-cat="' + t.cat + '" onclick="window._tgInvTabClick(this)">' + t.label + '</button>';
+    }).join("") + '</div>';
+    var html = '<div class="tg-container" id="' + wrapId + '" data-char="' + charName + '">';
+    if (title) html += '<div class="tg-cont-header">' + title + '</div>';
+    html += tabsHtml;
+    html += '<div class="tg-cont-body">';
+    html += '<div class="tg-cont-grid"></div>';
+    html += '<div class="tg-cont-detail"><div class="tg-detail-placeholder">Select an item</div></div>';
+    html += '</div>';
+    html += '<div class="tg-inv-empty tg-cont-empty" style="display:none">Inventory is empty</div>';
+    html += '</div>';
+    var self = this;
+    $(self.output).wiki(html);
+    setTimeout(function() {
+      var wrap = document.getElementById(wrapId);
+      if (wrap) window._tgInvRender(wrap);
+    }, 0);
+  }
+});
+
+// ── Container system ──
+var _tgModes = {"emporium":"shop","debris":"loot"};
+
+// Shared: get container object by varName string
+function _tgGetCont(n) { return (State.variables["containers"] || {})[n]; }
+// Shared: get character object by varName string
+function _tgGetChar(n) { return State.variables[n]; }
+
+// Buy one item from a shop container
+window.tgBuyItem = function(contName, charName, itemName, qty) {
+  qty = qty || 1;
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var slot = cont.items.find(function(s){return s.item===itemName;});
+  if (!slot) return;
+  var items = State.variables["items"] || {};
+  var price = (slot.price != null ? slot.price : (items[itemName] ? items[itemName].price||0 : 0)) * qty;
+  if ((ch.money||0) < price) return;
+  ch.money = (ch.money||0) - price;
+  if (slot.qty !== -1) { slot.qty -= qty; if (slot.qty <= 0) cont.items.splice(cont.items.indexOf(slot),1); }
+  var stackable = items[itemName] ? items[itemName].stackable : false;
+  if (stackable) { var ex=ch.inventory.find(function(e){return e.item===itemName;}); if(ex){ex.qty+=qty;} else {ch.inventory.push({item:itemName,qty:qty,equipped:false});} }
+  else { ch.inventory.push({item:itemName,qty:qty,equipped:false}); }
+  Engine.show();
+};
+
+// Take one item from a chest/loot container
+window.tgTakeItem = function(contName, charName, itemName, qty) {
+  qty = qty || 1;
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var slot = cont.items.find(function(s){return s.item===itemName;});
+  if (!slot) return;
+  var take = slot.qty === -1 ? qty : Math.min(qty, slot.qty);
+  if (slot.qty !== -1) { slot.qty -= take; if (slot.qty <= 0) cont.items.splice(cont.items.indexOf(slot),1); }
+  var items = State.variables["items"] || {};
+  var stackable = items[itemName] ? items[itemName].stackable : false;
+  if (stackable) { var ex=ch.inventory.find(function(e){return e.item===itemName;}); if(ex){ex.qty+=take;} else {ch.inventory.push({item:itemName,qty:take,equipped:false});} }
+  else { ch.inventory.push({item:itemName,qty:take,equipped:false}); }
+  Engine.show();
+};
+
+// Loot all items at once
+window.tgLootAllItems = function(contName, charName) {
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var items = State.variables["items"] || {};
+  cont.items.forEach(function(slot) {
+    var qty = slot.qty === -1 ? 1 : slot.qty;
+    var stackable = items[slot.item] ? items[slot.item].stackable : false;
+    if (stackable) { var ex=ch.inventory.find(function(e){return e.item===slot.item;}); if(ex){ex.qty+=qty; return;} }
+    ch.inventory.push({item:slot.item,qty:qty,equipped:false});
+  });
+  cont.items = [];
+  Engine.show();
+};
+
+// Cell click: reads contName/charName from parent data-* attrs — no quoting needed
+window.tgCellClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var contName    = wrap.dataset.cont;
+  var charName    = wrap.dataset.char;
+  var detailId    = wrap.dataset.det;
+  var itemVarName = el.dataset.item;
+  el.closest(".tg-cont-grid").querySelectorAll(".tg-cont-cell").forEach(function(c){c.classList.remove("tg-selected");});
+  el.classList.add("tg-selected");
+  var detail = document.getElementById(detailId);
+  if (!detail) return;
+  var cont = _tgGetCont(contName);
+  var ch   = _tgGetChar(charName);
+  var allItems = State.variables["items"] || {};
+  var item  = allItems[itemVarName] || {};
+  var slot  = cont ? cont.items.find(function(s){return s.item===itemVarName;}) : null;
+  if (!slot) { detail.innerHTML = "<div class=\\"tg-detail-placeholder\\">Item not found</div>"; return; }
+  var mode  = _tgModes[contName] || "loot";
+  var name  = item.name || itemVarName;
+  var desc  = item.description || "";
+  var icon  = item.icon ? "<img src=\\""+item.icon+"\\">": "";
+  var price = slot.price != null ? slot.price : (item.price || 0);
+  var qty   = slot.qty === -1 ? "\\u221e" : slot.qty;
+  var money = ch ? (ch.money || 0) : 0;
+  var html = "";
+  if (icon) html += "<div class=\\"tg-detail-icon\\">"+icon+"</div>";
+  html += "<div class=\\"tg-detail-name\\">"+name+"</div>";
+  if (desc) html += "<div class=\\"tg-detail-desc\\">"+desc+"</div>";
+  if (mode === "shop") {
+    html += "<div class=\\"tg-detail-meta\\">Price: "+price+"g &nbsp;|&nbsp; Your money: "+money+"g &nbsp;|&nbsp; In stock: "+qty+"</div>";
+    html += "<button class=\\"tg-detail-action\\" "+(money>=price?"":"disabled")+" onclick=\\"window.tgBuyNow(this)\\">Buy</button>";
+  } else {
+    html += "<div class=\\"tg-detail-meta\\">Qty: "+qty+"</div>";
+    html += "<button class=\\"tg-detail-action\\" onclick=\\"window.tgTakeNow(this)\\">Take</button>";
+  }
+  detail.innerHTML = html;
+};
+// Action dispatchers — walk up DOM to find context, no args needed in onclick
+window.tgBuyNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  var sel  = wrap ? wrap.querySelector(".tg-cont-cell.tg-selected") : null;
+  if (!wrap || !sel) return;
+  window.tgBuyItem(wrap.dataset.cont, wrap.dataset.char, sel.dataset.item, 1);
+};
+window.tgTakeNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  var sel  = wrap ? wrap.querySelector(".tg-cont-cell.tg-selected") : null;
+  if (!wrap || !sel) return;
+  window.tgTakeItem(wrap.dataset.cont, wrap.dataset.char, sel.dataset.item, 1);
+};
+window.tgLootNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  window.tgLootAllItems(wrap.dataset.cont, wrap.dataset.char);
+};
+
+// tgContainer macro — renders the full interactive container grid
+// Usage: <<tgContainer "containerVarName" "heroVarName" ["Title"]>>
+Macro.add("tgContainer", {
+  handler: function() {
+    var contName = this.args[0];
+    var charName = this.args[1];
+    var title    = this.args[2] || "";
+    var cont     = _tgGetCont(contName);
+    var ch       = _tgGetChar(charName);
+    if (!cont || !ch) { this.error("tgContainer: container or character not found: "+contName+" / "+charName); return; }
+
+    var mode     = _tgModes[contName] || "loot";
+    var allItems = State.variables["items"] || {};
+    var detailId = "tg-det-"+contName;
+
+    var html = "<div class=\\"tg-container\\" data-cont=\\""+contName+"\\" data-char=\\""+charName+"\\" data-det=\\""+detailId+"\\">";
+    if (title) html += "<div class=\\"tg-cont-header\\">"+title+"</div>";
+
+    if (cont.items.length === 0) {
+      html += "<div class=\\"tg-cont-empty\\">Empty</div>";
+    } else {
+      html += "<div class=\\"tg-cont-body\\">";
+      html += "<div class=\\"tg-cont-grid\\">";
+      cont.items.forEach(function(slot) {
+        var item = allItems[slot.item] || {};
+        var name = item.name || slot.item;
+        var icon = item.icon ? "<img src=\\""+item.icon+"\\" alt=\\"\\">": "<span style=\\"font-size:28px;line-height:1\\">📦</span>";
+        var qty  = slot.qty === -1 ? "∞" : slot.qty;
+        html += "<div class=\\"tg-cont-cell\\" data-item=\\""+slot.item+"\\" onclick=\\"window.tgCellClick(this)\\">"+icon+"<span class=\\"tg-cell-qty\\">&times;"+qty+"</span><span class=\\"tg-cell-name\\">"+name+"</span></div>";
+      });
+      html += "</div>";
+      // detail panel
+      html += "<div class=\\"tg-cont-detail\\" id=\\""+detailId+"\\"><div class=\\"tg-detail-placeholder\\">Select an item</div></div>";
+      // loot-all button for chest/loot modes
+      html += "</div>";
+      if (mode !== "shop") {
+        html += "<div style=\\"margin-top:8px\\"><button class=\\"tg-detail-action\\" onclick=\\"window.tgLootNow(this)\\">Take all</button></div>";
+      }
+    }
+    html += "</div>";
+    $(this.output).wiki(html);
+  }
+});
+
+// Legacy action macros (for manual use in passages)
+// tgShopBuy "containerVarName" "itemVarName" "charVarName" [qty]
+Macro.add("tgShopBuy", {
+  handler: function() {
+    window.tgBuyItem(this.args[0], this.args[2], this.args[1], this.args[3] != null ? this.args[3] : 1);
+  }
+});
+Macro.add("tgShopSell", {
+  handler: function() {
+    var cont = _tgGetCont(this.args[0]); var ch = _tgGetChar(this.args[2]);
+    if (!cont || !ch) return;
+    var itemName = this.args[1]; var qty = this.args[3] != null ? this.args[3] : 1;
+    var items = State.variables["items"];
+    var idx = ch.inventory.findIndex(function(e){return e.item===itemName;});
+    if (idx === -1) return;
+    var price = (items && items[itemName] ? items[itemName].price||0 : 0) * qty;
+    ch.inventory[idx].qty -= qty;
+    if (ch.inventory[idx].qty <= 0) ch.inventory.splice(idx,1);
+    ch.money = (ch.money||0) + price;
+    Engine.show();
+  }
+});
+Macro.add("tgChestTake", {
+  handler: function() { window.tgTakeItem(this.args[0], this.args[2], this.args[1], this.args[3] != null ? this.args[3] : 1); }
+});
+Macro.add("tgLootAll", {
+  handler: function() { window.tgLootAllItems(this.args[0], this.args[1]); }
+});
+
+// ── Paperdoll macros ──
+// tgEquip($charVar, itemVarName) — equips wearable item into its target slot
+Macro.add("tgEquip", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    if (!charVar || !itemName) return;
+    var items = State.variables["items"];
+    var item = items ? items[itemName] : null;
+    if (!item || !item.slot) return;
+    var slot = item.slot;
+    if (!charVar.equipment) charVar.equipment = {};
+    // Unequip anything already in the slot
+    var prev = charVar.equipment[slot];
+    if (prev && charVar.inventory) {
+      var pe = charVar.inventory.find(function(e){ return e.item === prev; });
+      if (pe) pe.equipped = false;
+    }
+    charVar.equipment[slot] = itemName;
+    // Mark as equipped in inventory
+    if (charVar.inventory) {
+      var e = charVar.inventory.find(function(e){ return e.item === itemName; });
+      if (e) e.equipped = true;
+    }
+    UIBar.update();
+  }
+});
+
+// tgUnequip($charVar, slotId) — unequips item from named slot
+Macro.add("tgUnequip", {
+  handler: function() {
+    var charVar = this.args[0];
+    var slotId = this.args[1];
+    if (!charVar || !slotId || !charVar.equipment) return;
+    var itemName = charVar.equipment[slotId];
+    charVar.equipment[slotId] = "";
+    if (itemName && charVar.inventory) {
+      var e = charVar.inventory.find(function(e){ return e.item === itemName; });
+      if (e) e.equipped = false;
+    }
+  }
+});
+
+// tgIsEquipped(charVar, itemVarName) → boolean (use in expressions)
+window.tgIsEquipped = function(charVar, itemName) {
+  if (!charVar || !charVar.equipment || !itemName) return false;
+  return Object.values(charVar.equipment).indexOf(itemName) !== -1;
+};
+
+// tgSlotMenu(charVarName, slotId, slotLabelNorm, event) — open a popup menu to equip/unequip
+// Shows compatible items from the character inventory + an Unequip option.
+window.tgSlotMenu = function(charVarName, slotId, slotLabelNorm, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  var ch = State.variables[charVarName];
+  if (!ch) return;
+  if (!ch.equipment) ch.equipment = {};
+  if (!ch.inventory) ch.inventory = [];
+  var items = State.variables["items"] || {};
+  var currentEquipped = ch.equipment[slotId] || "";
+  // Compatible: inventory entries whose item.slot matches slotId or normalized label
+  var compatible = ch.inventory.filter(function(entry) {
+    var it = items[entry.item];
+    if (!it || !it.slot) return false;
+    var nslot = String(it.slot).toLowerCase().replace(/\\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+    return nslot === slotId || nslot === slotLabelNorm;
+  });
+  // Remove any existing menu
+  var existing = document.getElementById("tg-pd-menu");
+  if (existing) existing.remove();
+  var menu = document.createElement("div");
+  menu.id = "tg-pd-menu";
+  menu.className = "tg-pd-menu";
+  function addRow(html, onClick, extraCls) {
+    var row = document.createElement("div");
+    row.className = "tg-pd-menu-item" + (extraCls ? " " + extraCls : "");
+    row.innerHTML = html;
+    row.addEventListener("click", function(e) { e.stopPropagation(); onClick(); menu.remove(); UIBar.update(); });
+    menu.appendChild(row);
+  }
+  if (currentEquipped) {
+    var curIt = items[currentEquipped] || {};
+    var curIcon = curIt.icon ? '<img src="' + curIt.icon + '" class="tg-pd-menu-icon"/>' : '<span class="tg-pd-menu-icon"></span>';
+    addRow(curIcon + '<span class="tg-pd-menu-label">✕ ' + (curIt.name || currentEquipped) + '</span>', function() {
+      ch.equipment[slotId] = "";
+      var e = ch.inventory.find(function(x){ return x.item === currentEquipped; });
+      if (e) e.equipped = false;
+    }, "tg-pd-menu-unequip");
+  }
+  compatible.forEach(function(entry) {
+    if (entry.item === currentEquipped) return;
+    var it = items[entry.item] || {};
+    var icon = it.icon ? '<img src="' + it.icon + '" class="tg-pd-menu-icon"/>' : '<span class="tg-pd-menu-icon"></span>';
+    addRow(icon + '<span class="tg-pd-menu-label">' + (it.name || entry.item) + '</span>', function() {
+      if (currentEquipped) {
+        var old = ch.inventory.find(function(x){ return x.item === currentEquipped; });
+        if (old) old.equipped = false;
+      }
+      ch.equipment[slotId] = entry.item;
+      entry.equipped = true;
+    });
+  });
+  if (menu.children.length === 0) {
+    var empty = document.createElement("div");
+    empty.className = "tg-pd-menu-empty";
+    empty.textContent = "No compatible items";
+    menu.appendChild(empty);
+  }
+  document.body.appendChild(menu);
+  // Position next to the clicked cell
+  var rect = (ev && ev.currentTarget ? ev.currentTarget : ev && ev.target).getBoundingClientRect();
+  var mw = menu.offsetWidth, mh = menu.offsetHeight;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var left = rect.right + 4;
+  if (left + mw > vw) left = Math.max(4, rect.left - mw - 4);
+  var top = rect.top;
+  if (top + mh > vh) top = Math.max(4, vh - mh - 4);
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  setTimeout(function() {
+    var closer = function(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener("click", closer); document.removeEventListener("keydown", keyCloser); }
+    };
+    var keyCloser = function(e) {
+      if (e.key === "Escape") { menu.remove(); document.removeEventListener("click", closer); document.removeEventListener("keydown", keyCloser); }
+    };
+    document.addEventListener("click", closer);
+    document.addEventListener("keydown", keyCloser);
+  }, 0);
+};
+
+// Popup class sync — mirror tg-popup-* from #ui-dialog-body to #ui-dialog frame.
+$(document).on(":dialogopened", function() {
+  var bodyCls = ($("#ui-dialog-body").attr("class") || "").split(/\\s+/);
+  var popupCls = bodyCls.filter(function(c) { return c && /^tg-popup-/.test(c); });
+  var $frame = $("#ui-dialog");
+  // Strip any previous tg-popup-* classes from the frame, then add the current ones.
+  var frameCls = (($frame.attr("class") || "").split(/\\s+/)).filter(function(c) { return c && !/^tg-popup-/.test(c); });
+  $frame.attr("class", frameCls.concat(popupCls).join(" "));
+});
+
+// Audio volume: restore from saved state on load (audio + video)
+$(document).on(":passagedisplay", function() {
+  var v = State.variables.__tgMasterVol;
+  if (v != null) {
+    SimpleAudio.volume(v);
+    document.querySelectorAll("video").forEach(function(el) { el.volume = v; });
+  }
+});
+
+// Purl signature
+$(document).one(":storyready", function() {
+  var sig = document.createElement("div");
+  sig.style.cssText = "position:fixed;bottom:4px;left:0;width:var(--ui-bar-width,17.5em);text-align:center;font-size:0.65em;opacity:0.45;pointer-events:auto;z-index:50;";
+  sig.innerHTML = 'Made via <a href="https://purl.pp.ua" target="_blank" rel="noopener" style="color:inherit;">Purl</a>';
+  document.body.appendChild(sig);
+});",
+  "startPid": 7,
+}
+`;
+
+exports[`export golden master (demo) — guards the compileStory refactor > exportToTwee(demo) is byte-stable 1`] = `
+"::StoryTitle
+The Clockwork Heart
+
+
+::StoryDisplayTitle
+The Clockwork Heart
+
+
+::StoryData
+{
+  "ifid": "PURL-DEMO-CLOCKWORK-HEART",
+  "format": "SugarCube",
+  "format-version": "2.36.1",
+  "start": "Start",
+  "zoom": 1
+}
+
+
+::StoryInit
+<<set $sidePanel = { hidden: false, width: 18, position: "\\"left\\"", initiallyCollapsed: false, allowCollapse: true, bgColor: "\\"\\"", show_history: true, show_saves: true }>>
+<<set $affection to 0>>
+<<set $playerName to "Traveler">>
+<<set $gameTime to new Date(2025,5,8,8,0)>>
+<<set $worldState to {}>>
+<<set $difficulty to "Normal">>
+<<set $theme to "brass">>
+<<set $textSpeed to 60>>
+<<set $partyMembers to ["Elara Voss","Doran Pike"]>>
+<<set $showHints to true>>
+<<set $subscribeNews to false>>
+<<set $metElara to false>>
+<<set $foundPurse to false>>
+<<set $gaveRose to false>>
+<<set $traveler = { name: "Traveler", styles: { bgColor: "#1e293b", borderColor: "#475569", nameColor: "#cbd5e1", textColor: "#e2e8f0", avatar: "", llm_descr: "", llm_temperature: 0 }, inventory: [], money: 30, equipment: { head: "goggles", hand: "", trinket: "pocketwatch" } }>>
+<<set $elara = { name: "Elara Voss", styles: { bgColor: "#2e1065", borderColor: "#a855f7", nameColor: "#d8b4fe", textColor: "#ede9fe", avatar: "assets/chars/elara.png", llm_descr: "A brilliant, slightly distracted clockwork inventor. Warm but guarded.", llm_temperature: 0 }, inventory: [], money: 0 }>>
+<<set $doran = { name: "Doran Pike", styles: { bgColor: "#422006", borderColor: "#d97706", nameColor: "#fbbf24", textColor: "#fef3c7", avatar: "assets/chars/doran.png", llm_descr: "A jovial, shrewd merchant who always has \\"just the thing\\".", llm_temperature: 0 }, inventory: [], money: 0 }>>
+<<set $items = { goggles: { name: "Brass Goggles", icon: "assets/Items/goggles.png", price: 40, description: "Polished brass goggles with amber lenses.", stackable: false, slot: "head" }, pocketwatch: { name: "Pocket Watch", icon: "assets/Items/watch.png", price: 120, description: "A ticking heirloom that never seems to stop.", stackable: false, slot: "trinket" }, lantern: { name: "Aether Lantern", icon: "assets/Items/lantern.png", price: 65, description: "A handheld lantern lit by humming aether.", stackable: false, slot: "hand" }, tonic: { name: "Healing Tonic", icon: "assets/Items/tonic.png", price: 15, description: "Restores a little vigor. Tastes of copper.", stackable: true }, gear: { name: "Copper Gear", icon: "assets/Items/gear.png", price: 8, description: "A small, oddly warm copper gear.", stackable: true }, rose: { name: "Clockwork Rose", icon: "assets/Items/rose.png", price: 150, description: "A delicate, humming rose made of brass and ruby glass.", stackable: false, slot: "trinket" } }>>
+<<set $containers = { emporium: { items: [{item:"lantern",qty:3,price:65},{item:"tonic",qty:-1,price:15},{item:"gear",qty:5,price:8}] }, debris: { items: [{item:"rose",qty:1}] } }>>
+<<set $quests = { missingGear: { name: "The Missing Gear", description: "Elara's masterwork is one gear short of ticking.", state: "active", category: "Main", steps: { talkElara: { name: "Speak with Elara", description: "Find the inventor in her workshop.", state: "active" }, getGear: { name: "Acquire a copper gear", description: "Buy one from Doran.", state: "hidden" }, returnGear: { name: "Return the gear", description: "Bring it back to Elara.", state: "hidden" } } } }>>
+<<cacheaudio "tga_b_start_audio" "assets/audio/ambient_harbor.mp3">>
+<<waitforaudio>>
+<<set $__tgMasterVol to 1>>
+<<set $traveler.equipment.head to "goggles">>
+<<set $traveler.equipment.trinket to "pocketwatch">>
+<<run $traveler.inventory.push({ item: "goggles", qty: 1, equipped: true })>>
+<<run $traveler.inventory.push({ item: "pocketwatch", qty: 1, equipped: true })>>
+<<run $traveler.inventory.push({ item: "tonic", qty: 2, equipped: false })>>
+
+
+::StoryStylesheet [stylesheet]
+/* ═══ Global ═══ */
+body, #story { background-color: #0f172a !important; }
+
+/* ═══ Dialogue ═══ */
+.dialogue { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; font-style: italic; }
+.dialogue.dlg-right { flex-direction: row-reverse; }
+.char-avatar { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.char-body { flex: 1; padding: 8px 12px; border-radius: 4px; }
+.char-name { font-weight: bold; display: block; margin-bottom: 4px; }
+.char-text { display: block; margin: 0 !important; padding: 0; }
+
+.dialogue.dlg-chartraveler .char-body { background: #1e293b; border-left: 4px solid #475569; }
+.dialogue.dlg-right.dlg-chartraveler .char-body { border-left: none; border-right: 4px solid #475569; }
+.dialogue.dlg-chartraveler .char-name { color: #cbd5e1; }
+.dialogue.dlg-chartraveler .char-text { color: #e2e8f0; }
+
+.dialogue.dlg-charelara .char-body { background: #2e1065; border-left: 4px solid #a855f7; }
+.dialogue.dlg-right.dlg-charelara .char-body { border-left: none; border-right: 4px solid #a855f7; }
+.dialogue.dlg-charelara .char-name { color: #d8b4fe; }
+.dialogue.dlg-charelara .char-text { color: #ede9fe; }
+
+.dialogue.dlg-chardoran .char-body { background: #422006; border-left: 4px solid #d97706; }
+.dialogue.dlg-right.dlg-chardoran .char-body { border-left: none; border-right: 4px solid #d97706; }
+.dialogue.dlg-chardoran .char-name { color: #fbbf24; }
+.dialogue.dlg-chardoran .char-text { color: #fef3c7; }
+
+/* ═══ Cell utilities (lightbox / progress) ═══ */
+.tg-progress { width: 100%; height: 100%; background: var(--tg-bar-empty, #333); border-radius: 2px; overflow: hidden; display: flex; align-items: center; }
+.tg-progress-vert { flex-direction: column-reverse; align-items: stretch; }
+.tg-bar { height: 100%; background: var(--tg-bar-fill, #4a90d9); transition: width 0.3s, height 0.3s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--tg-bar-text, inherit); }
+/* lightbox */
+.tg-lb { cursor: pointer !important; }
+#tg-lb-ov { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); align-items: center; justify-content: center; cursor: zoom-out; }
+#tg-lb-ov.on { display: flex; }
+#tg-lb-ov img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 6px; box-shadow: 0 8px 48px rgba(0,0,0,.8); cursor: default; }
+#tg-lb-x { position: absolute; top: 12px; right: 18px; color: #fff; font-size: 2em; line-height: 1; cursor: pointer; opacity: .7; user-select: none; transition: opacity .15s; }
+#tg-lb-x:hover { opacity: 1; }
+
+/* ═══ TabsBlock ═══ */
+.tg-tabs-block { display: flex; gap: 2px; margin-bottom: 6px; flex-wrap: wrap; }
+.tg-tabs-block > span { display: inline-flex; }
+.tg-tabs-block a { flex: 0 0 auto; padding: 3px 10px; border: 1px solid #555; border-radius: 3px; cursor: pointer; text-decoration: none; color: inherit; font-size: 0.85em; transition: background 0.15s; }
+.tg-tabs-block a:hover { background: rgba(255,255,255,0.1); }
+.tg-tabs-block a.tg-tabs-active { background: rgba(99,102,241,0.25); border-color: #818cf8; }
+
+/* ═══ SectionBlock ═══ */
+.tg-section { margin: 6px 0; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }
+.tg-section-title { font-weight: 600; font-size: 0.9em; opacity: 0.85; margin-bottom: 4px; }
+details.tg-section > summary.tg-section-title { cursor: pointer; user-select: none; list-style: revert; margin-bottom: 0; }
+details.tg-section[open] > summary.tg-section-title { margin-bottom: 4px; }
+
+/* ═══ Callout ═══ */
+.tg-callout { display: flex; gap: 8px; margin: 8px 0; padding: 8px 10px; border-radius: 4px; border-left: 3px solid var(--tg-co-accent); background: var(--tg-co-bg); }
+.tg-callout-icon { flex-shrink: 0; font-size: 1.1em; line-height: 1.5; }
+.tg-callout-body { flex: 1; min-width: 0; }
+.tg-callout-title { font-weight: 600; margin-bottom: 2px; }
+.tg-callout-info    { --tg-co-accent: #3b82f6; --tg-co-bg: rgba(59,130,246,0.12); }
+.tg-callout-success { --tg-co-accent: #22c55e; --tg-co-bg: rgba(34,197,94,0.12); }
+.tg-callout-warning { --tg-co-accent: #f59e0b; --tg-co-bg: rgba(245,158,11,0.12); }
+.tg-callout-danger  { --tg-co-accent: #ef4444; --tg-co-bg: rgba(239,68,68,0.12); }
+.tg-callout-note    { --tg-co-accent: #94a3b8; --tg-co-bg: rgba(148,163,184,0.12); }
+
+/* ═══ DisplayObject ═══ */
+/* DisplayObject — shared sub-elements */
+.tg-do { display: block; }
+.tg-do-row { display: flex; gap: 8px; align-items: baseline; }
+.tg-do-label { opacity: 0.75; }
+.tg-do-value { flex: 1; min-width: 0; }
+.tg-do-bar { display: inline-block; vertical-align: middle; width: 100%; height: 10px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
+.tg-do-bar-fill { display: block; height: 100%; background: #4a90d9; transition: width 0.3s; }
+.tg-do-bar-text { font-size: 0.85em; opacity: 0.8; margin-left: 4px; white-space: nowrap; }
+.tg-do-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; background: rgba(255,255,255,0.1); font-size: 0.85em; }
+/* list — vertical rows, label left / value right */
+.tg-do-list { display: flex; flex-direction: column; gap: 4px; }
+.tg-do-list .tg-do-row { justify-content: space-between; }
+.tg-do-list .tg-do-value { flex: 0 1 auto; text-align: right; }
+/* inline — flowing label:value · label:value */
+.tg-do-inline { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.tg-do-inline .tg-do-row { display: inline-flex; gap: 4px; }
+.tg-do-inline .tg-do-row:not(:last-child)::after { content: "·"; margin-left: 12px; opacity: 0.4; }
+/* table — two aligned columns via display:contents */
+.tg-do-table { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; row-gap: 4px; }
+.tg-do-table .tg-do-row { display: contents; }
+.tg-do-table .tg-do-label { text-align: right; }
+/* cards — boxed tiles */
+.tg-do-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.tg-do-cards .tg-do-row { flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 5px; background: rgba(255,255,255,0.06); min-width: 60px; }
+.tg-do-cards .tg-do-label { font-size: 0.78em; opacity: 0.7; }
+.tg-do-cards .tg-do-value { font-size: 1.05em; flex: none; text-align: center; }
+/* grid — N configurable columns via --tg-do-cols */
+.tg-do-grid { display: grid; grid-template-columns: repeat(var(--tg-do-cols, 2), minmax(0, 1fr)); gap: 4px 12px; }
+.tg-do-grid .tg-do-row { justify-content: space-between; }
+/* bars — vertical list, each row is a labeled bar */
+.tg-do-bars { display: flex; flex-direction: column; gap: 6px; }
+.tg-do-bars .tg-do-row { flex-direction: column; align-items: stretch; gap: 2px; }
+.tg-do-bars .tg-do-label { font-size: 0.85em; }
+.tg-do-bars .tg-do-value { display: flex; align-items: center; gap: 6px; }
+
+/* ═══ Quests ═══ */
+.tg-quests { display:flex; flex-direction:column; gap:.6em; }
+.tg-quest { padding:.5em .7em; border-left:3px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); border-radius:.3em; }
+.tg-quest-title { font-weight:600; }
+.tg-quest-desc { opacity:.8; font-size:.92em; margin-top:.2em; }
+.tg-quest-steps { margin-top:.35em; display:flex; flex-direction:column; gap:.15em; padding-left:.3em; }
+.tg-quest-step { opacity:.9; font-size:.92em; }
+.tg-quest-mark { display:inline-block; width:1.1em; text-align:center; opacity:.85; }
+
+/* ═══ Buttons ═══ */
+.tg-btn { display: inline-block; }
+.tg-btn a { display: inline-block; text-decoration: none; cursor: pointer; transition: filter 0.15s; }
+.tg-btn a:hover { filter: brightness(1.2); }
+
+.tg-btn-b_town_l1 a { background: #3b82f6; color: #fff; border: 1px solid #2563eb; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l1 { display: inline-block; }
+.tg-btn-b_town_l1 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l2 a { background: #d97706; color: #fff; border: 1px solid #b45309; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l2 { display: inline-block; }
+.tg-btn-b_town_l2 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l6 a { background: #334155; color: #fff; border: 1px solid #1e293b; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l6 { display: inline-block; }
+.tg-btn-b_town_l6 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l3 a { background: #0d9488; color: #fff; border: 1px solid #0f766e; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l3 { display: inline-block; }
+.tg-btn-b_town_l3 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l4 a { background: #7c3aed; color: #fff; border: 1px solid #6d28d9; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l4 { display: inline-block; }
+.tg-btn-b_town_l4 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_town_l5 a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_town_l5 { display: inline-block; }
+.tg-btn-b_town_l5 a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_talk_bt a { background: #22c55e; color: #06281a; border: 1px solid #16a34a; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_talk_bt { display: inline-block; }
+.tg-btn-b_ws_talk_bt a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_gift_fn a { background: #7c3aed; color: #fff; border: 1px solid #6d28d9; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_gift_fn { display: inline-block; }
+.tg-btn-b_ws_gift_fn a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_gift_ro a { background: #ec4899; color: #fff; border: 1px solid #db2777; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_gift_ro { display: inline-block; }
+.tg-btn-b_ws_gift_ro a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_help a { background: #334155; color: #cbd5e1; border: 1px solid #1e293b; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_help { display: inline-block; }
+.tg-btn-b_ws_help a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ws_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ws_back { display: inline-block; }
+.tg-btn-b_ws_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_shop_links a { background: #3b82f6; color: #fff; border: 1px solid #2563eb; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_shop_links { display: inline-block; }
+.tg-btn-b_shop_links a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_shop_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_shop_back { display: inline-block; }
+.tg-btn-b_shop_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_docks_grop a { background: #d97706; color: #fff; border: 1px solid #b45309; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_docks_grop { display: inline-block; }
+.tg-btn-b_docks_grop a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_docks_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_docks_back { display: inline-block; }
+.tg-btn-b_docks_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_wd_use a { background: #16a34a; color: #fff; border: 1px solid #15803d; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_wd_use { display: inline-block; }
+.tg-btn-b_wd_use a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_wd_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_wd_back { display: inline-block; }
+.tg-btn-b_wd_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ql_finish a { background: #a855f7; color: #fff; border: 1px solid #9333ea; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ql_finish { display: inline-block; }
+.tg-btn-b_ql_finish a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_ql_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_ql_back { display: inline-block; }
+.tg-btn-b_ql_back a { display: inline-block; width: auto; text-align: left; }
+
+.tg-btn-b_set_back a { background: #475569; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 1.0em; font-weight: normal; }
+.tg-btn-b_set_back { display: inline-block; }
+.tg-btn-b_set_back a { display: inline-block; width: auto; text-align: left; }
+
+/* ═══ Tooltips ═══ */
+.tg-tip { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }
+.tg-tip .tg-tip-text { display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #e2e8f0; padding: 6px 8px; border-radius: 4px; font-size: 0.85em; z-index: 100; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.4); max-width: 240px; text-align: center; }
+.tg-tip:hover .tg-tip-text { display: block; }
+.tg-tip-img { display: block; max-width: 100%; height: auto; border-radius: 3px; margin-bottom: 4px; }
+.tg-tip-text .tg-tip-img:last-child { margin-bottom: 0; }
+
+/* ═══ Containers ═══ */
+.tg-container { font-family: inherit; }
+.tg-cont-header { font-size: 1.05em; font-weight: bold; margin-bottom: 8px; }
+.tg-cont-body { display: flex; gap: 16px; align-items: flex-start; }
+.tg-cont-grid { display: grid; grid-template-columns: repeat(4, 64px); gap: 4px; align-content: start; }
+.tg-cont-cell { width: 64px; height: 64px; border: 2px solid rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; position: relative; transition: border-color 0.15s, background 0.15s; box-sizing: border-box; }
+.tg-cont-cell:hover { border-color: rgba(255,255,255,0.4); }
+.tg-cont-cell.tg-selected { border-color: #6366f1; background: rgba(99,102,241,0.18); }
+.tg-cont-cell img { width: 36px; height: 36px; object-fit: contain; }
+.tg-cell-qty { position: absolute; bottom: 2px; right: 4px; font-size: 10px; opacity: 0.8; }
+.tg-cell-name { font-size: 10px; text-align: center; overflow: hidden; max-width: 60px; white-space: nowrap; text-overflow: ellipsis; }
+.tg-cont-detail { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; min-height: 140px; }
+.tg-detail-placeholder { color: rgba(255,255,255,0.3); font-size: 12px; padding-top: 8px; }
+.tg-detail-icon { margin-bottom: 6px; }
+.tg-detail-icon img { width: 56px; height: 56px; object-fit: contain; }
+.tg-detail-name { font-weight: bold; margin-bottom: 2px; }
+.tg-detail-desc { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 6px; }
+.tg-detail-meta { font-size: 12px; margin-bottom: 10px; color: rgba(255,255,255,0.7); }
+.tg-detail-action { display: inline-block; padding: 5px 18px; background: #6366f1; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-size: 13px; transition: background 0.15s; }
+.tg-detail-action:hover:not(:disabled) { background: #4f46e5; }
+.tg-detail-action:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; }
+.tg-cont-empty { color: rgba(255,255,255,0.3); font-size: 13px; padding: 16px 0; }
+
+/* ═══ Paperdoll ═══ */
+.tg-pd-slot:hover { border-color: rgba(99,102,241,0.8) !important; }
+.tg-pd-menu { position: fixed; z-index: 10000; background: #1a1a2e; border: 1px solid rgba(99,102,241,0.5); border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); padding: 4px; min-width: 160px; max-height: 60vh; overflow-y: auto; }
+.tg-pd-menu-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 3px; cursor: pointer; color: #e2e8f0; font-size: 13px; transition: background 0.1s; }
+.tg-pd-menu-item:hover { background: rgba(99,102,241,0.25); }
+.tg-pd-menu-item.tg-pd-menu-unequip { color: #f87171; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 2px; padding-bottom: 6px; }
+.tg-pd-menu-icon { width: 24px; height: 24px; object-fit: contain; display: inline-block; flex-shrink: 0; }
+.tg-pd-menu-label { flex: 1; white-space: nowrap; }
+.tg-pd-menu-empty { padding: 8px 10px; color: rgba(255,255,255,0.4); font-size: 12px; text-align: center; }
+
+/* ═══ Inventory ═══ */
+.tg-inv-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tg-inv-tab { padding: 4px 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: transparent; color: #e2e8f0; cursor: pointer; font-size: 12px; transition: background 0.1s, border-color 0.1s; }
+.tg-inv-tab:hover { border-color: rgba(255,255,255,0.4); }
+.tg-inv-tab.tg-active { background: rgba(99,102,241,0.25); border-color: #6366f1; }
+.tg-cont-cell.tg-inv-equipped { box-shadow: inset 0 0 0 2px #10b981; }
+.tg-cont-cell.tg-inv-equipped::after { content: "✔"; position: absolute; top: 2px; right: 4px; font-size: 11px; color: #10b981; text-shadow: 0 0 2px rgba(0,0,0,0.6); }
+.tg-detail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.tg-detail-action.tg-inv-drop { background: #dc2626; }
+.tg-detail-action.tg-inv-drop:hover:not(:disabled) { background: #b91c1c; }
+
+/* ═══ Block Types ═══ */
+.tg-text { }
+.tg-image { text-align: center; }
+.tg-image img { display: inline-block; vertical-align: middle; max-width: 100%; }
+.tg-video { text-align: center; }
+.tg-video video { display: inline-block; vertical-align: middle; max-width: 100%; }
+.tg-divider { border: none; border-top: var(--tg-div-thickness, 1px) solid var(--tg-div-color, #555555); margin: var(--tg-div-margin, 8px) 0; }
+.tg-input-field { }
+.tg-checkbox { }
+.tg-radio { }
+.tg-include { max-width: var(--tg-inc-max-width, none); border: var(--tg-inc-border-width, 0px) solid var(--tg-inc-border-color, transparent); border-radius: var(--tg-inc-radius, 0); padding: var(--tg-inc-padding, 0); background-color: var(--tg-inc-bg, transparent); }
+.tg-table { display: flex; flex-direction: column; gap: var(--tg-tbl-gap, 4px); margin: 0; padding: 0; }
+
+/* ═══ Sidebar systemConfig ═══ */
+/* Sidebar systemConfig */
+body.tg-sidebar-hidden #ui-bar { display: none !important; }
+body.tg-sidebar-hidden #story  { margin-left: 0 !important; margin-right: 0 !important; }
+body.tg-no-collapse #ui-bar-toggle { display: none !important; }
+body.tg-no-history #history-jumpto, #history-backward, #history-forward { display: none !important; }
+body.tg-no-saves #menu-item-saves { display: none !important; }
+#ui-bar { font-family: Georgia, serif; }
+#story-caption > * + * { margin-top: 10px; }
+
+/* ═══ Title systemConfig ═══ */
+/* Title systemConfig */
+#story-title { color: #fbbf24; font-family: Georgia, serif; }
+
+
+::StoryScript [script]
+// Sidebar systemConfig — startup
+$(document).one(':storyready', function() { if (State.variables.sidePanel.initiallyCollapsed) UIBar.stow(); });
+Config.saves.isAllowed = function() { return !!State.variables.sidePanel.show_saves; };
+// Sidebar systemConfig — runtime sync (re-runs on every passage render)
+window._tgSyncSidebar = function() {
+  document.body.classList.toggle('tg-sidebar-hidden', !!State.variables.sidePanel.hidden);
+  (function() { var w = State.variables.sidePanel.width, p = State.variables.sidePanel.position; var bar = document.getElementById('ui-bar'); var story = document.getElementById('story'); if (!bar || !story) return; var wStr = (typeof w === 'number' && w > 0) ? (w + 'em') : ''; var right = (p === 'right'); bar.style.width = wStr; bar.style.left  = right ? 'auto' : ''; bar.style.right = right ? '0'    : ''; story.style.marginLeft  = right ? '0' : (wStr || ''); story.style.marginRight = right ? (wStr || '17.5em') : ''; })();
+  (function() { var c = State.variables.sidePanel.bgColor; var bar = document.getElementById('ui-bar'); if (bar) bar.style.background = (typeof c === 'string' ? c : ''); })();
+  document.body.classList.toggle('tg-no-collapse', !State.variables.sidePanel.allowCollapse);
+  document.body.classList.toggle('tg-no-history', !State.variables.sidePanel.show_history);
+  document.body.classList.toggle('tg-no-saves', !State.variables.sidePanel.show_saves);
+};
+$(document).on(':storyready :passagedisplay', window._tgSyncSidebar);
+
+// ── Date-Time Utils ──
+window.tgAddTime = function(varPath, delta) {
+  var parts = varPath.split(".");
+  var obj = State.variables;
+  for (var i = 0; i < parts.length - 1; i++) { obj = obj[parts[i]]; }
+  var key = parts[parts.length - 1];
+  var val = obj[key];
+
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return;
+
+  if (delta.minutes) date.setMinutes(date.getMinutes() + delta.minutes);
+  if (delta.hours)   date.setHours(date.getHours() + delta.hours);
+  if (delta.days)    date.setDate(date.getDate() + delta.days);
+  if (delta.months)  date.setMonth(date.getMonth() + delta.months);
+  if (delta.years)   date.setFullYear(date.getFullYear() + delta.years);
+
+  var pad = function(n) { return n < 10 ? "0" + n : n; };
+  obj[key] = date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+};
+
+window.tgFormatDate = function(val, format) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return val;
+  var DAYS_L  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var DAYS_S  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var MONS_L  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var MONS_S  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var o = {
+    "dddd": DAYS_L[date.getDay()],
+    "ddd":  DAYS_S[date.getDay()],
+    "MMMM": MONS_L[date.getMonth()],
+    "MMM":  MONS_S[date.getMonth()],
+    "DD":   ("0" + date.getDate()).slice(-2),
+    "MM":   ("0" + (date.getMonth() + 1)).slice(-2),
+    "YYYY": String(date.getFullYear()),
+    "HH":   ("0" + date.getHours()).slice(-2),
+    "mm":   ("0" + date.getMinutes()).slice(-2)
+  };
+  return format.replace(/dddd|ddd|MMMM|MMM|DD|MM|YYYY|HH|mm/g, function(m) { return o[m]; });
+};
+
+window.tgRenderClock = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var h = date.getHours() % 12 + date.getMinutes() / 60;
+  var m = date.getMinutes();
+  var PI = Math.PI;
+  var toR = function(deg) { return deg * PI / 180; };
+  var hA = toR(h / 12 * 360 - 90);
+  var mA = toR(m / 60 * 360 - 90);
+  var fx = function(r, a) { return (50 + r * Math.cos(a)).toFixed(1); };
+  var fy = function(r, a) { return (50 + r * Math.sin(a)).toFixed(1); };
+  var marks = "";
+  for (var i = 0; i < 12; i++) {
+    var a = toR(i / 12 * 360 - 90);
+    marks += '<line x1="' + fx(43,a) + '" y1="' + fy(43,a) + '" x2="' + fx(48,a) + '" y2="' + fy(48,a) + '" stroke="currentColor" stroke-width="2"/>';
+  }
+  return '<svg viewBox="0 0 100 100" width="60" height="60" style="display:inline-block;vertical-align:middle">' +
+    '<circle cx="50" cy="50" r="49" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+    marks +
+    '<line x1="50" y1="50" x2="' + fx(30,hA) + '" y2="' + fy(30,hA) + '" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+    '<line x1="50" y1="50" x2="' + fx(40,mA) + '" y2="' + fy(40,mA) + '" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<circle cx="50" cy="50" r="3" fill="currentColor"/>' +
+    '</svg>';
+};
+
+window.tgRenderDigital = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var pad = function(n) { return ("0" + n).slice(-2); };
+  return '<span style="font-family:monospace;font-size:1.4em;letter-spacing:0.05em;display:inline-block;background:rgba(0,0,0,0.35);padding:2px 8px;border-radius:4px">' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + '</span>';
+};
+
+window.tgRenderCalendar = function(val) {
+  var date = new Date(String(val).replace(" ", "T"));
+  if (isNaN(date.getTime())) return String(val);
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DAYS   = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  var yr = date.getFullYear(), mo = date.getMonth(), dy = date.getDate();
+  var first = (new Date(yr, mo, 1).getDay() + 6) % 7;
+  var total = new Date(yr, mo + 1, 0).getDate();
+  var s = '<table style="border-collapse:collapse;font-size:0.78em;display:inline-table;vertical-align:middle">';
+  s += '<caption style="text-align:center;padding-bottom:2px;font-weight:bold">' + MONTHS[mo] + " " + yr + '</caption><thead><tr>';
+  for (var d = 0; d < 7; d++) s += '<th style="padding:1px 3px;text-align:center;opacity:0.6">' + DAYS[d] + '</th>';
+  s += '</tr></thead><tbody><tr>';
+  for (var i = 0; i < first; i++) s += '<td></td>';
+  for (var i = 1; i <= total; i++) {
+    if ((i + first - 1) % 7 === 0 && i > 1) s += '</tr><tr>';
+    var cur = (i === dy);
+    s += '<td style="padding:1px 3px;text-align:center' + (cur ? ";font-weight:bold;outline:1px solid currentColor;border-radius:50%" : "") + '">' + i + '</td>';
+  }
+  s += '</tr></tbody></table>';
+  return s;
+};
+
+window.tgRenderClockCalendar = function(val) {
+  return '<span style="display:inline-flex;align-items:center;gap:8px">' + window.tgRenderClock(val) + window.tgRenderCalendar(val) + '</span>';
+};
+
+window.tgRenderDigitalCalendar = function(val) {
+  return '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:4px">' + window.tgRenderCalendar(val) + window.tgRenderDigital(val) + '</span>';
+};
+
+window.tgOpenLightbox = function(src) {
+  var o = document.getElementById('tg-lb-ov');
+  if (!o) {
+    o = document.createElement('div');
+    o.id = 'tg-lb-ov';
+    o.innerHTML = '<span id="tg-lb-x">✕</span><img id="tg-lb-img">';
+    document.body.appendChild(o);
+    var cl = function() { o.classList.remove('on'); };
+    o.addEventListener('click', function(e) {
+      if (e.target === o || e.target.id === 'tg-lb-x') cl();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') cl();
+    });
+  }
+  document.getElementById('tg-lb-img').src = src;
+  o.classList.add('on');
+};
+
+// Tabs — mark active anchor based on State.variables[data-ctrl]
+function _tgUpdateTabs() {
+  document.querySelectorAll('.tg-tabs-block[data-ctrl]').forEach(function(bar) {
+    var ctrl = bar.getAttribute('data-ctrl');
+    if (!ctrl) return;
+    var val = ctrl.split('.').reduce(function(o, k) { return o && o[k]; }, State.variables);
+    bar.querySelectorAll('[data-idx]').forEach(function(span) {
+      var a = span.querySelector('a');
+      if (a) a.classList.toggle('tg-tabs-active', Number(span.getAttribute('data-idx')) === val);
+    });
+  });
+}
+$(document).on(':storyready :passagedisplay', _tgUpdateTabs);
+
+/* TG: auto-refresh sidebar + live blocks when textbox/numberbox values change */
+/* change fires on Enter / blur / stepper-arrow — the moment SugarCube commits the value */
+$(document).on("change.tg-inp", ".macro-textbox, .macro-numberbox", function() {
+  UIBar.update();
+  $('.tg-live[data-wiki]').each(function() { $(this).empty().wiki($(this).attr('data-wiki')); });
+});
+/* input fires on every keystroke — debounced for live block preview */
+$(document).on("input.tg-inp", ".macro-textbox, .macro-numberbox", (function() {
+  var t;
+  return function() {
+    clearTimeout(t);
+    t = setTimeout(function() {
+      UIBar.update();
+  $('.tg-live[data-wiki]').each(function() { $(this).empty().wiki($(this).attr('data-wiki')); });
+    }, 200);
+  };
+})());
+
+/* TG: periodic re-render of live blocks every 200ms */
+$(document).on(":passagedisplay", function() {
+  clearInterval(window._tgLiveTimer);
+  if ($(".tg-live[data-wiki]").length) {
+    window._tgLiveTimer = setInterval(function() {
+      $(".tg-live[data-wiki]").each(function() {
+        $(this).empty().wiki($(this).attr("data-wiki"));
+      });
+    }, 200);
+  }
+});
+$(document).on(":passagehide", function() {
+  clearInterval(window._tgLiveTimer);
+});
+
+/* TG: watchers — global check function + :passagedisplay hook */
+window._tgCheckWatchers = function() {
+  window._tgWPrev = window._tgWPrev || {};
+  if (!State || !State.variables) return;
+  (function() { // Affection milestone
+    var _cond = !!(State.variables["affection"] >= 30);
+    var _prev = window._tgWPrev["w_affection_glow"];
+    window._tgWPrev["w_affection_glow"] = _cond;
+    if (!_cond || _prev) return;
+    State.variables["subscribeNews"] = true;
+  })();
+};
+$(document).on(":passagedisplay", window._tgCheckWatchers);
+
+/* Quests: chain auto-advance + parent auto-complete */
+window._tgQuests = {"missingGear":{ordered:true,auto:true,steps:["talkElara","getGear","returnGear"]}};
+window._tgQuestNormalize = function(q){
+  var cfg = window._tgQuests[q]; if (!cfg) return;
+  var root = State.variables.quests; if (!root) return;
+  var Q = root[q]; if (!Q || !Q.steps) return;
+  if (cfg.ordered) {
+    for (var i = 0; i < cfg.steps.length; i++) {
+      var st = Q.steps[cfg.steps[i]];
+      if (!st) continue;
+      if (st.state === "done") continue;
+      if (st.state === "hidden") st.state = "active";
+      break;
+    }
+  }
+  if (cfg.auto) {
+    var allDone = cfg.steps.every(function(s){ var x = Q.steps[s]; return x && x.state === "done"; });
+    if (allDone && Q.state !== "done") Q.state = "done";
+  }
+};
+
+// Audio: passageinit handler + autoplay unlock
+var _tgAudioPlayMap = {"Start":[{"id":"tga_b_start_audio","volume":0.55,"loop":true}]};
+$(document).one(":passageend", function() {
+  if (typeof _tgAudioPlayMap === "undefined") return;
+  var ts = _tgAudioPlayMap[State.passage];
+  if (!ts || !ts.length) return;
+  var blocked = ts.some(function(t) {
+    var tr = SimpleAudio.tracks.get(t.id);
+    return tr && !tr.isPlaying();
+  });
+  if (!blocked) return;
+  var ov = document.createElement("div");
+  ov.id = "tg-audio-unlock";
+  ov.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);cursor:pointer";
+  ov.innerHTML = '<div style="pointer-events:none;color:#fff;font-size:1.4em;text-align:center;line-height:1.6">▶ Click to begin</div>';
+  ov.addEventListener("click", function() {
+    ov.remove();
+    var ts2 = _tgAudioPlayMap[State.passage];
+    if (ts2) ts2.forEach(function(t) {
+      var tr = SimpleAudio.tracks.get(t.id);
+      if (tr && !tr.isPlaying()) tr.volume(t.volume).loop(t.loop).play();
+    });
+  }, { once: true });
+  document.body.appendChild(ov);
+});
+
+// ── Inventory macros ──
+Macro.add("tgInvAdd", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    var qty = this.args[2] != null ? this.args[2] : 1;
+    if (!charVar || !charVar.inventory) return;
+    var items = State.variables["items"];
+    var item = items ? items[itemName] : null;
+    if (item && item.stackable) {
+      var ex = charVar.inventory.find(function(e) { return e.item === itemName; });
+      if (ex) { ex.qty += qty; return; }
+    }
+    charVar.inventory.push({ item: itemName, qty: qty, equipped: false });
+  }
+});
+
+Macro.add("tgInvRemove", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    var qty = this.args[2] != null ? this.args[2] : 1;
+    if (!charVar || !charVar.inventory) return;
+    var idx = charVar.inventory.findIndex(function(e) { return e.item === itemName; });
+    if (idx === -1) return;
+    charVar.inventory[idx].qty -= qty;
+    if (charVar.inventory[idx].qty <= 0) charVar.inventory.splice(idx, 1);
+  }
+});
+
+// Inventory helpers usable in <<if>> expressions
+window.tgInvHas = function(charVar, itemName) {
+  if (!charVar || !charVar.inventory) return false;
+  return charVar.inventory.some(function(e) { return e.item === itemName; });
+};
+window.tgInvCount = function(charVar, itemName) {
+  if (!charVar || !charVar.inventory) return 0;
+  var entry = charVar.inventory.find(function(e) { return e.item === itemName; });
+  return entry ? entry.qty : 0;
+};
+
+// ── Inventory UI (tgInventory) ──
+window._tgInvState = window._tgInvState || {};
+window._tgInvDialog = function(title, bodyHtml) {
+  if (typeof Dialog === "undefined") { alert(bodyHtml.replace(/<[^>]+>/g, "")); return; }
+  Dialog.setup(title);
+  Dialog.wiki(bodyHtml);
+  Dialog.open();
+};
+
+window._tgInvNormSlot = function(s) {
+  return String(s || "").toLowerCase().replace(/\\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+};
+
+window._tgInvCharHasSlot = function(ch, slotName) {
+  if (!ch || !ch.equipment) return false;
+  var norm = window._tgInvNormSlot(slotName);
+  var keys = Object.keys(ch.equipment);
+  for (var i = 0; i < keys.length; i++) {
+    if (window._tgInvNormSlot(keys[i]) === norm) return true;
+  }
+  return false;
+};
+
+window._tgInvRender = function(wrap) {
+  var charName = wrap.dataset.char;
+  var ch = State.variables[charName];
+  if (!ch) return;
+  if (!ch.inventory) ch.inventory = [];
+  var state = window._tgInvState[wrap.id] || { cat: "all", selected: "" };
+  window._tgInvState[wrap.id] = state;
+  var items = State.variables["items"] || {};
+  var filtered = ch.inventory.filter(function(e) {
+    if (state.cat === "all") return true;
+    var it = items[e.item] || {};
+    return (it.category || "misc") === state.cat;
+  });
+  var grid = wrap.querySelector(".tg-cont-grid");
+  var detail = wrap.querySelector(".tg-cont-detail");
+  var empty = wrap.querySelector(".tg-inv-empty");
+  // Tabs
+  wrap.querySelectorAll(".tg-inv-tab").forEach(function(t) {
+    t.classList.toggle("tg-active", t.dataset.cat === state.cat);
+  });
+  if (!filtered.length) {
+    if (grid) grid.innerHTML = "";
+    if (empty) empty.style.display = "";
+    if (detail) detail.innerHTML = '<div class="tg-detail-placeholder">' + (state.cat === "all" ? "Inventory is empty" : "No items in this category") + '</div>';
+    return;
+  }
+  if (empty) empty.style.display = "none";
+  var cellsHtml = filtered.map(function(e) {
+    var it = items[e.item] || {};
+    var name = it.name || e.item;
+    var icon = it.icon ? '<img src="' + it.icon + '" alt="">' : '<span style="font-size:28px;line-height:1">📦</span>';
+    var eqCls = e.equipped ? " tg-inv-equipped" : "";
+    var sel = (state.selected === e.item) ? " tg-selected" : "";
+    return '<div class="tg-cont-cell' + eqCls + sel + '" data-item="' + e.item + '" onclick="window._tgInvCellClick(this)">' + icon + '<span class="tg-cell-qty">&times;' + e.qty + '</span><span class="tg-cell-name">' + name + '</span></div>';
+  }).join("");
+  if (grid) grid.innerHTML = cellsHtml;
+  // Detail panel
+  if (!detail) return;
+  var selEntry = state.selected ? ch.inventory.find(function(x) { return x.item === state.selected; }) : null;
+  if (!selEntry) {
+    detail.innerHTML = '<div class="tg-detail-placeholder">Select an item</div>';
+    return;
+  }
+  var it = items[selEntry.item] || {};
+  var name = it.name || selEntry.item;
+  var desc = it.description || "";
+  var icon = it.icon ? '<img src="' + it.icon + '">' : "";
+  var html = "";
+  if (icon) html += '<div class="tg-detail-icon">' + icon + '</div>';
+  html += '<div class="tg-detail-name">' + name + '</div>';
+  if (desc) html += '<div class="tg-detail-desc">' + desc + '</div>';
+  html += '<div class="tg-detail-meta">Qty: ' + selEntry.qty + (selEntry.equipped ? " &nbsp;|&nbsp; Equipped" : "") + '</div>';
+  html += '<div class="tg-detail-actions">';
+  var cat = it.category || "misc";
+  if (cat === "wearable") {
+    if (selEntry.equipped) {
+      html += '<button class="tg-detail-action" onclick="window._tgInvUnequip(this)">Unequip</button>';
+    } else {
+      html += '<button class="tg-detail-action" onclick="window._tgInvEquip(this)">Equip</button>';
+    }
+  } else if (cat === "consumable") {
+    html += '<button class="tg-detail-action" onclick="window._tgInvUse(this)">Use</button>';
+  }
+  html += '<button class="tg-detail-action tg-inv-drop" onclick="window._tgInvDrop(this)">Drop</button>';
+  html += '</div>';
+  detail.innerHTML = html;
+};
+
+window._tgInvTabClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var st = window._tgInvState[wrap.id] || (window._tgInvState[wrap.id] = { cat: "all", selected: "" });
+  st.cat = el.dataset.cat || "all";
+  st.selected = "";
+  window._tgInvRender(wrap);
+};
+
+window._tgInvCellClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var st = window._tgInvState[wrap.id] || (window._tgInvState[wrap.id] = { cat: "all", selected: "" });
+  st.selected = el.dataset.item;
+  window._tgInvRender(wrap);
+};
+
+window._tgInvCtx = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return null;
+  var st = window._tgInvState[wrap.id];
+  if (!st || !st.selected) return null;
+  var ch = State.variables[wrap.dataset.char];
+  if (!ch) return null;
+  var items = State.variables["items"] || {};
+  var it = items[st.selected] || {};
+  return { wrap: wrap, ch: ch, st: st, it: it, itemName: st.selected };
+};
+
+window._tgInvEquip = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var slot = ctx.it.targetSlot || ctx.it.slot;
+  if (!slot) { window._tgInvDialog("Cannot equip", "This item has no target slot."); return; }
+  if (!window._tgInvCharHasSlot(ctx.ch, slot)) {
+    window._tgInvDialog("Cannot equip", 'Paperdoll has no slot named "' + slot + '".');
+    return;
+  }
+  if (!ctx.ch.equipment) ctx.ch.equipment = {};
+  var norm = window._tgInvNormSlot(slot);
+  var targetKey = slot;
+  Object.keys(ctx.ch.equipment).forEach(function(k) {
+    if (window._tgInvNormSlot(k) === norm) targetKey = k;
+  });
+  var prev = ctx.ch.equipment[targetKey];
+  if (prev) {
+    var pe = ctx.ch.inventory.find(function(e) { return e.item === prev; });
+    if (pe) pe.equipped = false;
+  }
+  ctx.ch.equipment[targetKey] = ctx.itemName;
+  var e = ctx.ch.inventory.find(function(x) { return x.item === ctx.itemName; });
+  if (e) e.equipped = true;
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvUnequip = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx || !ctx.ch.equipment) return;
+  Object.keys(ctx.ch.equipment).forEach(function(k) {
+    if (ctx.ch.equipment[k] === ctx.itemName) ctx.ch.equipment[k] = "";
+  });
+  var e = ctx.ch.inventory.find(function(x) { return x.item === ctx.itemName; });
+  if (e) e.equipped = false;
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvUse = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var idx = ctx.ch.inventory.findIndex(function(e) { return e.item === ctx.itemName; });
+  if (idx === -1) return;
+  ctx.ch.inventory[idx].qty -= 1;
+  if (ctx.ch.inventory[idx].qty <= 0) {
+    ctx.ch.inventory.splice(idx, 1);
+    ctx.st.selected = "";
+  }
+  window._tgInvRender(ctx.wrap);
+  UIBar.update();
+};
+
+window._tgInvDrop = function(el) {
+  var ctx = window._tgInvCtx(el);
+  if (!ctx) return;
+  var wrapId = ctx.wrap.id;
+  var itemName = ctx.itemName;
+  var name = ctx.it.name || itemName;
+  var entry = ctx.ch.inventory.find(function(e) { return e.item === itemName; });
+  if (!entry) return;
+  var qty = entry.qty;
+  if (typeof Dialog === "undefined") {
+    if (!confirm("Drop " + qty + "× " + name + "?")) return;
+    window._tgInvDoDrop(wrapId, itemName);
+    return;
+  }
+  Dialog.setup("Drop item");
+  var body = '<p>Drop ' + qty + '× ' + name + '?</p>' +
+             '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">' +
+             '<button class="tg-detail-action" onclick="Dialog.close()">Cancel</button>' +
+             '<button class="tg-detail-action tg-inv-drop" onclick="Dialog.close();window._tgInvDoDrop(\\'' + wrapId + '\\',\\'' + itemName + '\\')">Drop</button>' +
+             '</div>';
+  Dialog.wiki(body);
+  Dialog.open();
+};
+
+window._tgInvDoDrop = function(wrapId, itemName) {
+  var wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  var ch = State.variables[wrap.dataset.char];
+  if (!ch || !ch.inventory) return;
+  var idx = ch.inventory.findIndex(function(e) { return e.item === itemName; });
+  if (idx === -1) return;
+  var entry = ch.inventory[idx];
+  if (entry.equipped && ch.equipment) {
+    Object.keys(ch.equipment).forEach(function(k) {
+      if (ch.equipment[k] === itemName) ch.equipment[k] = "";
+    });
+  }
+  ch.inventory.splice(idx, 1);
+  var st = window._tgInvState[wrap.id];
+  if (st) st.selected = "";
+  window._tgInvRender(wrap);
+  UIBar.update();
+};
+
+// <<tgInventory "charVarName" ["Title"]>>
+Macro.add("tgInventory", {
+  handler: function() {
+    var charName = this.args[0];
+    var title    = this.args[1] || "";
+    var ch = State.variables[charName];
+    if (!ch) { this.error("tgInventory: character not found: " + charName); return; }
+    if (!ch.inventory) ch.inventory = [];
+    var wrapId = "tg-inv-" + charName + "-" + (Math.random().toString(36).substr(2, 6));
+    var tabs = [
+      { cat: "all",        label: "All" },
+      { cat: "wearable",   label: "👕 Wearable" },
+      { cat: "consumable", label: "🧪 Consumable" },
+      { cat: "misc",       label: "📦 Misc" },
+    ];
+    var tabsHtml = '<div class="tg-inv-tabs">' + tabs.map(function(t) {
+      return '<button type="button" class="tg-inv-tab' + (t.cat === "all" ? " tg-active" : "") + '" data-cat="' + t.cat + '" onclick="window._tgInvTabClick(this)">' + t.label + '</button>';
+    }).join("") + '</div>';
+    var html = '<div class="tg-container" id="' + wrapId + '" data-char="' + charName + '">';
+    if (title) html += '<div class="tg-cont-header">' + title + '</div>';
+    html += tabsHtml;
+    html += '<div class="tg-cont-body">';
+    html += '<div class="tg-cont-grid"></div>';
+    html += '<div class="tg-cont-detail"><div class="tg-detail-placeholder">Select an item</div></div>';
+    html += '</div>';
+    html += '<div class="tg-inv-empty tg-cont-empty" style="display:none">Inventory is empty</div>';
+    html += '</div>';
+    var self = this;
+    $(self.output).wiki(html);
+    setTimeout(function() {
+      var wrap = document.getElementById(wrapId);
+      if (wrap) window._tgInvRender(wrap);
+    }, 0);
+  }
+});
+
+// ── Container system ──
+var _tgModes = {"emporium":"shop","debris":"loot"};
+
+// Shared: get container object by varName string
+function _tgGetCont(n) { return (State.variables["containers"] || {})[n]; }
+// Shared: get character object by varName string
+function _tgGetChar(n) { return State.variables[n]; }
+
+// Buy one item from a shop container
+window.tgBuyItem = function(contName, charName, itemName, qty) {
+  qty = qty || 1;
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var slot = cont.items.find(function(s){return s.item===itemName;});
+  if (!slot) return;
+  var items = State.variables["items"] || {};
+  var price = (slot.price != null ? slot.price : (items[itemName] ? items[itemName].price||0 : 0)) * qty;
+  if ((ch.money||0) < price) return;
+  ch.money = (ch.money||0) - price;
+  if (slot.qty !== -1) { slot.qty -= qty; if (slot.qty <= 0) cont.items.splice(cont.items.indexOf(slot),1); }
+  var stackable = items[itemName] ? items[itemName].stackable : false;
+  if (stackable) { var ex=ch.inventory.find(function(e){return e.item===itemName;}); if(ex){ex.qty+=qty;} else {ch.inventory.push({item:itemName,qty:qty,equipped:false});} }
+  else { ch.inventory.push({item:itemName,qty:qty,equipped:false}); }
+  Engine.show();
+};
+
+// Take one item from a chest/loot container
+window.tgTakeItem = function(contName, charName, itemName, qty) {
+  qty = qty || 1;
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var slot = cont.items.find(function(s){return s.item===itemName;});
+  if (!slot) return;
+  var take = slot.qty === -1 ? qty : Math.min(qty, slot.qty);
+  if (slot.qty !== -1) { slot.qty -= take; if (slot.qty <= 0) cont.items.splice(cont.items.indexOf(slot),1); }
+  var items = State.variables["items"] || {};
+  var stackable = items[itemName] ? items[itemName].stackable : false;
+  if (stackable) { var ex=ch.inventory.find(function(e){return e.item===itemName;}); if(ex){ex.qty+=take;} else {ch.inventory.push({item:itemName,qty:take,equipped:false});} }
+  else { ch.inventory.push({item:itemName,qty:take,equipped:false}); }
+  Engine.show();
+};
+
+// Loot all items at once
+window.tgLootAllItems = function(contName, charName) {
+  var cont = _tgGetCont(contName); var ch = _tgGetChar(charName);
+  if (!cont || !ch) return;
+  var items = State.variables["items"] || {};
+  cont.items.forEach(function(slot) {
+    var qty = slot.qty === -1 ? 1 : slot.qty;
+    var stackable = items[slot.item] ? items[slot.item].stackable : false;
+    if (stackable) { var ex=ch.inventory.find(function(e){return e.item===slot.item;}); if(ex){ex.qty+=qty; return;} }
+    ch.inventory.push({item:slot.item,qty:qty,equipped:false});
+  });
+  cont.items = [];
+  Engine.show();
+};
+
+// Cell click: reads contName/charName from parent data-* attrs — no quoting needed
+window.tgCellClick = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  var contName    = wrap.dataset.cont;
+  var charName    = wrap.dataset.char;
+  var detailId    = wrap.dataset.det;
+  var itemVarName = el.dataset.item;
+  el.closest(".tg-cont-grid").querySelectorAll(".tg-cont-cell").forEach(function(c){c.classList.remove("tg-selected");});
+  el.classList.add("tg-selected");
+  var detail = document.getElementById(detailId);
+  if (!detail) return;
+  var cont = _tgGetCont(contName);
+  var ch   = _tgGetChar(charName);
+  var allItems = State.variables["items"] || {};
+  var item  = allItems[itemVarName] || {};
+  var slot  = cont ? cont.items.find(function(s){return s.item===itemVarName;}) : null;
+  if (!slot) { detail.innerHTML = "<div class=\\"tg-detail-placeholder\\">Item not found</div>"; return; }
+  var mode  = _tgModes[contName] || "loot";
+  var name  = item.name || itemVarName;
+  var desc  = item.description || "";
+  var icon  = item.icon ? "<img src=\\""+item.icon+"\\">": "";
+  var price = slot.price != null ? slot.price : (item.price || 0);
+  var qty   = slot.qty === -1 ? "\\u221e" : slot.qty;
+  var money = ch ? (ch.money || 0) : 0;
+  var html = "";
+  if (icon) html += "<div class=\\"tg-detail-icon\\">"+icon+"</div>";
+  html += "<div class=\\"tg-detail-name\\">"+name+"</div>";
+  if (desc) html += "<div class=\\"tg-detail-desc\\">"+desc+"</div>";
+  if (mode === "shop") {
+    html += "<div class=\\"tg-detail-meta\\">Price: "+price+"g &nbsp;|&nbsp; Your money: "+money+"g &nbsp;|&nbsp; In stock: "+qty+"</div>";
+    html += "<button class=\\"tg-detail-action\\" "+(money>=price?"":"disabled")+" onclick=\\"window.tgBuyNow(this)\\">Buy</button>";
+  } else {
+    html += "<div class=\\"tg-detail-meta\\">Qty: "+qty+"</div>";
+    html += "<button class=\\"tg-detail-action\\" onclick=\\"window.tgTakeNow(this)\\">Take</button>";
+  }
+  detail.innerHTML = html;
+};
+// Action dispatchers — walk up DOM to find context, no args needed in onclick
+window.tgBuyNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  var sel  = wrap ? wrap.querySelector(".tg-cont-cell.tg-selected") : null;
+  if (!wrap || !sel) return;
+  window.tgBuyItem(wrap.dataset.cont, wrap.dataset.char, sel.dataset.item, 1);
+};
+window.tgTakeNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  var sel  = wrap ? wrap.querySelector(".tg-cont-cell.tg-selected") : null;
+  if (!wrap || !sel) return;
+  window.tgTakeItem(wrap.dataset.cont, wrap.dataset.char, sel.dataset.item, 1);
+};
+window.tgLootNow = function(el) {
+  var wrap = el.closest(".tg-container");
+  if (!wrap) return;
+  window.tgLootAllItems(wrap.dataset.cont, wrap.dataset.char);
+};
+
+// tgContainer macro — renders the full interactive container grid
+// Usage: <<tgContainer "containerVarName" "heroVarName" ["Title"]>>
+Macro.add("tgContainer", {
+  handler: function() {
+    var contName = this.args[0];
+    var charName = this.args[1];
+    var title    = this.args[2] || "";
+    var cont     = _tgGetCont(contName);
+    var ch       = _tgGetChar(charName);
+    if (!cont || !ch) { this.error("tgContainer: container or character not found: "+contName+" / "+charName); return; }
+
+    var mode     = _tgModes[contName] || "loot";
+    var allItems = State.variables["items"] || {};
+    var detailId = "tg-det-"+contName;
+
+    var html = "<div class=\\"tg-container\\" data-cont=\\""+contName+"\\" data-char=\\""+charName+"\\" data-det=\\""+detailId+"\\">";
+    if (title) html += "<div class=\\"tg-cont-header\\">"+title+"</div>";
+
+    if (cont.items.length === 0) {
+      html += "<div class=\\"tg-cont-empty\\">Empty</div>";
+    } else {
+      html += "<div class=\\"tg-cont-body\\">";
+      html += "<div class=\\"tg-cont-grid\\">";
+      cont.items.forEach(function(slot) {
+        var item = allItems[slot.item] || {};
+        var name = item.name || slot.item;
+        var icon = item.icon ? "<img src=\\""+item.icon+"\\" alt=\\"\\">": "<span style=\\"font-size:28px;line-height:1\\">📦</span>";
+        var qty  = slot.qty === -1 ? "∞" : slot.qty;
+        html += "<div class=\\"tg-cont-cell\\" data-item=\\""+slot.item+"\\" onclick=\\"window.tgCellClick(this)\\">"+icon+"<span class=\\"tg-cell-qty\\">&times;"+qty+"</span><span class=\\"tg-cell-name\\">"+name+"</span></div>";
+      });
+      html += "</div>";
+      // detail panel
+      html += "<div class=\\"tg-cont-detail\\" id=\\""+detailId+"\\"><div class=\\"tg-detail-placeholder\\">Select an item</div></div>";
+      // loot-all button for chest/loot modes
+      html += "</div>";
+      if (mode !== "shop") {
+        html += "<div style=\\"margin-top:8px\\"><button class=\\"tg-detail-action\\" onclick=\\"window.tgLootNow(this)\\">Take all</button></div>";
+      }
+    }
+    html += "</div>";
+    $(this.output).wiki(html);
+  }
+});
+
+// Legacy action macros (for manual use in passages)
+// tgShopBuy "containerVarName" "itemVarName" "charVarName" [qty]
+Macro.add("tgShopBuy", {
+  handler: function() {
+    window.tgBuyItem(this.args[0], this.args[2], this.args[1], this.args[3] != null ? this.args[3] : 1);
+  }
+});
+Macro.add("tgShopSell", {
+  handler: function() {
+    var cont = _tgGetCont(this.args[0]); var ch = _tgGetChar(this.args[2]);
+    if (!cont || !ch) return;
+    var itemName = this.args[1]; var qty = this.args[3] != null ? this.args[3] : 1;
+    var items = State.variables["items"];
+    var idx = ch.inventory.findIndex(function(e){return e.item===itemName;});
+    if (idx === -1) return;
+    var price = (items && items[itemName] ? items[itemName].price||0 : 0) * qty;
+    ch.inventory[idx].qty -= qty;
+    if (ch.inventory[idx].qty <= 0) ch.inventory.splice(idx,1);
+    ch.money = (ch.money||0) + price;
+    Engine.show();
+  }
+});
+Macro.add("tgChestTake", {
+  handler: function() { window.tgTakeItem(this.args[0], this.args[2], this.args[1], this.args[3] != null ? this.args[3] : 1); }
+});
+Macro.add("tgLootAll", {
+  handler: function() { window.tgLootAllItems(this.args[0], this.args[1]); }
+});
+
+// ── Paperdoll macros ──
+// tgEquip($charVar, itemVarName) — equips wearable item into its target slot
+Macro.add("tgEquip", {
+  handler: function() {
+    var charVar = this.args[0];
+    var itemName = this.args[1];
+    if (!charVar || !itemName) return;
+    var items = State.variables["items"];
+    var item = items ? items[itemName] : null;
+    if (!item || !item.slot) return;
+    var slot = item.slot;
+    if (!charVar.equipment) charVar.equipment = {};
+    // Unequip anything already in the slot
+    var prev = charVar.equipment[slot];
+    if (prev && charVar.inventory) {
+      var pe = charVar.inventory.find(function(e){ return e.item === prev; });
+      if (pe) pe.equipped = false;
+    }
+    charVar.equipment[slot] = itemName;
+    // Mark as equipped in inventory
+    if (charVar.inventory) {
+      var e = charVar.inventory.find(function(e){ return e.item === itemName; });
+      if (e) e.equipped = true;
+    }
+    UIBar.update();
+  }
+});
+
+// tgUnequip($charVar, slotId) — unequips item from named slot
+Macro.add("tgUnequip", {
+  handler: function() {
+    var charVar = this.args[0];
+    var slotId = this.args[1];
+    if (!charVar || !slotId || !charVar.equipment) return;
+    var itemName = charVar.equipment[slotId];
+    charVar.equipment[slotId] = "";
+    if (itemName && charVar.inventory) {
+      var e = charVar.inventory.find(function(e){ return e.item === itemName; });
+      if (e) e.equipped = false;
+    }
+  }
+});
+
+// tgIsEquipped(charVar, itemVarName) → boolean (use in expressions)
+window.tgIsEquipped = function(charVar, itemName) {
+  if (!charVar || !charVar.equipment || !itemName) return false;
+  return Object.values(charVar.equipment).indexOf(itemName) !== -1;
+};
+
+// tgSlotMenu(charVarName, slotId, slotLabelNorm, event) — open a popup menu to equip/unequip
+// Shows compatible items from the character inventory + an Unequip option.
+window.tgSlotMenu = function(charVarName, slotId, slotLabelNorm, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  var ch = State.variables[charVarName];
+  if (!ch) return;
+  if (!ch.equipment) ch.equipment = {};
+  if (!ch.inventory) ch.inventory = [];
+  var items = State.variables["items"] || {};
+  var currentEquipped = ch.equipment[slotId] || "";
+  // Compatible: inventory entries whose item.slot matches slotId or normalized label
+  var compatible = ch.inventory.filter(function(entry) {
+    var it = items[entry.item];
+    if (!it || !it.slot) return false;
+    var nslot = String(it.slot).toLowerCase().replace(/\\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+    return nslot === slotId || nslot === slotLabelNorm;
+  });
+  // Remove any existing menu
+  var existing = document.getElementById("tg-pd-menu");
+  if (existing) existing.remove();
+  var menu = document.createElement("div");
+  menu.id = "tg-pd-menu";
+  menu.className = "tg-pd-menu";
+  function addRow(html, onClick, extraCls) {
+    var row = document.createElement("div");
+    row.className = "tg-pd-menu-item" + (extraCls ? " " + extraCls : "");
+    row.innerHTML = html;
+    row.addEventListener("click", function(e) { e.stopPropagation(); onClick(); menu.remove(); UIBar.update(); });
+    menu.appendChild(row);
+  }
+  if (currentEquipped) {
+    var curIt = items[currentEquipped] || {};
+    var curIcon = curIt.icon ? '<img src="' + curIt.icon + '" class="tg-pd-menu-icon"/>' : '<span class="tg-pd-menu-icon"></span>';
+    addRow(curIcon + '<span class="tg-pd-menu-label">✕ ' + (curIt.name || currentEquipped) + '</span>', function() {
+      ch.equipment[slotId] = "";
+      var e = ch.inventory.find(function(x){ return x.item === currentEquipped; });
+      if (e) e.equipped = false;
+    }, "tg-pd-menu-unequip");
+  }
+  compatible.forEach(function(entry) {
+    if (entry.item === currentEquipped) return;
+    var it = items[entry.item] || {};
+    var icon = it.icon ? '<img src="' + it.icon + '" class="tg-pd-menu-icon"/>' : '<span class="tg-pd-menu-icon"></span>';
+    addRow(icon + '<span class="tg-pd-menu-label">' + (it.name || entry.item) + '</span>', function() {
+      if (currentEquipped) {
+        var old = ch.inventory.find(function(x){ return x.item === currentEquipped; });
+        if (old) old.equipped = false;
+      }
+      ch.equipment[slotId] = entry.item;
+      entry.equipped = true;
+    });
+  });
+  if (menu.children.length === 0) {
+    var empty = document.createElement("div");
+    empty.className = "tg-pd-menu-empty";
+    empty.textContent = "No compatible items";
+    menu.appendChild(empty);
+  }
+  document.body.appendChild(menu);
+  // Position next to the clicked cell
+  var rect = (ev && ev.currentTarget ? ev.currentTarget : ev && ev.target).getBoundingClientRect();
+  var mw = menu.offsetWidth, mh = menu.offsetHeight;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var left = rect.right + 4;
+  if (left + mw > vw) left = Math.max(4, rect.left - mw - 4);
+  var top = rect.top;
+  if (top + mh > vh) top = Math.max(4, vh - mh - 4);
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  setTimeout(function() {
+    var closer = function(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener("click", closer); document.removeEventListener("keydown", keyCloser); }
+    };
+    var keyCloser = function(e) {
+      if (e.key === "Escape") { menu.remove(); document.removeEventListener("click", closer); document.removeEventListener("keydown", keyCloser); }
+    };
+    document.addEventListener("click", closer);
+    document.addEventListener("keydown", keyCloser);
+  }, 0);
+};
+
+// Popup class sync — mirror tg-popup-* from #ui-dialog-body to #ui-dialog frame.
+$(document).on(":dialogopened", function() {
+  var bodyCls = ($("#ui-dialog-body").attr("class") || "").split(/\\s+/);
+  var popupCls = bodyCls.filter(function(c) { return c && /^tg-popup-/.test(c); });
+  var $frame = $("#ui-dialog");
+  // Strip any previous tg-popup-* classes from the frame, then add the current ones.
+  var frameCls = (($frame.attr("class") || "").split(/\\s+/)).filter(function(c) { return c && !/^tg-popup-/.test(c); });
+  $frame.attr("class", frameCls.concat(popupCls).join(" "));
+});
+
+// Audio volume: restore from saved state on load (audio + video)
+$(document).on(":passagedisplay", function() {
+  var v = State.variables.__tgMasterVol;
+  if (v != null) {
+    SimpleAudio.volume(v);
+    document.querySelectorAll("video").forEach(function(el) { el.volume = v; });
+  }
+});
+
+// Purl signature
+$(document).one(":storyready", function() {
+  var sig = document.createElement("div");
+  sig.style.cssText = "position:fixed;bottom:4px;left:0;width:var(--ui-bar-width,17.5em);text-align:center;font-size:0.65em;opacity:0.45;pointer-events:auto;z-index:50;";
+  sig.innerHTML = 'Made via <a href="https://purl.pp.ua" target="_blank" rel="noopener" style="color:inherit;">Purl</a>';
+  document.body.appendChild(sig);
+});
+
+
+::StoryCaption
+<div class="tg-section">
+  <div class="tg-section-title">Status</div>
+  <span style="display:flex;justify-content:center;align-items:center;width:100%;flex-wrap:wrap"><<print tgRenderDigitalCalendar($gameTime)>></span>
+  <div class="tg-text">Affection</div>
+  <div class="tg-progress-block" style="height:12px"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<print '<span class="tg-progress" style="--tg-bar-empty:#312e81;--tg-bar-fill:'+'#ec4899'+';--tg-bar-text:#fce7f3">'+'<span class="tg-bar" style="width:'+_tgP+'%">'+$affection+'/100'+'</span></span>'>></div>
+  <div class="tg-do tg-do-list"><span class="tg-do-row"><span class="tg-do-label">Name</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;print $playerName&gt;&gt;"><<print $playerName>></span></span><span class="tg-do-row"><span class="tg-do-label">Coin</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;print $traveler.money&gt;&gt;"><<print $traveler.money>></span></span><span class="tg-do-row"><span class="tg-do-label">Affection</span><span class="tg-do-value tg-live" data-wiki="&lt;&lt;set _tgP to Math.min(100,Math.max(0,$affection/100*100))&gt;&gt;&lt;&lt;print '&lt;span class=&quot;tg-do-bar&quot;&gt;&lt;span class=&quot;tg-do-bar-fill&quot; style=&quot;width:'+_tgP+'%&quot;&gt;&lt;/span&gt;&lt;/span&gt;'&gt;&gt;&lt;span class=&quot;tg-do-bar-text&quot;&gt;&lt;&lt;print $affection&gt;&gt;/&lt;&lt;print 100&gt;&gt;&lt;/span&gt;"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<print '<span class="tg-do-bar"><span class="tg-do-bar-fill" style="width:'+_tgP+'%"></span></span>'>><span class="tg-do-bar-text"><<print $affection>>/<<print 100>></span></span></span></div>
+</div>
+<div class="tg-quests tg-live" data-wiki="&lt;&lt;if $quests.missingGear.state is &quot;active&quot;&gt;&gt;&lt;div class=&quot;tg-quest&quot;&gt;&lt;div class=&quot;tg-quest-title&quot; style=&quot;color:#a855f7&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.name&gt;&gt;&lt;/div&gt;&lt;div class=&quot;tg-quest-steps&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.talkElara.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.getGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.returnGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;/div&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;"><<if $quests.missingGear.state is "active">><div class="tg-quest"><div class="tg-quest-title" style="color:#a855f7"><span class="tg-quest-mark"><<if $quests.missingGear.state is "done">>✓<<elseif $quests.missingGear.state is "failed">>✗<<elseif $quests.missingGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.name>></div><div class="tg-quest-steps"><<if $quests.missingGear.steps.talkElara.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.talkElara.state is "done">>✓<<elseif $quests.missingGear.steps.talkElara.state is "failed">>✗<<elseif $quests.missingGear.steps.talkElara.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.talkElara.name>></div><</if>><<if $quests.missingGear.steps.getGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.getGear.state is "done">>✓<<elseif $quests.missingGear.steps.getGear.state is "failed">>✗<<elseif $quests.missingGear.steps.getGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.getGear.name>></div><</if>><<if $quests.missingGear.steps.returnGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.returnGear.state is "done">>✓<<elseif $quests.missingGear.steps.returnGear.state is "failed">>✗<<elseif $quests.missingGear.steps.returnGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.returnGear.name>></div><</if>></div></div><</if>></div>
+
+
+::StoryMenu
+<<link "Settings">><<goto "Settings">><</link>>
+<<link "Journal">><<goto "Journal">><</link>>
+<<link "Saves">><<run UI.saves()>><</link>>
+<<link "Restart">><<run UI.restart()>><</link>>
+
+
+::PassageHeader
+<div style="text-align:center;opacity:.6;font-variant:small-caps">Cogsworth</div>
+
+
+::PassageFooter
+<hr class="tg-divider" style="--tg-div-color:#334155;--tg-div-thickness:1px;--tg-div-margin:6px">
+<div class="tg-text">//A Purl demonstration story.//</div>
+
+
+::Start
+<<audio "tga_b_start_audio" volume 0.55 loop play>>
+<div class="tg-callout tg-callout-info"><div class="tg-callout-body"><div class="tg-callout-title">How to play</div>Click choices and links to move through the story. Your stats live in the sidebar.</div></div>
+<<type 25ms>><div class="tg-text">Steam hisses from the cobbled streets of **Cogsworth**. A telegram in your pocket reads only: //come quickly — E.//</div><</type>>
+<div class="tg-input-field">What do they call you?
+<<textbox "$playerName" $playerName>></div>
+<<set $worldState = { townName: "Cogsworth", day: 1, foggy: true, exits: ["north","docks"], meta: { chapter: 1 } }>>
+<<run Save.autosave.save("Arrival")>><<script>>(function(){var n=$('<div>').text("Progress saved").css({position:'fixed',bottom:'1.2em',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.82)',color:'#fff',padding:'.4em .9em',borderRadius:'.4em',zIndex:99999,fontSize:'.9em',opacity:0,transition:'opacity .3s',pointerEvents:'none'}).appendTo('body');setTimeout(function(){n.css('opacity',1);},16);setTimeout(function(){n.css('opacity',0);setTimeout(function(){n.remove();},320);},1500);})();<</script>>
+<hr class="tg-divider" style="--tg-div-color:#475569;--tg-div-thickness:1px;--tg-div-margin:12px">
+<div class="tg-choice">
+  <<link "Head into town" "TownSquare">><</link>>
+</div>
+<<run Dialog.setup("Welcome"); Dialog.wiki(Story.get("PopupWelcome").processText()); Dialog.open();>>
+<<if false>>[[TownSquare]]<</if>>
+
+
+::TownSquare
+<div class="tg-text">The town square churns with gears and gossip. Three lanes branch away from the fountain.</div>
+<<run tgAddTime("gameTime", {"years":0,"months":0,"days":0,"hours":1,"minutes":0})>>
+<div class="tg-spacer" style="height:10px"></div>
+<div class="tg-section">
+  <div class="tg-section-title">Where to?</div>
+  <span class="tg-btn tg-btn-b_town_l1"><<link "Elara's Workshop">>
+    <<goto "Workshop">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l2"><<link "Doran's Emporium">>
+    <<goto "Emporium">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l6"><<link "The Foggy Docks">>
+    <<goto "Docks">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l3"><<link "Your satchel & gear">>
+    <<goto "Satchel">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l4"><<link "Quest journal">>
+    <<goto "Journal">>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <span class="tg-btn tg-btn-b_town_l5"><<link "Settings">>
+    <<goto "Settings">>
+    <<run UIBar.update()>>
+  <</link>></span>
+</div>
+<<if false>>[[Workshop]][[Emporium]][[Docks]][[Satchel]][[Journal]][[Settings]]<</if>>
+
+
+::Workshop
+<div class="tg-image"><img src="assets/chars/elara_full.png" alt="Elara at her workbench" width="320" /></div>
+<<set $metElara to true>>
+<<type 20ms>><div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">You came! Oh — mind the springs. My heart-engine is //this// close, but it's missing a single copper gear.</span></div></div><</type>>
+<<if $quests.missingGear.steps.talkElara.state == "active">>
+  <<set $quests.missingGear.steps.talkElara.state to "done">>
+  <<set $quests.missingGear.steps.getGear.state to "active">>
+  <<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<</if>>
+<div class="tg-progress-block" style="height:14px"><<set _tgP to Math.min(100,Math.max(0,$affection/100*100))>><<set _tgC to 'rgb('+Math.round(99+(137)*_tgP/100)+','+Math.round(102+(-30)*_tgP/100)+','+Math.round(241+(-88)*_tgP/100)+')'>><<print '<span class="tg-progress" style="--tg-bar-empty:#312e81;--tg-bar-fill:'+_tgC+';--tg-bar-text:#ede9fe">'+'<span class="tg-bar" style="width:'+_tgP+'%">'+$affection+'/100'+'</span></span>'>></div>
+<<if ndef $__tabs_b_ws_tabs>><<set $__tabs_b_ws_tabs to 0>><</if>>
+<div class="tg-tabs-block" data-ctrl="__tabs_b_ws_tabs"><span data-idx="0"><<link "Talk">><<set $__tabs_b_ws_tabs to 0>><<run Engine.show()>><</link>></span><span data-idx="1"><<link "Gift">><<set $__tabs_b_ws_tabs to 1>><<run Engine.show()>><</link>></span><span data-idx="2"><<link "Lore">><<set $__tabs_b_ws_tabs to 2>><<run Engine.show()>><</link>></span></div>
+<<if $__tabs_b_ws_tabs eq 0>>
+  <span class="tg-btn tg-btn-b_ws_talk_bt"><<link "Compliment her work (+5)">>
+    <<set $affection += 5>>
+    <<run Engine.show()>>
+    <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+    <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+    <<run UIBar.update()>>
+  <</link>></span>
+  <<if $affection >= 20>>
+    <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">A warm smile. "You always know what to say."</span></div></div>
+  <<else>>
+    <div class="tg-text">She nods politely, eyes still on her gears.</div>
+  <</if>>
+<<elseif $__tabs_b_ws_tabs eq 1>>
+  <<if tgInvHas($traveler, "gear")>>
+    <span class="tg-btn tg-btn-b_ws_gift_fn"><<link "Offer a copper gear">>
+      <<include "GiveGift">>
+      <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+    <div class="tg-text">//Giving the gear here advances your quest.//</div>
+    <div class="tg-spacer" style="height:10px"></div>
+  <</if>>
+  <<if tgInvHas($traveler, "rose")>>
+    <span class="tg-btn tg-btn-b_ws_gift_ro"><<link "Offer the Clockwork Rose">>
+      <<include "GiveRose">>
+      <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+    <div class="tg-text">//Offer the rare treasure found at the docks.//</div>
+    <div class="tg-spacer" style="height:10px"></div>
+  <</if>>
+  <<if !tgInvHas($traveler, "gear") && !tgInvHas($traveler, "rose")>>
+    <div class="tg-text">You don't have any suitable gifts in your satchel right now. Elara needs a copper gear for her engine, but maybe you can find something else in Cogsworth...</div>
+  <</if>>
+<<elseif $__tabs_b_ws_tabs eq 2>>
+  <div class="tg-text">The heart-engine, she explains, could power the whole harbor — if only it ticked.</div>
+  <div class="tg-video"><video src="assets/vid/heart_engine.mp4" controls width="360"></video></div>
+<</if>>
+<span class="tg-btn tg-btn-b_ws_help"><<link "Help">>
+  <<run Dialog.setup("How gifting works"); Dialog.wiki(Story.get("PopupHelp").processText()); Dialog.open();>>
+  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_ws_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[GiveGift]][[GiveRose]][[TownSquare]]<</if>>
+
+
+::Emporium
+<div class="dialogue dlg-chardoran dlg-right"><<if $doran.styles.avatar>><img class="char-avatar" @src="$doran.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $doran.name>></span><span class="char-text">Welcome, welcome! Gears, lanterns, tonics — I've got just the thing.</span></div></div>
+<<tgContainer "emporium" "traveler" "Doran's Emporium">>
+<<if $quests.missingGear.steps.getGear.state == "active">>
+  <<set $quests.missingGear.steps.getGear.state to "done">>
+  <<set $quests.missingGear.steps.returnGear.state to "active">>
+  <<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<</if>>
+<hr class="tg-divider" style="--tg-div-color:#555555;--tg-div-thickness:1px;--tg-div-margin:8px">
+<span class="tg-btn tg-btn-b_shop_links"><<link "Return to the workshop">>
+  <<goto "Workshop">>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_shop_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[Workshop]][[TownSquare]]<</if>>
+
+
+::Docks
+<<if tgIsEquipped($traveler, "lantern")>>
+  <div class="tg-text">The bright blue-white beam of your Aether Lantern cuts through the thick green smog. You walk along the creaking timber pier. Near a rusted, derelict crane, you spot a pile of discarded clockwork scrap. Something gold glints deep within the heap.</div>
+  <<tgContainer "debris" "traveler" "Rusted Debris">>
+<<else>>
+  <div class="tg-text">The thick green fog wraps around the harbor like a wet shroud. You hear waves lapping against the timber piers, but you can't see two steps in front of you. Exploring the docks in this blackness is suicide. You need a light source to pierce this gloom — perhaps Doran at the Emporium has something?</div>
+  <<if $foundPurse>>
+    <div class="tg-text">You have already recovered the soggy leather pouch containing 40 gold coins.</div>
+  <<else>>
+    <span class="tg-btn tg-btn-b_docks_grop"><<link "Grope blindly in the dark water">>
+      <<set $foundPurse to true>>
+      <<set $traveler.money += 40>>
+      <<run Engine.show()>>
+      <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+      <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+      <<run UIBar.update()>>
+    <</link>></span>
+  <</if>>
+<</if>>
+<span class="tg-btn tg-btn-b_docks_back"><<link "Return to Town Square">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[TownSquare]]<</if>>
+
+
+::Satchel
+<div class="tg-text">You lay out your belongings and the gear you carry.</div>
+<div style="display:flex;justify-content:center;width:100%"><div class="tg-paperdoll" style="display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px);gap:2px"><div class="tg-pd-slot" style="grid-row:1;grid-column:1;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','head','head',event)"><<if $traveler.equipment.head neq "">><img @src="$items[$traveler.equipment.head].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Head</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div><div class="tg-pd-slot" style="grid-row:1;grid-column:2;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','hand','hand',event)"><<if $traveler.equipment.hand neq "">><img @src="$items[$traveler.equipment.hand].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Hand</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div><div class="tg-pd-slot" style="grid-row:1;grid-column:3;width:64px;height:64px;box-sizing:border-box;overflow:hidden;border:1px solid rgba(100,116,139,0.7);border-radius:3px;position:relative;background:rgba(15,23,42,0.5);cursor:pointer" onclick="tgSlotMenu('traveler','trinket','trinket',event)"><<if $traveler.equipment.trinket neq "">><img @src="$items[$traveler.equipment.trinket].icon" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"/><div style="position:absolute;bottom:0;left:0;right:0;font-size:0.6em;text-align:center;background:rgba(0,0,0,0.6);color:#cbd5e1;pointer-events:none;padding:1px 0;">Trinket</div><<else>><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-size:1.4em;opacity:0.2;color:#94a3b8;">○</span></div><</if>></div></div></div>
+<<tgInventory "traveler" "Satchel">>
+<<for _member range $partyMembers>>
+  <div class="tg-text">• <<print _member>></div>
+<</for>>
+<span class="tg-btn tg-btn-b_wd_use"><<link "Drink a Healing Tonic">>
+  <<include "tg_use_tonic">>
+  <<run $('.tg-live[data-wiki]').each(function(){$(this).empty().wiki($(this).attr('data-wiki'));})>>
+  <<run window._tgCheckWatchers && window._tgCheckWatchers()>>
+  <<run window._tgRefreshStyleBind && window._tgRefreshStyleBind()>>
+  <<run UIBar.update()>>
+<</link>></span>
+<span class="tg-btn tg-btn-b_wd_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[tg_use_tonic]][[TownSquare]]<</if>>
+
+
+::Journal
+<div class="tg-text">## Quest Journal</div>
+<div class="tg-quests tg-live" data-wiki="&lt;&lt;if $quests.missingGear.state is &quot;active&quot; or $quests.missingGear.state is &quot;done&quot;&gt;&gt;&lt;div class=&quot;tg-quest&quot;&gt;&lt;div class=&quot;tg-quest-title&quot; style=&quot;color:#a855f7&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;if $quests.missingGear.description&gt;&gt;&lt;div class=&quot;tg-quest-desc&quot;&gt;&lt;&lt;= $quests.missingGear.description&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;div class=&quot;tg-quest-steps&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.talkElara.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.talkElara.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.talkElara.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.getGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.getGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.getGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state isnot &quot;hidden&quot;&gt;&gt;&lt;div class=&quot;tg-quest-step&quot;&gt;&lt;span class=&quot;tg-quest-mark&quot;&gt;&lt;&lt;if $quests.missingGear.steps.returnGear.state is &quot;done&quot;&gt;&gt;✓&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;failed&quot;&gt;&gt;✗&lt;&lt;elseif $quests.missingGear.steps.returnGear.state is &quot;active&quot;&gt;&gt;•&lt;&lt;else&gt;&gt;·&lt;&lt;/if&gt;&gt;&lt;/span&gt; &lt;&lt;= $quests.missingGear.steps.returnGear.name&gt;&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;&lt;/div&gt;&lt;/div&gt;&lt;&lt;/if&gt;&gt;"><<if $quests.missingGear.state is "active" or $quests.missingGear.state is "done">><div class="tg-quest"><div class="tg-quest-title" style="color:#a855f7"><span class="tg-quest-mark"><<if $quests.missingGear.state is "done">>✓<<elseif $quests.missingGear.state is "failed">>✗<<elseif $quests.missingGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.name>></div><<if $quests.missingGear.description>><div class="tg-quest-desc"><<= $quests.missingGear.description>></div><</if>><div class="tg-quest-steps"><<if $quests.missingGear.steps.talkElara.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.talkElara.state is "done">>✓<<elseif $quests.missingGear.steps.talkElara.state is "failed">>✗<<elseif $quests.missingGear.steps.talkElara.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.talkElara.name>></div><</if>><<if $quests.missingGear.steps.getGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.getGear.state is "done">>✓<<elseif $quests.missingGear.steps.getGear.state is "failed">>✗<<elseif $quests.missingGear.steps.getGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.getGear.name>></div><</if>><<if $quests.missingGear.steps.returnGear.state isnot "hidden">><div class="tg-quest-step"><span class="tg-quest-mark"><<if $quests.missingGear.steps.returnGear.state is "done">>✓<<elseif $quests.missingGear.steps.returnGear.state is "failed">>✗<<elseif $quests.missingGear.steps.returnGear.state is "active">>•<<else>>·<</if>></span> <<= $quests.missingGear.steps.returnGear.name>></div><</if>></div></div><</if>></div>
+<div class="tg-spacer" style="height:16px"></div>
+<<if $quests.missingGear.steps.returnGear.state === "active" && tgInvHas($traveler, "gear")>>
+  <span class="tg-btn tg-btn-b_ql_finish"><<link "Bring the gear to Elara">>
+    <<goto "Finale">>
+    <<run UIBar.update()>>
+  <</link>></span>
+<</if>>
+<span class="tg-btn tg-btn-b_ql_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[Finale]][[TownSquare]]<</if>>
+
+
+::Settings
+<div class="tg-text">## Settings</div>
+<div class="tg-radio">Difficulty
+<<radiobutton "$difficulty" "Easy" autocheck>> Gentle
+<<radiobutton "$difficulty" "Normal" autocheck>> Balanced
+<<radiobutton "$difficulty" "Hard" autocheck>> Clockwork</div>
+<span class="tg-select">Interface theme <<listbox "$theme" autoselect>><<option "Brass" "brass">><<option "Copper" "copper">><<option "Iron" "iron">><</listbox>></span>
+<span class="tg-slider">Text speed <input id="tgslb_set_speed" type="range" min="0" max="100" step="5" value="60" style="vertical-align:middle"><span id="tgslb_set_speedv" class="tg-slider-val">60</span></span><<script>>setTimeout(function(){  var s=document.getElementById("tgslb_set_speed"); if(!s) return;  var cur=State.variables["textSpeed"];  if(cur!=null) s.value=cur;  var d=document.getElementById("tgslb_set_speedv"); if(d) d.textContent=s.value;  s.addEventListener("input", function(){    var nv=Number(s.value);    State.variables["textSpeed"]=nv;    var dd=document.getElementById("tgslb_set_speedv"); if(dd) dd.textContent=nv;    if(window.jQuery){window.jQuery(".tg-live[data-wiki]").each(function(){window.jQuery(this).empty().wiki(window.jQuery(this).attr("data-wiki"));});}    if(window._tgCheckWatchers) window._tgCheckWatchers();  });},0);<</script>>
+<div class="tg-checkbox">Preferences
+<<checkbox "$showHints" false true autocheck>> Show gameplay hints
+<<checkbox "$subscribeNews" false true autocheck>> Subscribe to the Cogsworth Courier</div>
+<span class="tg-audio-volume" style="display:flex;align-items:center;gap:6px;width:100%"><button id="tgvolb_set_volm" onclick="var S=SugarCube.SimpleAudio;S.mute(!S.mute());this.textContent=S.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A)" style="border:none;background:none;cursor:pointer;font-size:1.2em">&#x1F50A;</button><input id="tgvolb_set_vol" type="range" min="0" max="100" value="100" style="flex:1;min-width:0" oninput="var x=this.value/100;SugarCube.SimpleAudio.volume(x);SugarCube.State.variables.__tgMasterVol=x;document.querySelectorAll('video').forEach(function(el){el.volume=x;})" /></span><<script>>setTimeout(function(){  var v=State.variables.__tgMasterVol;  var s=document.getElementById("tgvolb_set_vol");  if(s&&v!=null)s.value=Math.round(v*100);  var m=document.getElementById("tgvolb_set_volm");if(m)m.textContent=SugarCube.SimpleAudio.mute()?String.fromCodePoint(0x1F507):String.fromCodePoint(0x1F50A);},0);<</script>>
+<hr class="tg-divider" style="--tg-div-color:#555555;--tg-div-thickness:1px;--tg-div-margin:8px">
+<div class="tg-table" style="--tg-tbl-gap:4px;--tg-tbl-border-color:#334155;--tg-tbl-border-width:1px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color);padding:2px"><div style="display:flex;overflow:hidden;align-items:stretch;margin:0;height:28px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px"><div class="tg-text">**Control**</div></span><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px;border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><div class="tg-text">**Effect**</div></span></div><div style="display:flex;overflow:hidden;align-items:stretch;margin:0;height:28px;border:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px"><div class="tg-text">Choice</div></span><span style="flex:50;display:flex;align-items:center;overflow:hidden;font-size:0.85em;min-width:0;box-sizing:border-box;padding:2px 4px;border-left:var(--tg-tbl-border-width) solid var(--tg-tbl-border-color)"><div class="tg-text">Branches the story</div></span></div></div>
+<div class="tg-include" style="--tg-inc-border-width:1px;--tg-inc-border-color:#475569;--tg-inc-radius:6px;--tg-inc-padding:8px"><<include "SharedTip">></div>
+<small style="opacity:.7">Built with Purl — a no-code SugarCube studio.</small>
+<span class="tg-btn tg-btn-b_set_back"><<link "Return to town">>
+  <<goto "TownSquare">>
+  <<run UIBar.update()>>
+<</link>></span>
+<<if false>>[[TownSquare]]<</if>>
+
+
+::Finale
+<<set $quests.missingGear.state to "done">>
+<<set $quests.missingGear.steps.returnGear.state to "done">>
+<<run window._tgQuestNormalize && window._tgQuestNormalize("missingGear")>>
+<<if $gaveRose>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">Elara holds the Clockwork Rose, its gears ticking softly in unison with the heart-engine. She looks up at you, her eyes shining. "The engine is perfect, but this rose... it makes this workshop feel like a home. Thank you for bringing light back into my life."</span></div></div>
+  <div class="tg-callout tg-callout-success"><div class="tg-callout-body"><div class="tg-callout-title">A perfect ending</div>The clockwork rose blooms, and the heart-engine sings a song of a new dawn.</div></div>
+<<elseif $affection >= 15>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">The engine ticks — then //sings//. She takes your hand. "Stay a while?"</span></div></div>
+  <div class="tg-callout tg-callout-success"><div class="tg-callout-body"><div class="tg-callout-title">A warm ending</div>The clockwork heart beats in time with two others.</div></div>
+<<else>>
+  <div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">The engine ticks to life. "Thank you, friend. Truly."</span></div></div>
+  <div class="tg-callout tg-callout-note"><div class="tg-callout-body"><div class="tg-callout-title">A quiet ending</div>Cogsworth hums a little brighter tonight.</div></div>
+<</if>>
+<<run Save.autosave.save("The end")>>
+<hr class="tg-divider" style="--tg-div-color:#a855f7;--tg-div-thickness:2px;--tg-div-margin:16px">
+<<link "↺ Play again">><<run UI.restart()>><</link>>
+
+
+::GiveGift [func]
+<<set $affection += 10>>
+<<tgInvRemove $traveler "gear" 1>>
+<div class="tg-text">Elara turns the gear over, eyes bright. "Where did you—? Never mind. //Thank you.//"</div>
+
+
+::GiveRose [func]
+<<set $affection += 20>>
+<<set $gaveRose to true>>
+<<tgInvRemove $traveler "rose" 1>>
+<<set $traveler.equipment.trinket to "">>
+<div class="dialogue dlg-charelara dlg-left"><<if $elara.styles.avatar>><img class="char-avatar" @src="$elara.styles.avatar"><</if>><div class="char-body"><span class="char-name"><<print $elara.name>></span><span class="char-text">Elara gasps, her fingers gently tracing the brass petals. "A clockwork rose... I thought these were lost when the Great Foundry burned. It's beautiful... thank you."</span></div></div>
+
+
+::tg_use_tonic [func]
+<div class="tg-text">You uncork the tonic and drink. Warmth spreads through your fingers.</div>
+
+
+::PopupWelcome [popup]
+<div class="tg-text">Welcome to **The Clockwork Heart** — a tiny demo built to show off Purl. Explore freely; nothing here can break.</div>
+
+
+::PopupHelp [popup]
+<div class="tg-text">Gifting the **Copper Gear** to Elara in the Gift tab advances your quest and raises her affection.</div>
+
+
+::SharedTip [func]
+<div class="tg-text">//Tip: your choices and gifts shape which ending you reach.//</div>
+
+"
+`;
