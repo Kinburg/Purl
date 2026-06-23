@@ -1,0 +1,3179 @@
+{
+  "id": "proj_clockwork_heart",
+  "title": "The Clockwork Heart",
+  "ifid": "PURL-DEMO-CLOCKWORK-HEART",
+  "author": "Purl",
+  "description": "A small steampunk visual novel demonstrating Purl block types.",
+  "lore": "Cogsworth: a fog-wrapped harbor town run on brass and aether. The inventor Elara Voss is building a heart-engine to light the whole harbor.",
+  "settings": {
+    "storyLanguage": "English",
+    "autoloadSave": false,
+    "bgColor": "#0f172a",
+    "audioUnlockText": "▶ Click to begin"
+  },
+  "scenes": [
+    {
+      "id": "sc_start",
+      "name": "Start",
+      "tags": [
+        "start"
+      ],
+      "blocks": [
+        {
+          "id": "b_start_note",
+          "type": "note",
+          "text": "Opening scene. Sets player name, seeds world state, plays ambience."
+        },
+        {
+          "id": "b_start_audio",
+          "type": "audio",
+          "src": "assets/audio/ambient_harbor.mp3",
+          "trigger": "immediate",
+          "loop": true,
+          "onLeave": "persist",
+          "stopOthers": false,
+          "volume": 55
+        },
+        {
+          "id": "b_start_callout",
+          "type": "callout",
+          "variant": "info",
+          "title": "How to play",
+          "content": "Click choices and links to move through the story. Your stats live in the sidebar."
+        },
+        {
+          "id": "b_start_text",
+          "type": "text",
+          "content": "Steam hisses from the cobbled streets of **Cogsworth**. A telegram in your pocket reads only: //come quickly — E.//",
+          "typewriter": {
+            "speed": 25
+          }
+        },
+        {
+          "id": "b_start_input",
+          "type": "input-field",
+          "label": "What do they call you?",
+          "variableId": "var_playername",
+          "placeholder": "Traveler"
+        },
+        {
+          "id": "b_start_world",
+          "type": "set-object",
+          "variableId": "var_worldstate",
+          "entries": [
+            {
+              "id": "wo_town",
+              "key": "townName",
+              "valueType": "string",
+              "value": "Cogsworth"
+            },
+            {
+              "id": "wo_day",
+              "key": "day",
+              "valueType": "number",
+              "value": "1"
+            },
+            {
+              "id": "wo_fog",
+              "key": "foggy",
+              "valueType": "boolean",
+              "value": "true"
+            },
+            {
+              "id": "wo_exits",
+              "key": "exits",
+              "valueType": "array",
+              "value": "[\"north\",\"docks\"]"
+            },
+            {
+              "id": "wo_meta",
+              "key": "meta",
+              "valueType": "object",
+              "entries": [
+                {
+                  "id": "wo_chapter",
+                  "key": "chapter",
+                  "valueType": "number",
+                  "value": "1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_start_save",
+          "type": "save",
+          "title": "Arrival",
+          "notify": true,
+          "notifyText": "Progress saved"
+        },
+        {
+          "id": "b_start_divider",
+          "type": "divider",
+          "color": "#475569",
+          "thickness": 1,
+          "marginV": 12
+        },
+        {
+          "id": "b_start_choice",
+          "type": "choice",
+          "options": [
+            {
+              "id": "o_start_go",
+              "label": "Head into town",
+              "targetSceneId": "sc_town",
+              "condition": ""
+            }
+          ]
+        },
+        {
+          "id": "b_start_popup",
+          "type": "popup",
+          "targetSceneId": "sc_pop_welcome",
+          "title": "Welcome"
+        }
+      ]
+    },
+    {
+      "id": "sc_town",
+      "name": "TownSquare",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_town_text",
+          "type": "text",
+          "content": "The town square churns with gears and gossip. Three lanes branch away from the fountain."
+        },
+        {
+          "id": "b_town_time",
+          "type": "time-manipulation",
+          "variableId": "var_gametime",
+          "years": 0,
+          "months": 0,
+          "days": 0,
+          "hours": 1,
+          "minutes": 0
+        },
+        {
+          "id": "b_town_spacer",
+          "type": "spacer",
+          "size": 10
+        },
+        {
+          "id": "b_town_links_section",
+          "type": "section",
+          "title": "Where to?",
+          "blocks": [
+            {
+              "id": "b_town_l1",
+              "type": "link",
+              "label": "Elara's Workshop",
+              "target": "scene",
+              "targetSceneId": "sc_workshop",
+              "actions": [],
+              "style": {
+                "bgColor": "#3b82f6",
+                "textColor": "#fff",
+                "borderColor": "#2563eb",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            },
+            {
+              "id": "b_town_l2",
+              "type": "link",
+              "label": "Doran's Emporium",
+              "target": "scene",
+              "targetSceneId": "sc_shop",
+              "actions": [],
+              "style": {
+                "bgColor": "#d97706",
+                "textColor": "#fff",
+                "borderColor": "#b45309",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            },
+            {
+              "id": "b_town_l6",
+              "type": "link",
+              "label": "The Foggy Docks",
+              "target": "scene",
+              "targetSceneId": "sc_docks",
+              "actions": [],
+              "style": {
+                "bgColor": "#334155",
+                "textColor": "#fff",
+                "borderColor": "#1e293b",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            },
+            {
+              "id": "b_town_l3",
+              "type": "link",
+              "label": "Your satchel & gear",
+              "target": "scene",
+              "targetSceneId": "sc_wardrobe",
+              "actions": [],
+              "style": {
+                "bgColor": "#0d9488",
+                "textColor": "#fff",
+                "borderColor": "#0f766e",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            },
+            {
+              "id": "b_town_l4",
+              "type": "link",
+              "label": "Quest journal",
+              "target": "scene",
+              "targetSceneId": "sc_questlog",
+              "actions": [],
+              "style": {
+                "bgColor": "#7c3aed",
+                "textColor": "#fff",
+                "borderColor": "#6d28d9",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            },
+            {
+              "id": "b_town_l5",
+              "type": "link",
+              "label": "Settings",
+              "target": "scene",
+              "targetSceneId": "sc_settings",
+              "actions": [],
+              "style": {
+                "bgColor": "#475569",
+                "textColor": "#fff",
+                "borderColor": "#334155",
+                "borderRadius": 6,
+                "paddingV": 6,
+                "paddingH": 14,
+                "fontSize": 10,
+                "bold": false,
+                "fullWidth": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sc_workshop",
+      "name": "Workshop",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_ws_img",
+          "type": "image",
+          "mode": "static",
+          "src": "assets/chars/elara.png",
+          "alt": "Elara at her workbench",
+          "width": 320
+        },
+        {
+          "id": "b_ws_set_met",
+          "type": "variable-set",
+          "variableId": "var_met_elara",
+          "operator": "=",
+          "value": "true"
+        },
+        {
+          "id": "b_ws_dlg",
+          "type": "dialogue",
+          "characterId": "char_elara",
+          "text": "You came! Oh — mind the springs. My heart-engine is //this// close, but it's missing a single copper gear.",
+          "align": "left",
+          "typewriter": {
+            "speed": 20
+          }
+        },
+        {
+          "id": "b_ws_quest_guard",
+          "type": "condition",
+          "branches": [
+            {
+              "id": "br_ws_quest",
+              "branchType": "if",
+              "variableId": "qv_talk_state",
+              "operator": "==",
+              "value": "active",
+              "blocks": [
+                {
+                  "id": "b_ws_quest",
+                  "type": "quest-set",
+                  "questId": "quest_missing",
+                  "stepStates": [
+                    {
+                      "stepId": "qs_talk",
+                      "state": "done"
+                    },
+                    {
+                      "stepId": "qs_get",
+                      "state": "active"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_ws_progress",
+          "type": "progress",
+          "variableId": "var_affection",
+          "maxValue": 100,
+          "color": "#a855f7",
+          "emptyColor": "#312e81",
+          "textColor": "#ede9fe",
+          "colorRange": {
+            "from": "#6366f1",
+            "to": "#ec4899"
+          },
+          "showText": true,
+          "height": 14
+        },
+        {
+          "id": "b_ws_tabs",
+          "type": "tabs",
+          "defaultTabIndex": 0,
+          "tabs": [
+            {
+              "id": "tab_talk",
+              "label": "Talk",
+              "blocks": [
+                {
+                  "id": "b_ws_talk_btn",
+                  "type": "button",
+                  "label": "Compliment her work (+5)",
+                  "style": {
+                    "bgColor": "#22c55e",
+                    "textColor": "#06281a",
+                    "borderColor": "#16a34a",
+                    "borderRadius": 6,
+                    "paddingV": 6,
+                    "paddingH": 14,
+                    "fontSize": 10,
+                    "bold": false,
+                    "fullWidth": false
+                  },
+                  "refreshScene": true,
+                  "actions": [
+                    {
+                      "id": "a_aff",
+                      "type": "set-variable",
+                      "variableId": "var_affection",
+                      "operator": "+=",
+                      "value": "5"
+                    }
+                  ]
+                },
+                {
+                  "id": "b_ws_cond",
+                  "type": "condition",
+                  "branches": [
+                    {
+                      "id": "br_high",
+                      "branchType": "if",
+                      "variableId": "var_affection",
+                      "operator": ">=",
+                      "value": "20",
+                      "blocks": [
+                        {
+                          "id": "b_ws_cond_hi",
+                          "type": "dialogue",
+                          "characterId": "char_elara",
+                          "text": "A warm smile. \"You always know what to say.\"",
+                          "align": "left"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "br_low",
+                      "branchType": "else",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "blocks": [
+                        {
+                          "id": "b_ws_cond_lo",
+                          "type": "text",
+                          "content": "She nods politely, eyes still on her gears."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tab_gift",
+              "label": "Gift",
+              "blocks": [
+                {
+                  "id": "b_ws_gift_gear_cond",
+                  "type": "condition",
+                  "branches": [
+                    {
+                      "id": "br_gift_gear_yes",
+                      "branchType": "if",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "rawExpression": "tgInvHas($traveler, \"gear\")",
+                      "blocks": [
+                        {
+                          "id": "b_ws_gift_fn",
+                          "type": "function",
+                          "label": "Offer a copper gear",
+                          "targetSceneId": "sc_give_gift",
+                          "style": {
+                            "bgColor": "#7c3aed",
+                            "textColor": "#fff",
+                            "borderColor": "#6d28d9",
+                            "borderRadius": 6,
+                            "paddingV": 6,
+                            "paddingH": 14,
+                            "fontSize": 10,
+                            "bold": false,
+                            "fullWidth": false
+                          },
+                          "actions": []
+                        },
+                        {
+                          "id": "b_ws_gift_hint",
+                          "type": "text",
+                          "content": "//Giving the gear here advances your quest.//"
+                        },
+                        {
+                          "id": "b_ws_gift_gear_spacer",
+                          "type": "spacer",
+                          "size": 10
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "b_ws_gift_rose_cond",
+                  "type": "condition",
+                  "branches": [
+                    {
+                      "id": "br_gift_rose_yes",
+                      "branchType": "if",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "rawExpression": "tgInvHas($traveler, \"rose\")",
+                      "blocks": [
+                        {
+                          "id": "b_ws_gift_rose_fn",
+                          "type": "function",
+                          "label": "Offer the Clockwork Rose",
+                          "targetSceneId": "sc_give_rose",
+                          "style": {
+                            "bgColor": "#ec4899",
+                            "textColor": "#fff",
+                            "borderColor": "#db2777",
+                            "borderRadius": 6,
+                            "paddingV": 6,
+                            "paddingH": 14,
+                            "fontSize": 10,
+                            "bold": false,
+                            "fullWidth": false
+                          },
+                          "actions": []
+                        },
+                        {
+                          "id": "b_ws_gift_rose_hint",
+                          "type": "text",
+                          "content": "//Offer the rare treasure found at the docks.//"
+                        },
+                        {
+                          "id": "b_ws_gift_rose_spacer",
+                          "type": "spacer",
+                          "size": 10
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "b_ws_gift_none_cond",
+                  "type": "condition",
+                  "branches": [
+                    {
+                      "id": "br_gift_none_yes",
+                      "branchType": "if",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "rawExpression": "!tgInvHas($traveler, \"gear\") && !tgInvHas($traveler, \"rose\")",
+                      "blocks": [
+                        {
+                          "id": "b_ws_gift_none_text",
+                          "type": "text",
+                          "content": "You don't have any suitable gifts in your satchel right now. Elara needs a copper gear for her engine, but maybe you can find something else in Cogsworth..."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tab_lore",
+              "label": "Lore",
+              "blocks": [
+                {
+                  "id": "b_ws_lore",
+                  "type": "text",
+                  "content": "The heart-engine, she explains, could power the whole harbor — if only it ticked."
+                },
+                {
+                  "id": "b_ws_video",
+                  "type": "video",
+                  "src": "assets/vid/heart_engine.mp4",
+                  "autoplay": false,
+                  "loop": false,
+                  "controls": true,
+                  "width": 360
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_ws_help",
+          "type": "button",
+          "label": "Help",
+          "style": {
+            "bgColor": "#334155",
+            "textColor": "#cbd5e1",
+            "borderColor": "#1e293b",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          },
+          "actions": [
+            {
+              "id": "a_help",
+              "type": "open-popup",
+              "targetSceneId": "sc_pop_help",
+              "title": "How gifting works"
+            }
+          ]
+        },
+        {
+          "id": "b_ws_back",
+          "type": "link",
+          "label": "Return to town",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_shop",
+      "name": "Emporium",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_shop_dlg",
+          "type": "dialogue",
+          "characterId": "char_doran",
+          "text": "Welcome, welcome! Gears, lanterns, tonics — I've got just the thing.",
+          "align": "right"
+        },
+        {
+          "id": "b_shop_container",
+          "type": "container",
+          "containerId": "cont_emporium",
+          "title": "Doran's Emporium"
+        },
+        {
+          "id": "b_shop_quest_guard",
+          "type": "condition",
+          "branches": [
+            {
+              "id": "br_shop_quest",
+              "branchType": "if",
+              "variableId": "qv_get_state",
+              "operator": "==",
+              "value": "active",
+              "blocks": [
+                {
+                  "id": "b_shop_quest",
+                  "type": "quest-set",
+                  "questId": "quest_missing",
+                  "stepStates": [
+                    {
+                      "stepId": "qs_get",
+                      "state": "done"
+                    },
+                    {
+                      "stepId": "qs_return",
+                      "state": "active"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_shop_divider",
+          "type": "divider"
+        },
+        {
+          "id": "b_shop_links",
+          "type": "link",
+          "label": "Return to the workshop",
+          "target": "scene",
+          "targetSceneId": "sc_workshop",
+          "actions": [],
+          "style": {
+            "bgColor": "#3b82f6",
+            "textColor": "#fff",
+            "borderColor": "#2563eb",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        },
+        {
+          "id": "b_shop_back",
+          "type": "link",
+          "label": "Return to town",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_docks",
+      "name": "Docks",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_docks_note",
+          "type": "note",
+          "text": "Docks scene. Checks for equipped Aether Lantern."
+        },
+        {
+          "id": "b_docks_cond",
+          "type": "condition",
+          "branches": [
+            {
+              "id": "br_docks_light",
+              "branchType": "if",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "rawExpression": "tgIsEquipped($traveler, \"lantern\")",
+              "blocks": [
+                {
+                  "id": "b_docks_light_text",
+                  "type": "text",
+                  "content": "The bright blue-white beam of your Aether Lantern cuts through the thick green smog. You walk along the creaking timber pier. Near a rusted, derelict crane, you spot a pile of discarded clockwork scrap. Something gold glints deep within the heap."
+                },
+                {
+                  "id": "b_docks_debris_container",
+                  "type": "container",
+                  "containerId": "cont_debris",
+                  "title": "Rusted Debris"
+                }
+              ]
+            },
+            {
+              "id": "br_docks_dark",
+              "branchType": "else",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "blocks": [
+                {
+                  "id": "b_docks_dark_text",
+                  "type": "text",
+                  "content": "The thick green fog wraps around the harbor like a wet shroud. You hear waves lapping against the timber piers, but you can't see two steps in front of you. Exploring the docks in this blackness is suicide. You need a light source to pierce this gloom — perhaps Doran at the Emporium has something?"
+                },
+                {
+                  "id": "b_docks_purse_cond",
+                  "type": "condition",
+                  "branches": [
+                    {
+                      "id": "br_purse_found",
+                      "branchType": "if",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "rawExpression": "$foundPurse",
+                      "blocks": [
+                        {
+                          "id": "b_docks_purse_text",
+                          "type": "text",
+                          "content": "You have already recovered the soggy leather pouch containing 40 gold coins."
+                        }
+                      ]
+                    },
+                    {
+                      "id": "br_purse_not_found",
+                      "branchType": "else",
+                      "variableId": "",
+                      "operator": "==",
+                      "value": "",
+                      "blocks": [
+                        {
+                          "id": "b_docks_grope_btn",
+                          "type": "button",
+                          "label": "Grope blindly in the dark water",
+                          "style": {
+                            "bgColor": "#d97706",
+                            "textColor": "#fff",
+                            "borderColor": "#b45309",
+                            "borderRadius": 6,
+                            "paddingV": 6,
+                            "paddingH": 14,
+                            "fontSize": 10,
+                            "bold": false,
+                            "fullWidth": false
+                          },
+                          "refreshScene": true,
+                          "actions": [
+                            {
+                              "id": "a_purse_set",
+                              "type": "set-variable",
+                              "variableId": "var_found_purse",
+                              "operator": "=",
+                              "value": "true"
+                            },
+                            {
+                              "id": "a_purse_gold",
+                              "type": "set-variable",
+                              "variableId": "cv_traveler_money",
+                              "operator": "+=",
+                              "value": "40"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_docks_back",
+          "type": "link",
+          "label": "Return to Town Square",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_wardrobe",
+      "name": "Satchel",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_wd_text",
+          "type": "text",
+          "content": "You lay out your belongings and the gear you carry."
+        },
+        {
+          "id": "b_wd_paperdoll",
+          "type": "paperdoll",
+          "charId": "char_traveler",
+          "showLabels": true
+        },
+        {
+          "id": "b_wd_inv",
+          "type": "inventory",
+          "charId": "char_traveler",
+          "title": "Satchel"
+        },
+        {
+          "id": "b_wd_for",
+          "type": "for",
+          "mode": "range",
+          "valueVar": "_member",
+          "source": "$partyMembers",
+          "blocks": [
+            {
+              "id": "b_wd_for_text",
+              "type": "text",
+              "content": "• <<print _member>>"
+            }
+          ]
+        },
+        {
+          "id": "b_wd_use",
+          "type": "function",
+          "label": "Drink a Healing Tonic",
+          "targetSceneId": "sc_use_tonic",
+          "style": {
+            "bgColor": "#16a34a",
+            "textColor": "#fff",
+            "borderColor": "#15803d",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          },
+          "actions": []
+        },
+        {
+          "id": "b_wd_back",
+          "type": "link",
+          "label": "Return to town",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_questlog",
+      "name": "Journal",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_ql_title",
+          "type": "text",
+          "content": "## Quest Journal"
+        },
+        {
+          "id": "b_ql_show",
+          "type": "quest-show",
+          "showDescription": true,
+          "showSteps": true,
+          "live": true
+        },
+        {
+          "id": "b_ql_spacer",
+          "type": "spacer",
+          "size": 16
+        },
+        {
+          "id": "b_ql_finish_cond",
+          "type": "condition",
+          "branches": [
+            {
+              "id": "br_ql_finish_yes",
+              "branchType": "if",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "rawExpression": "$quests.missingGear.steps.returnGear.state === \"active\" && tgInvHas($traveler, \"gear\")",
+              "blocks": [
+                {
+                  "id": "b_ql_finish",
+                  "type": "link",
+                  "label": "Bring the gear to Elara",
+                  "target": "scene",
+                  "targetSceneId": "sc_finale",
+                  "actions": [],
+                  "style": {
+                    "bgColor": "#a855f7",
+                    "textColor": "#fff",
+                    "borderColor": "#9333ea",
+                    "borderRadius": 6,
+                    "paddingV": 6,
+                    "paddingH": 14,
+                    "fontSize": 10,
+                    "bold": false,
+                    "fullWidth": false
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_ql_back",
+          "type": "link",
+          "label": "Return to town",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_settings",
+      "name": "Settings",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_set_title",
+          "type": "text",
+          "content": "## Settings"
+        },
+        {
+          "id": "b_set_diff",
+          "type": "radio",
+          "label": "Difficulty",
+          "variableId": "var_difficulty",
+          "options": [
+            {
+              "id": "rd_easy",
+              "label": "Gentle",
+              "value": "Easy"
+            },
+            {
+              "id": "rd_normal",
+              "label": "Balanced",
+              "value": "Normal"
+            },
+            {
+              "id": "rd_hard",
+              "label": "Clockwork",
+              "value": "Hard"
+            }
+          ]
+        },
+        {
+          "id": "b_set_theme",
+          "type": "select",
+          "label": "Interface theme",
+          "variableId": "var_theme",
+          "options": [
+            {
+              "id": "sl_brass",
+              "label": "Brass",
+              "value": "brass"
+            },
+            {
+              "id": "sl_copper",
+              "label": "Copper",
+              "value": "copper"
+            },
+            {
+              "id": "sl_iron",
+              "label": "Iron",
+              "value": "iron"
+            }
+          ]
+        },
+        {
+          "id": "b_set_speed",
+          "type": "slider",
+          "label": "Text speed",
+          "variableId": "var_textspeed",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "showValue": true
+        },
+        {
+          "id": "b_set_checks",
+          "type": "checkbox",
+          "label": "Preferences",
+          "mode": "flags",
+          "options": [
+            {
+              "id": "ck_hints",
+              "label": "Show gameplay hints",
+              "variableId": "var_opt_hints"
+            },
+            {
+              "id": "ck_news",
+              "label": "Subscribe to the Cogsworth Courier",
+              "variableId": "var_opt_news"
+            }
+          ]
+        },
+        {
+          "id": "b_set_vol",
+          "type": "audio-volume",
+          "showMuteButton": true
+        },
+        {
+          "id": "b_set_divider",
+          "type": "divider"
+        },
+        {
+          "id": "b_set_table",
+          "type": "table",
+          "style": {
+            "rowGap": 4,
+            "borderWidth": 1,
+            "borderColor": "#334155",
+            "showOuterBorder": true,
+            "showRowBorders": true,
+            "showCellBorders": true
+          },
+          "rows": [
+            {
+              "id": "tr_h",
+              "height": 28,
+              "cells": [
+                {
+                  "id": "tc_h1",
+                  "width": 50,
+                  "blocks": [
+                    {
+                      "id": "b_tbl_h1",
+                      "type": "text",
+                      "content": "**Control**"
+                    }
+                  ]
+                },
+                {
+                  "id": "tc_h2",
+                  "width": 50,
+                  "blocks": [
+                    {
+                      "id": "b_tbl_h2",
+                      "type": "text",
+                      "content": "**Effect**"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tr_1",
+              "height": 28,
+              "cells": [
+                {
+                  "id": "tc_11",
+                  "width": 50,
+                  "blocks": [
+                    {
+                      "id": "b_tbl_11",
+                      "type": "text",
+                      "content": "Choice"
+                    }
+                  ]
+                },
+                {
+                  "id": "tc_12",
+                  "width": 50,
+                  "blocks": [
+                    {
+                      "id": "b_tbl_12",
+                      "type": "text",
+                      "content": "Branches the story"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_set_include",
+          "type": "include",
+          "passageName": "sc_shared_tip",
+          "bordered": true,
+          "borderColor": "#475569",
+          "padding": 8,
+          "borderRadius": 6
+        },
+        {
+          "id": "b_set_raw",
+          "type": "raw",
+          "code": "<small style=\"opacity:.7\">Built with Purl — a no-code SugarCube studio.</small>"
+        },
+        {
+          "id": "b_set_back",
+          "type": "link",
+          "label": "Return to town",
+          "target": "scene",
+          "targetSceneId": "sc_town",
+          "actions": [],
+          "style": {
+            "bgColor": "#475569",
+            "textColor": "#fff",
+            "borderColor": "#334155",
+            "borderRadius": 6,
+            "paddingV": 6,
+            "paddingH": 14,
+            "fontSize": 10,
+            "bold": false,
+            "fullWidth": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sc_finale",
+      "name": "Finale",
+      "tags": [],
+      "blocks": [
+        {
+          "id": "b_fin_quest",
+          "type": "quest-set",
+          "questId": "quest_missing",
+          "parentState": "done",
+          "stepStates": [
+            {
+              "stepId": "qs_return",
+              "state": "done"
+            }
+          ]
+        },
+        {
+          "id": "b_fin_cond",
+          "type": "condition",
+          "branches": [
+            {
+              "id": "fb_rose",
+              "branchType": "if",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "rawExpression": "$gaveRose",
+              "blocks": [
+                {
+                  "id": "b_fin_dlg_rose",
+                  "type": "dialogue",
+                  "characterId": "char_elara",
+                  "text": "Elara holds the Clockwork Rose, its gears ticking softly in unison with the heart-engine. She looks up at you, her eyes shining. \"The engine is perfect, but this rose... it makes this workshop feel like a home. Thank you for bringing light back into my life.\"",
+                  "align": "left"
+                },
+                {
+                  "id": "b_fin_callout_rose",
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "A perfect ending",
+                  "content": "The clockwork rose blooms, and the heart-engine sings a song of a new dawn."
+                }
+              ]
+            },
+            {
+              "id": "fb_warm",
+              "branchType": "elseif",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "rawExpression": "$affection >= 15",
+              "blocks": [
+                {
+                  "id": "b_fin_dlg_warm",
+                  "type": "dialogue",
+                  "characterId": "char_elara",
+                  "text": "The engine ticks — then //sings//. She takes your hand. \"Stay a while?\"",
+                  "align": "left"
+                },
+                {
+                  "id": "b_fin_callout_warm",
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "A warm ending",
+                  "content": "The clockwork heart beats in time with two others."
+                }
+              ]
+            },
+            {
+              "id": "fb_cool",
+              "branchType": "else",
+              "variableId": "",
+              "operator": "==",
+              "value": "",
+              "blocks": [
+                {
+                  "id": "b_fin_dlg_cool",
+                  "type": "dialogue",
+                  "characterId": "char_elara",
+                  "text": "The engine ticks to life. \"Thank you, friend. Truly.\"",
+                  "align": "left"
+                },
+                {
+                  "id": "b_fin_callout_cool",
+                  "type": "callout",
+                  "variant": "note",
+                  "title": "A quiet ending",
+                  "content": "Cogsworth hums a little brighter tonight."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_fin_save",
+          "type": "save",
+          "title": "The end",
+          "notify": false
+        },
+        {
+          "id": "b_fin_divider",
+          "type": "divider",
+          "color": "#a855f7",
+          "thickness": 2,
+          "marginV": 16
+        },
+        {
+          "id": "b_fin_restart",
+          "type": "menu-link",
+          "label": "↺ Play again",
+          "target": "restart",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "id": "sc_caption",
+      "name": "StoryCaption",
+      "tags": [
+        "sidebar"
+      ],
+      "blocks": [
+        {
+          "id": "b_cap_section",
+          "type": "section",
+          "title": "Status",
+          "collapsible": false,
+          "blocks": [
+            {
+              "id": "b_cap_dt",
+              "type": "date-time",
+              "variableId": "var_gametime",
+              "displayMode": "digital-calendar",
+              "format": "DD MMM, HH:mm",
+              "prefix": "",
+              "suffix": ""
+            },
+            {
+              "id": "b_cap_aff_label",
+              "type": "text",
+              "content": "Affection"
+            },
+            {
+              "id": "b_cap_aff",
+              "type": "progress",
+              "variableId": "var_affection",
+              "maxValue": 100,
+              "color": "#ec4899",
+              "emptyColor": "#312e81",
+              "textColor": "#fce7f3",
+              "colorRange": null,
+              "showText": true,
+              "height": 12
+            },
+            {
+              "id": "b_cap_sheet",
+              "type": "display-object",
+              "source": "manual",
+              "autoSync": false,
+              "layout": "list",
+              "live": true,
+              "fields": [
+                {
+                  "id": "do_name",
+                  "variableId": "var_playername",
+                  "label": "Name",
+                  "render": "text"
+                },
+                {
+                  "id": "do_gold",
+                  "variableId": "cv_traveler_money",
+                  "label": "Coin",
+                  "render": "text"
+                },
+                {
+                  "id": "do_aff",
+                  "variableId": "var_affection",
+                  "label": "Affection",
+                  "render": "bar",
+                  "maxValue": 100
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b_cap_quests",
+          "type": "quest-show",
+          "filterStates": [
+            "active"
+          ],
+          "showDescription": false,
+          "showSteps": true,
+          "live": true
+        }
+      ],
+      "systemConfig": {
+        "kind": "sidebar",
+        "hidden": {
+          "variableId": "sp_hidden"
+        },
+        "width": {
+          "variableId": "sp_width"
+        },
+        "position": {
+          "variableId": "sp_position"
+        },
+        "initiallyCollapsed": {
+          "variableId": "sp_collapsed"
+        },
+        "allowCollapse": {
+          "variableId": "sp_allow"
+        },
+        "bgColor": {
+          "variableId": "sp_bg"
+        },
+        "historyControls": {
+          "variableId": "sp_history"
+        },
+        "saveLoadMenu": {
+          "variableId": "sp_saves"
+        },
+        "fontFamily": "Georgia, serif",
+        "blockGap": 10
+      }
+    },
+    {
+      "id": "sc_title",
+      "name": "StoryDisplayTitle",
+      "tags": [
+        "title"
+      ],
+      "blocks": [
+        {
+          "id": "b_title_text",
+          "type": "text",
+          "content": "The Clockwork Heart"
+        }
+      ],
+      "systemConfig": {
+        "kind": "title",
+        "textColor": "#fbbf24",
+        "font": "Georgia, serif"
+      }
+    },
+    {
+      "id": "sc_menu",
+      "name": "StoryMenu",
+      "tags": [
+        "menu"
+      ],
+      "blocks": [
+        {
+          "id": "b_menu_settings",
+          "type": "menu-link",
+          "label": "Settings",
+          "target": "scene",
+          "targetSceneId": "sc_settings",
+          "actions": []
+        },
+        {
+          "id": "b_menu_journal",
+          "type": "menu-link",
+          "label": "Journal",
+          "target": "scene",
+          "targetSceneId": "sc_questlog",
+          "actions": []
+        },
+        {
+          "id": "b_menu_saves",
+          "type": "menu-link",
+          "label": "Saves",
+          "target": "saves",
+          "actions": []
+        },
+        {
+          "id": "b_menu_restart",
+          "type": "menu-link",
+          "label": "Restart",
+          "target": "restart",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "id": "sc_header",
+      "name": "PassageHeader",
+      "tags": [
+        "passage-header"
+      ],
+      "blocks": [
+        {
+          "id": "b_hdr_raw",
+          "type": "raw",
+          "code": "<div style=\"text-align:center;opacity:.6;font-variant:small-caps\">Cogsworth</div>"
+        }
+      ]
+    },
+    {
+      "id": "sc_footer",
+      "name": "PassageFooter",
+      "tags": [
+        "passage-footer"
+      ],
+      "blocks": [
+        {
+          "id": "b_ftr_divider",
+          "type": "divider",
+          "color": "#334155",
+          "thickness": 1,
+          "marginV": 6
+        },
+        {
+          "id": "b_ftr_text",
+          "type": "text",
+          "content": "//A Purl demonstration story.//"
+        }
+      ]
+    },
+    {
+      "id": "sc_give_gift",
+      "name": "GiveGift",
+      "tags": [
+        "func"
+      ],
+      "blocks": [
+        {
+          "id": "b_gg_aff",
+          "type": "variable-set",
+          "variableId": "var_affection",
+          "operator": "+=",
+          "value": "10"
+        },
+        {
+          "id": "b_gg_remove_gear",
+          "type": "raw",
+          "code": "<<tgInvRemove $traveler \"gear\" 1>>"
+        },
+        {
+          "id": "b_gg_text",
+          "type": "text",
+          "content": "Elara turns the gear over, eyes bright. \"Where did you—? Never mind. //Thank you.//\""
+        }
+      ]
+    },
+    {
+      "id": "sc_give_rose",
+      "name": "GiveRose",
+      "tags": [
+        "func"
+      ],
+      "blocks": [
+        {
+          "id": "b_gr_aff",
+          "type": "variable-set",
+          "variableId": "var_affection",
+          "operator": "+=",
+          "value": "20"
+        },
+        {
+          "id": "b_gr_set_gave",
+          "type": "variable-set",
+          "variableId": "var_gave_rose",
+          "operator": "=",
+          "value": "true"
+        },
+        {
+          "id": "b_gr_remove_rose",
+          "type": "raw",
+          "code": "<<tgInvRemove $traveler \"rose\" 1>>\n<<set $traveler.equipment.trinket to \"\">>"
+        },
+        {
+          "id": "b_gr_dlg",
+          "type": "dialogue",
+          "characterId": "char_elara",
+          "text": "Elara gasps, her fingers gently tracing the brass petals. \"A clockwork rose... I thought these were lost when the Great Foundry burned. It's beautiful... thank you.\"",
+          "align": "left"
+        }
+      ]
+    },
+    {
+      "id": "sc_use_tonic",
+      "name": "tg_use_tonic",
+      "tags": [
+        "func"
+      ],
+      "blocks": [
+        {
+          "id": "b_ut_text",
+          "type": "text",
+          "content": "You uncork the tonic and drink. Warmth spreads through your fingers."
+        }
+      ]
+    },
+    {
+      "id": "sc_pop_welcome",
+      "name": "PopupWelcome",
+      "tags": [
+        "popup"
+      ],
+      "blocks": [
+        {
+          "id": "b_pw_text",
+          "type": "text",
+          "content": "Welcome to **The Clockwork Heart** — a tiny demo built to show off Purl. Explore freely; nothing here can break."
+        }
+      ]
+    },
+    {
+      "id": "sc_pop_help",
+      "name": "PopupHelp",
+      "tags": [
+        "popup"
+      ],
+      "blocks": [
+        {
+          "id": "b_ph_text",
+          "type": "text",
+          "content": "Gifting the **Copper Gear** to Elara in the Gift tab advances your quest and raises her affection."
+        }
+      ]
+    },
+    {
+      "id": "sc_shared_tip",
+      "name": "SharedTip",
+      "tags": [
+        "func"
+      ],
+      "blocks": [
+        {
+          "id": "b_sh_text",
+          "type": "text",
+          "content": "//Tip: your choices and gifts shape which ending you reach.//"
+        }
+      ]
+    }
+  ],
+  "sceneGroups": [],
+  "characters": [
+    {
+      "id": "char_traveler",
+      "name": "Traveler",
+      "varName": "traveler",
+      "nameColor": "#cbd5e1",
+      "textColor": "#e2e8f0",
+      "bgColor": "#1e293b",
+      "borderColor": "#475569",
+      "isHero": true,
+      "initialInventory": [
+        {
+          "id": "inv_goggles",
+          "itemVarName": "goggles",
+          "quantity": 1,
+          "equipped": true
+        },
+        {
+          "id": "inv_watch",
+          "itemVarName": "pocketwatch",
+          "quantity": 1,
+          "equipped": true
+        },
+        {
+          "id": "inv_tonic",
+          "itemVarName": "tonic",
+          "quantity": 2,
+          "equipped": false
+        }
+      ],
+      "paperdoll": {
+        "gridCols": 3,
+        "gridRows": 2,
+        "cellSize": 64,
+        "slots": [
+          {
+            "id": "head",
+            "label": "Head",
+            "row": 1,
+            "col": 1,
+            "clickable": true,
+            "defaultItemVarName": "goggles"
+          },
+          {
+            "id": "hand",
+            "label": "Hand",
+            "row": 1,
+            "col": 2,
+            "clickable": true
+          },
+          {
+            "id": "trinket",
+            "label": "Trinket",
+            "row": 1,
+            "col": 3,
+            "clickable": true,
+            "defaultItemVarName": "pocketwatch"
+          }
+        ]
+      },
+      "varIds": {
+        "groupId": "cg_traveler",
+        "stylesGroupId": "cg_traveler_styles",
+        "nameVarId": "cv_traveler_name",
+        "bgColorVarId": "cv_traveler_bg",
+        "borderColorVarId": "cv_traveler_border",
+        "nameColorVarId": "cv_traveler_namecolor",
+        "textColorVarId": "cv_traveler_textcolor",
+        "avatarVarId": "cv_traveler_avatar",
+        "llmDescrVarId": "cv_traveler_llmdescr",
+        "llmTemperatureVarId": "cv_traveler_llmtemp",
+        "inventoryVarId": "cv_traveler_inventory",
+        "moneyVarId": "cv_traveler_money",
+        "equipmentGroupId": "cg_traveler_equipment"
+      },
+      "avatarConfig": {
+        "mode": "static",
+        "src": "assets/chars/traveler/default.png",
+        "variableId": "",
+        "mapping": [],
+        "defaultSrc": ""
+      },
+      "llm_descr": ""
+    },
+    {
+      "id": "char_elara",
+      "name": "Elara Voss",
+      "varName": "elara",
+      "nameColor": "#d8b4fe",
+      "textColor": "#ede9fe",
+      "bgColor": "#2e1065",
+      "borderColor": "#a855f7",
+      "llm_descr": "A brilliant, slightly distracted clockwork inventor. Warm but guarded.",
+      "initialInventory": [],
+      "varIds": {
+        "groupId": "cg_elara",
+        "stylesGroupId": "cg_elara_styles",
+        "nameVarId": "cv_elara_name",
+        "bgColorVarId": "cv_elara_bg",
+        "borderColorVarId": "cv_elara_border",
+        "nameColorVarId": "cv_elara_namecolor",
+        "textColorVarId": "cv_elara_textcolor",
+        "avatarVarId": "cv_elara_avatar",
+        "llmDescrVarId": "cv_elara_llmdescr",
+        "llmTemperatureVarId": "cv_elara_llmtemp",
+        "inventoryVarId": "cv_elara_inventory",
+        "moneyVarId": "cv_elara_money"
+      },
+      "customDialogueStyle": {
+        "enabled": true,
+        "mode": "static",
+        "fields": {
+          "borderRadius": 10
+        }
+      },
+      "avatarConfig": {
+        "mode": "static",
+        "src": "assets/chars/elara.png",
+        "variableId": "",
+        "mapping": [],
+        "defaultSrc": ""
+      },
+      "isHero": false
+    },
+    {
+      "id": "char_doran",
+      "name": "Doran Pike",
+      "varName": "doran",
+      "nameColor": "#fbbf24",
+      "textColor": "#fef3c7",
+      "bgColor": "#422006",
+      "borderColor": "#d97706",
+      "llm_descr": "A jovial, shrewd merchant who always has \"just the thing\".",
+      "initialInventory": [],
+      "varIds": {
+        "groupId": "cg_doran",
+        "stylesGroupId": "cg_doran_styles",
+        "nameVarId": "cv_doran_name",
+        "bgColorVarId": "cv_doran_bg",
+        "borderColorVarId": "cv_doran_border",
+        "nameColorVarId": "cv_doran_namecolor",
+        "textColorVarId": "cv_doran_textcolor",
+        "avatarVarId": "cv_doran_avatar",
+        "llmDescrVarId": "cv_doran_llmdescr",
+        "llmTemperatureVarId": "cv_doran_llmtemp",
+        "inventoryVarId": "cv_doran_inventory",
+        "moneyVarId": "cv_doran_money"
+      },
+      "avatarConfig": {
+        "mode": "static",
+        "src": "assets/chars/doran.png",
+        "variableId": "",
+        "mapping": [],
+        "defaultSrc": ""
+      },
+      "isHero": false
+    }
+  ],
+  "items": [
+    {
+      "id": "item_goggles",
+      "name": "Brass Goggles",
+      "varName": "goggles",
+      "category": "wearable",
+      "stackable": false,
+      "description": "Polished brass goggles with amber lenses.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/goggles.png"
+      },
+      "customProps": [],
+      "targetSlot": "head",
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_goggles",
+        "nameVarId": "iv_goggles_name",
+        "iconVarId": "iv_goggles_icon",
+        "priceVarId": "iv_goggles_price",
+        "descVarId": "iv_goggles_desc",
+        "stackableVarId": "iv_goggles_stackable",
+        "slotVarId": "iv_goggles_slot"
+      }
+    },
+    {
+      "id": "item_watch",
+      "name": "Pocket Watch",
+      "varName": "pocketwatch",
+      "category": "wearable",
+      "stackable": false,
+      "description": "A ticking heirloom that never seems to stop.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/watch.png"
+      },
+      "customProps": [],
+      "targetSlot": "trinket",
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_pocketwatch",
+        "nameVarId": "iv_pocketwatch_name",
+        "iconVarId": "iv_pocketwatch_icon",
+        "priceVarId": "iv_pocketwatch_price",
+        "descVarId": "iv_pocketwatch_desc",
+        "stackableVarId": "iv_pocketwatch_stackable",
+        "slotVarId": "iv_pocketwatch_slot"
+      }
+    },
+    {
+      "id": "item_lantern",
+      "name": "Aether Lantern",
+      "varName": "lantern",
+      "category": "wearable",
+      "stackable": false,
+      "description": "A handheld lantern lit by humming aether.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/lantern.png"
+      },
+      "customProps": [],
+      "targetSlot": "hand",
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_lantern",
+        "nameVarId": "iv_lantern_name",
+        "iconVarId": "iv_lantern_icon",
+        "priceVarId": "iv_lantern_price",
+        "descVarId": "iv_lantern_desc",
+        "stackableVarId": "iv_lantern_stackable",
+        "slotVarId": "iv_lantern_slot"
+      }
+    },
+    {
+      "id": "item_tonic",
+      "name": "Healing Tonic",
+      "varName": "tonic",
+      "category": "consumable",
+      "stackable": true,
+      "description": "Restores a little vigor. Tastes of copper.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/tonic.png"
+      },
+      "customProps": [],
+      "useFuncSceneId": "sc_use_tonic",
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_tonic",
+        "nameVarId": "iv_tonic_name",
+        "iconVarId": "iv_tonic_icon",
+        "priceVarId": "iv_tonic_price",
+        "descVarId": "iv_tonic_desc",
+        "stackableVarId": "iv_tonic_stackable"
+      }
+    },
+    {
+      "id": "item_gear",
+      "name": "Copper Gear",
+      "varName": "gear",
+      "category": "misc",
+      "stackable": true,
+      "description": "A small, oddly warm copper gear.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/gear.png"
+      },
+      "customProps": [],
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_gear",
+        "nameVarId": "iv_gear_name",
+        "iconVarId": "iv_gear_icon",
+        "priceVarId": "iv_gear_price",
+        "descVarId": "iv_gear_desc",
+        "stackableVarId": "iv_gear_stackable"
+      }
+    },
+    {
+      "id": "item_rose",
+      "name": "Clockwork Rose",
+      "varName": "rose",
+      "category": "wearable",
+      "stackable": false,
+      "description": "A delicate, humming rose made of brass and ruby glass.",
+      "iconConfig": {
+        "mode": "static",
+        "src": "assets/Items/rose.png"
+      },
+      "customProps": [],
+      "targetSlot": "trinket",
+      "varIds": {
+        "itemsRootGroupId": "grp_items",
+        "groupId": "ig_rose",
+        "nameVarId": "iv_rose_name",
+        "iconVarId": "iv_rose_icon",
+        "priceVarId": "iv_rose_price",
+        "descVarId": "iv_rose_desc",
+        "stackableVarId": "iv_rose_stackable",
+        "slotVarId": "iv_rose_slot"
+      }
+    }
+  ],
+  "containers": [
+    {
+      "id": "cont_emporium",
+      "name": "Doran's Emporium",
+      "varName": "emporium",
+      "mode": "shop",
+      "initialItems": [
+        {
+          "id": "cs_lantern",
+          "itemVarName": "lantern",
+          "quantity": 3,
+          "price": 65
+        },
+        {
+          "id": "cs_tonic",
+          "itemVarName": "tonic",
+          "quantity": -1,
+          "price": 15
+        },
+        {
+          "id": "cs_gear",
+          "itemVarName": "gear",
+          "quantity": 5,
+          "price": 8
+        }
+      ],
+      "varIds": {
+        "containersRootGroupId": "grp_containers",
+        "groupId": "kg_emporium",
+        "itemsVarId": "kv_emporium_items"
+      }
+    },
+    {
+      "id": "cont_debris",
+      "name": "Rusted Debris",
+      "varName": "debris",
+      "mode": "loot",
+      "initialItems": [
+        {
+          "id": "cs_rose",
+          "itemVarName": "rose",
+          "quantity": 1
+        }
+      ],
+      "varIds": {
+        "containersRootGroupId": "grp_containers",
+        "groupId": "kg_debris",
+        "itemsVarId": "kv_debris_items"
+      }
+    }
+  ],
+  "quests": [
+    {
+      "id": "quest_missing",
+      "name": "The Missing Gear",
+      "varName": "missingGear",
+      "description": "Elara's masterwork is one gear short of ticking.",
+      "categoryId": "qcat_main",
+      "initialState": "active",
+      "composite": true,
+      "ordered": true,
+      "autoCompleteParent": true,
+      "steps": [
+        {
+          "id": "qs_talk",
+          "name": "Speak with Elara",
+          "varName": "talkElara",
+          "description": "Find the inventor in her workshop.",
+          "initialState": "active"
+        },
+        {
+          "id": "qs_get",
+          "name": "Acquire a copper gear",
+          "varName": "getGear",
+          "description": "Buy one from Doran.",
+          "initialState": "hidden"
+        },
+        {
+          "id": "qs_return",
+          "name": "Return the gear",
+          "varName": "returnGear",
+          "description": "Bring it back to Elara.",
+          "initialState": "hidden"
+        }
+      ],
+      "varIds": {
+        "questsRootGroupId": "grp_quests",
+        "groupId": "qg_missing",
+        "nameVarId": "qv_missing_name",
+        "descVarId": "qv_missing_desc",
+        "stateVarId": "qv_missing_state",
+        "categoryVarId": "qv_missing_cat",
+        "stepsGroupId": "qg_missing_steps",
+        "stepVarIds": {
+          "qs_talk": {
+            "groupId": "qg_step_talk",
+            "nameVarId": "qv_talk_name",
+            "descVarId": "qv_talk_desc",
+            "stateVarId": "qv_talk_state"
+          },
+          "qs_get": {
+            "groupId": "qg_step_get",
+            "nameVarId": "qv_get_name",
+            "descVarId": "qv_get_desc",
+            "stateVarId": "qv_get_state"
+          },
+          "qs_return": {
+            "groupId": "qg_step_return",
+            "nameVarId": "qv_return_name",
+            "descVarId": "qv_return_desc",
+            "stateVarId": "qv_return_state"
+          }
+        }
+      }
+    }
+  ],
+  "questCategories": [
+    {
+      "id": "qcat_main",
+      "name": "Main",
+      "color": "#a855f7"
+    }
+  ],
+  "variableNodes": [
+    {
+      "kind": "group",
+      "id": "grp_sidepanel",
+      "name": "sidePanel",
+      "children": [
+        {
+          "kind": "variable",
+          "id": "sp_hidden",
+          "name": "hidden",
+          "varType": "boolean",
+          "defaultValue": "false",
+          "description": "Hide the UIBar entirely."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_width",
+          "name": "width",
+          "varType": "number",
+          "defaultValue": "18",
+          "description": "UIBar width."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_position",
+          "name": "position",
+          "varType": "string",
+          "defaultValue": "\"left\"",
+          "description": "UIBar side."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_collapsed",
+          "name": "initiallyCollapsed",
+          "varType": "boolean",
+          "defaultValue": "false",
+          "description": "Start collapsed."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_allow",
+          "name": "allowCollapse",
+          "varType": "boolean",
+          "defaultValue": "true",
+          "description": "Show the hamburger toggle."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_bg",
+          "name": "bgColor",
+          "varType": "string",
+          "defaultValue": "\"\"",
+          "description": "UIBar background color."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_history",
+          "name": "show_history",
+          "varType": "boolean",
+          "defaultValue": "true",
+          "description": "Show history nav."
+        },
+        {
+          "kind": "variable",
+          "id": "sp_saves",
+          "name": "show_saves",
+          "varType": "boolean",
+          "defaultValue": "true",
+          "description": "Show save/load menu."
+        }
+      ]
+    },
+    {
+      "kind": "variable",
+      "id": "var_affection",
+      "name": "affection",
+      "varType": "number",
+      "defaultValue": "0",
+      "description": "Elara affection 0–100"
+    },
+    {
+      "kind": "variable",
+      "id": "var_playername",
+      "name": "playerName",
+      "varType": "string",
+      "defaultValue": "Traveler",
+      "description": "Player-entered name"
+    },
+    {
+      "kind": "variable",
+      "id": "var_gametime",
+      "name": "gameTime",
+      "varType": "datetime",
+      "defaultValue": "new Date(2025,5,8,8,0)",
+      "description": "In-story clock",
+      "isExpression": true
+    },
+    {
+      "kind": "variable",
+      "id": "var_worldstate",
+      "name": "worldState",
+      "varType": "string",
+      "defaultValue": "{}",
+      "description": "Structured world state object",
+      "isExpression": true
+    },
+    {
+      "kind": "variable",
+      "id": "var_difficulty",
+      "name": "difficulty",
+      "varType": "string",
+      "defaultValue": "Normal",
+      "description": "Chosen difficulty"
+    },
+    {
+      "kind": "variable",
+      "id": "var_theme",
+      "name": "theme",
+      "varType": "string",
+      "defaultValue": "brass",
+      "description": "Chosen UI theme"
+    },
+    {
+      "kind": "variable",
+      "id": "var_textspeed",
+      "name": "textSpeed",
+      "varType": "number",
+      "defaultValue": "60",
+      "description": "Text speed 0–100"
+    },
+    {
+      "kind": "variable",
+      "id": "var_party",
+      "name": "partyMembers",
+      "varType": "array",
+      "defaultValue": "[\"Elara Voss\",\"Doran Pike\"]",
+      "description": "Named acquaintances"
+    },
+    {
+      "kind": "variable",
+      "id": "var_opt_hints",
+      "name": "showHints",
+      "varType": "boolean",
+      "defaultValue": "true",
+      "description": "Show gameplay hints"
+    },
+    {
+      "kind": "variable",
+      "id": "var_opt_news",
+      "name": "subscribeNews",
+      "varType": "boolean",
+      "defaultValue": "false",
+      "description": "Opt into in-world news"
+    },
+    {
+      "kind": "variable",
+      "id": "var_met_elara",
+      "name": "metElara",
+      "varType": "boolean",
+      "defaultValue": "false",
+      "description": "Has met Elara yet"
+    },
+    {
+      "kind": "variable",
+      "id": "var_found_purse",
+      "name": "foundPurse",
+      "varType": "boolean",
+      "defaultValue": "false",
+      "description": "Has found the purse at the docks"
+    },
+    {
+      "kind": "variable",
+      "id": "var_gave_rose",
+      "name": "gaveRose",
+      "varType": "boolean",
+      "defaultValue": "false",
+      "description": "Has gifted the clockwork rose"
+    },
+    {
+      "kind": "group",
+      "id": "cg_traveler",
+      "name": "traveler",
+      "children": [
+        {
+          "kind": "variable",
+          "id": "cv_traveler_name",
+          "name": "traveler_name",
+          "varType": "string",
+          "defaultValue": "Traveler",
+          "description": "Character name \"Traveler\""
+        },
+        {
+          "kind": "group",
+          "id": "cg_traveler_styles",
+          "name": "styles",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "cv_traveler_bg",
+              "name": "traveler_bgColor",
+              "varType": "string",
+              "defaultValue": "#1e293b",
+              "description": "Dialogue background color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_border",
+              "name": "traveler_borderColor",
+              "varType": "string",
+              "defaultValue": "#475569",
+              "description": "Dialogue border color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_namecolor",
+              "name": "traveler_nameColor",
+              "varType": "string",
+              "defaultValue": "#cbd5e1",
+              "description": "Character name color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_textcolor",
+              "name": "textColor",
+              "varType": "string",
+              "defaultValue": "#e2e8f0",
+              "description": "Dialogue text color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_avatar",
+              "name": "avatar",
+              "varType": "string",
+              "defaultValue": "assets/chars/traveler/default.png",
+              "description": "Avatar URL for \"Traveler\" (empty = hidden)"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_llmdescr",
+              "name": "llm_descr",
+              "varType": "string",
+              "defaultValue": "",
+              "description": "LLM personality for \"Traveler\""
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_llmtemp",
+              "name": "llm_temperature",
+              "varType": "number",
+              "defaultValue": "",
+              "description": "LLM temperature for \"Traveler\""
+            }
+          ]
+        },
+        {
+          "kind": "variable",
+          "id": "cv_traveler_inventory",
+          "name": "inventory",
+          "varType": "array",
+          "defaultValue": "[]",
+          "description": "Inventory for \"Traveler\""
+        },
+        {
+          "kind": "variable",
+          "id": "cv_traveler_money",
+          "name": "money",
+          "varType": "number",
+          "defaultValue": "30",
+          "description": "Money for \"Traveler\""
+        },
+        {
+          "kind": "group",
+          "id": "cg_traveler_equipment",
+          "name": "equipment",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "cv_traveler_eq_head",
+              "name": "head",
+              "varType": "string",
+              "defaultValue": "goggles",
+              "description": "Paperdoll slot \"Head\" for \"Traveler\""
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_eq_hand",
+              "name": "hand",
+              "varType": "string",
+              "defaultValue": "",
+              "description": "Paperdoll slot \"Hand\" for \"Traveler\""
+            },
+            {
+              "kind": "variable",
+              "id": "cv_traveler_eq_trinket",
+              "name": "trinket",
+              "varType": "string",
+              "defaultValue": "pocketwatch",
+              "description": "Paperdoll slot \"Trinket\" for \"Traveler\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "cg_elara",
+      "name": "elara",
+      "children": [
+        {
+          "kind": "variable",
+          "id": "cv_elara_name",
+          "name": "elara_voss_name",
+          "varType": "string",
+          "defaultValue": "Elara Voss",
+          "description": "Character name \"Elara Voss\""
+        },
+        {
+          "kind": "group",
+          "id": "cg_elara_styles",
+          "name": "styles",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "cv_elara_bg",
+              "name": "elara_voss_bgColor",
+              "varType": "string",
+              "defaultValue": "#2e1065",
+              "description": "Dialogue background color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_border",
+              "name": "elara_voss_borderColor",
+              "varType": "string",
+              "defaultValue": "#a855f7",
+              "description": "Dialogue border color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_namecolor",
+              "name": "elara_voss_nameColor",
+              "varType": "string",
+              "defaultValue": "#d8b4fe",
+              "description": "Character name color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_textcolor",
+              "name": "textColor",
+              "varType": "string",
+              "defaultValue": "#ede9fe",
+              "description": "Dialogue text color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_avatar",
+              "name": "avatar",
+              "varType": "string",
+              "defaultValue": "assets/chars/elara.png",
+              "description": "Avatar URL for \"Elara Voss\" (empty = hidden)"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_llmdescr",
+              "name": "llm_descr",
+              "varType": "string",
+              "defaultValue": "A brilliant, slightly distracted clockwork inventor. Warm but guarded.",
+              "description": "LLM personality for \"Elara Voss\""
+            },
+            {
+              "kind": "variable",
+              "id": "cv_elara_llmtemp",
+              "name": "llm_temperature",
+              "varType": "number",
+              "defaultValue": "",
+              "description": "LLM temperature for \"Elara Voss\""
+            }
+          ]
+        },
+        {
+          "kind": "variable",
+          "id": "cv_elara_inventory",
+          "name": "inventory",
+          "varType": "array",
+          "defaultValue": "[]",
+          "description": "Inventory for \"Elara Voss\""
+        },
+        {
+          "kind": "variable",
+          "id": "cv_elara_money",
+          "name": "money",
+          "varType": "number",
+          "defaultValue": "0",
+          "description": "Money for \"Elara Voss\""
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "cg_doran",
+      "name": "doran",
+      "children": [
+        {
+          "kind": "variable",
+          "id": "cv_doran_name",
+          "name": "doran_pike_name",
+          "varType": "string",
+          "defaultValue": "Doran Pike",
+          "description": "Character name \"Doran Pike\""
+        },
+        {
+          "kind": "group",
+          "id": "cg_doran_styles",
+          "name": "styles",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "cv_doran_bg",
+              "name": "doran_pike_bgColor",
+              "varType": "string",
+              "defaultValue": "#422006",
+              "description": "Dialogue background color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_border",
+              "name": "doran_pike_borderColor",
+              "varType": "string",
+              "defaultValue": "#d97706",
+              "description": "Dialogue border color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_namecolor",
+              "name": "doran_pike_nameColor",
+              "varType": "string",
+              "defaultValue": "#fbbf24",
+              "description": "Character name color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_textcolor",
+              "name": "textColor",
+              "varType": "string",
+              "defaultValue": "#fef3c7",
+              "description": "Dialogue text color"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_avatar",
+              "name": "avatar",
+              "varType": "string",
+              "defaultValue": "assets/chars/doran.png",
+              "description": "Avatar URL for \"Doran Pike\" (empty = hidden)"
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_llmdescr",
+              "name": "llm_descr",
+              "varType": "string",
+              "defaultValue": "A jovial, shrewd merchant who always has \"just the thing\".",
+              "description": "LLM personality for \"Doran Pike\""
+            },
+            {
+              "kind": "variable",
+              "id": "cv_doran_llmtemp",
+              "name": "llm_temperature",
+              "varType": "number",
+              "defaultValue": "",
+              "description": "LLM temperature for \"Doran Pike\""
+            }
+          ]
+        },
+        {
+          "kind": "variable",
+          "id": "cv_doran_inventory",
+          "name": "inventory",
+          "varType": "array",
+          "defaultValue": "[]",
+          "description": "Inventory for \"Doran Pike\""
+        },
+        {
+          "kind": "variable",
+          "id": "cv_doran_money",
+          "name": "money",
+          "varType": "number",
+          "defaultValue": "0",
+          "description": "Money for \"Doran Pike\""
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "grp_items",
+      "name": "items",
+      "children": [
+        {
+          "kind": "group",
+          "id": "ig_goggles",
+          "name": "goggles",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_goggles_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Brass Goggles",
+              "description": "Display name for item \"Brass Goggles\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_goggles_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/goggles.png",
+              "description": "Icon path for item \"Brass Goggles\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_goggles_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "40",
+              "description": "Price of item \"Brass Goggles\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_goggles_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "Polished brass goggles with amber lenses.",
+              "description": "Description of item \"Brass Goggles\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_goggles_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "false",
+              "description": ""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_goggles_slot",
+              "name": "slot",
+              "varType": "string",
+              "defaultValue": "head",
+              "description": "Paperdoll slot for \"Brass Goggles\""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "ig_pocketwatch",
+          "name": "pocketwatch",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Pocket Watch",
+              "description": "Display name for item \"Pocket Watch\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/watch.png",
+              "description": "Icon path for item \"Pocket Watch\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "120",
+              "description": "Price of item \"Pocket Watch\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "A ticking heirloom that never seems to stop.",
+              "description": "Description of item \"Pocket Watch\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "false",
+              "description": ""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_pocketwatch_slot",
+              "name": "slot",
+              "varType": "string",
+              "defaultValue": "trinket",
+              "description": "Paperdoll slot for \"Pocket Watch\""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "ig_lantern",
+          "name": "lantern",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_lantern_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Aether Lantern",
+              "description": "Display name for item \"Aether Lantern\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_lantern_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/lantern.png",
+              "description": "Icon path for item \"Aether Lantern\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_lantern_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "65",
+              "description": "Price of item \"Aether Lantern\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_lantern_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "A handheld lantern lit by humming aether.",
+              "description": "Description of item \"Aether Lantern\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_lantern_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "false",
+              "description": ""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_lantern_slot",
+              "name": "slot",
+              "varType": "string",
+              "defaultValue": "hand",
+              "description": "Paperdoll slot for \"Aether Lantern\""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "ig_tonic",
+          "name": "tonic",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_tonic_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Healing Tonic",
+              "description": "Display name for item \"Healing Tonic\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_tonic_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/tonic.png",
+              "description": "Icon path for item \"Healing Tonic\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_tonic_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "15",
+              "description": "Price of item \"Healing Tonic\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_tonic_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "Restores a little vigor. Tastes of copper.",
+              "description": "Description of item \"Healing Tonic\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_tonic_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "true",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "ig_gear",
+          "name": "gear",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_gear_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Copper Gear",
+              "description": "Display name for item \"Copper Gear\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_gear_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/gear.png",
+              "description": "Icon path for item \"Copper Gear\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_gear_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "8",
+              "description": "Price of item \"Copper Gear\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_gear_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "A small, oddly warm copper gear.",
+              "description": "Description of item \"Copper Gear\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_gear_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "true",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "ig_rose",
+          "name": "rose",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "iv_rose_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "Clockwork Rose",
+              "description": "Display name for item \"Clockwork Rose\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_rose_icon",
+              "name": "icon",
+              "varType": "string",
+              "defaultValue": "assets/Items/rose.png",
+              "description": "Icon path for item \"Clockwork Rose\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_rose_price",
+              "name": "price",
+              "varType": "number",
+              "defaultValue": "150",
+              "description": "Price of item \"Clockwork Rose\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_rose_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "A delicate, humming rose made of brass and ruby glass.",
+              "description": "Description of item \"Clockwork Rose\""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_rose_stackable",
+              "name": "stackable",
+              "varType": "boolean",
+              "defaultValue": "false",
+              "description": ""
+            },
+            {
+              "kind": "variable",
+              "id": "iv_rose_slot",
+              "name": "slot",
+              "varType": "string",
+              "defaultValue": "trinket",
+              "description": "Paperdoll slot for \"Clockwork Rose\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "grp_containers",
+      "name": "containers",
+      "children": [
+        {
+          "kind": "group",
+          "id": "kg_emporium",
+          "name": "emporium",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "kv_emporium_items",
+              "name": "items",
+              "varType": "array",
+              "defaultValue": "[{item:\"lantern\",qty:3,price:65},{item:\"tonic\",qty:-1,price:15},{item:\"gear\",qty:5,price:8}]",
+              "description": "Stock for container \"emporium\""
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "kg_debris",
+          "name": "debris",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "kv_debris_items",
+              "name": "items",
+              "varType": "array",
+              "defaultValue": "[{item:\"rose\",qty:1}]",
+              "description": "Stock for container \"debris\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "grp_quests",
+      "name": "quests",
+      "children": [
+        {
+          "kind": "group",
+          "id": "qg_missing",
+          "name": "missingGear",
+          "children": [
+            {
+              "kind": "variable",
+              "id": "qv_missing_name",
+              "name": "name",
+              "varType": "string",
+              "defaultValue": "The Missing Gear",
+              "description": "Quest name"
+            },
+            {
+              "kind": "variable",
+              "id": "qv_missing_desc",
+              "name": "description",
+              "varType": "string",
+              "defaultValue": "Elara's masterwork is one gear short of ticking.",
+              "description": ""
+            },
+            {
+              "kind": "variable",
+              "id": "qv_missing_state",
+              "name": "state",
+              "varType": "string",
+              "defaultValue": "active",
+              "description": "Quest state: hidden|active|done|failed"
+            },
+            {
+              "kind": "variable",
+              "id": "qv_missing_cat",
+              "name": "category",
+              "varType": "string",
+              "defaultValue": "Main",
+              "description": ""
+            },
+            {
+              "kind": "group",
+              "id": "qg_missing_steps",
+              "name": "steps",
+              "children": [
+                {
+                  "kind": "group",
+                  "id": "qg_step_talk",
+                  "name": "talkElara",
+                  "children": [
+                    {
+                      "kind": "variable",
+                      "id": "qv_talk_name",
+                      "name": "name",
+                      "varType": "string",
+                      "defaultValue": "Speak with Elara",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_talk_desc",
+                      "name": "description",
+                      "varType": "string",
+                      "defaultValue": "Find the inventor in her workshop.",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_talk_state",
+                      "name": "state",
+                      "varType": "string",
+                      "defaultValue": "active",
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "kind": "group",
+                  "id": "qg_step_get",
+                  "name": "getGear",
+                  "children": [
+                    {
+                      "kind": "variable",
+                      "id": "qv_get_name",
+                      "name": "name",
+                      "varType": "string",
+                      "defaultValue": "Acquire a copper gear",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_get_desc",
+                      "name": "description",
+                      "varType": "string",
+                      "defaultValue": "Buy one from Doran.",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_get_state",
+                      "name": "state",
+                      "varType": "string",
+                      "defaultValue": "hidden",
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "kind": "group",
+                  "id": "qg_step_return",
+                  "name": "returnGear",
+                  "children": [
+                    {
+                      "kind": "variable",
+                      "id": "qv_return_name",
+                      "name": "name",
+                      "varType": "string",
+                      "defaultValue": "Return the gear",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_return_desc",
+                      "name": "description",
+                      "varType": "string",
+                      "defaultValue": "Bring it back to Elara.",
+                      "description": ""
+                    },
+                    {
+                      "kind": "variable",
+                      "id": "qv_return_state",
+                      "name": "state",
+                      "varType": "string",
+                      "defaultValue": "hidden",
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "assetNodes": [
+    {
+      "kind": "group",
+      "id": "959c23f4-cef4-4d38-a7ed-0235b5d3ed93",
+      "name": "audio",
+      "relativePath": "assets/audio",
+      "children": [
+        {
+          "kind": "asset",
+          "id": "7bcad628-2888-422f-99e6-772c7c08d3e0",
+          "name": "start-audio-1.flac",
+          "assetType": "audio",
+          "relativePath": "assets/audio/start-audio-1.flac"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "9a03ec84-43e4-4943-8541-3948460f6fd4",
+      "name": "chars",
+      "relativePath": "assets/chars",
+      "children": [
+        {
+          "kind": "asset",
+          "id": "613cbf5b-8a27-4cb7-866f-f9fcf08dcca3",
+          "name": "doran.png",
+          "assetType": "image",
+          "relativePath": "assets/chars/doran.png"
+        },
+        {
+          "kind": "asset",
+          "id": "5f79fa52-755d-41ac-af4c-0aab76e278f8",
+          "name": "elara.png",
+          "assetType": "image",
+          "relativePath": "assets/chars/elara.png"
+        },
+        {
+          "kind": "group",
+          "id": "33bd5346-31a7-4521-87ef-6d44693dbb1b",
+          "name": "traveler",
+          "relativePath": "assets/chars/traveler",
+          "children": [
+            {
+              "kind": "asset",
+              "id": "97122dd9-07a9-46d3-9a55-a5eaf42d84b4",
+              "name": "default.png",
+              "assetType": "image",
+              "relativePath": "assets/chars/traveler/default.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "27c397b1-54a8-4911-b056-c7a19f62c726",
+      "name": "items",
+      "relativePath": "assets/items",
+      "children": [
+        {
+          "kind": "asset",
+          "id": "63784343-ac22-4d76-ba47-cacd82926ca5",
+          "name": "gear.png",
+          "assetType": "image",
+          "relativePath": "assets/items/gear.png"
+        },
+        {
+          "kind": "asset",
+          "id": "69c8fe76-89c6-4bc1-a74a-e9be095f8075",
+          "name": "goggles.png",
+          "assetType": "image",
+          "relativePath": "assets/items/goggles.png"
+        },
+        {
+          "kind": "asset",
+          "id": "ea471b88-1934-4515-9652-06d539d09516",
+          "name": "lantern.png",
+          "assetType": "image",
+          "relativePath": "assets/items/lantern.png"
+        },
+        {
+          "kind": "asset",
+          "id": "c96ee10d-53ca-46b0-8b32-d36347e736d4",
+          "name": "pocketwatch.png",
+          "assetType": "image",
+          "relativePath": "assets/items/pocketwatch.png"
+        },
+        {
+          "kind": "asset",
+          "id": "2cbf4e1e-bbe1-4160-aa2f-0d0d735d4ecf",
+          "name": "tonic.png",
+          "assetType": "image",
+          "relativePath": "assets/items/tonic.png"
+        }
+      ]
+    },
+    {
+      "kind": "asset",
+      "id": "5198be56-c27c-40cc-80d6-d5163ee59bf8",
+      "name": "workshop-1.png",
+      "assetType": "image",
+      "relativePath": "assets/workshop-1.png"
+    }
+  ],
+  "watchers": [
+    {
+      "id": "w_affection_glow",
+      "label": "Affection milestone",
+      "enabled": true,
+      "condition": {
+        "variableId": "var_affection",
+        "operator": ">=",
+        "value": "30"
+      },
+      "actions": [
+        {
+          "id": "wa_news",
+          "type": "set-variable",
+          "variableId": "var_opt_news",
+          "operator": "=",
+          "value": "true"
+        }
+      ]
+    }
+  ],
+  "customCss": "",
+  "customScript": ""
+}
