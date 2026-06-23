@@ -1,1 +1,1 @@
-{"root":["./electron/main.ts","./electron/preload.ts"],"version":"5.9.3"}
+{"root":["./electron/main.ts","./electron/pathguard.ts","./electron/preload.ts"],"version":"5.9.3"}

@@ -1,4 +1,5 @@
 import {app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, screen, shell} from 'electron';
+import {isInsideAnyRoot} from './pathGuard';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -17,6 +18,16 @@ protocol.registerSchemesAsPrivileged([
   {
     scheme: 'localfile',
     privileges: { secure: true, bypassCSP: true },
+  },
+  // Play-preview origin. `standard` + `secure` gives the preview iframe a REAL
+  // origin DISTINCT from the renderer's, so same-origin policy blocks the story /
+  // LLM JS running inside it from reaching `parent.electronAPI` (arbitrary FS/HTTP).
+  // `standard` is safe here (unlike `localfile`) — there is no Windows drive letter
+  // in the URL to be mis-hoisted into the host. The doc is served from memory
+  // (see the `play:setDoc` IPC + `purl-play` protocol handler below).
+  {
+    scheme: 'purl-play',
+    privileges: { standard: true, secure: true },
   },
 ]);
 
@@ -53,6 +64,40 @@ app.on('child-process-gone', (_event, details) => {
 
 // Projects stored in ~/Documents/Purl/Projects/
 const PROJECTS_DIR = path.join(app.getPath('documents'), 'Purl', 'Projects');
+
+// ─── Path confinement (security) ─────────────────────────────────────────────
+// Renderer-supplied paths to the fs:* handlers, the `localfile://` protocol, and
+// the binary HTTP proxy are confined to these roots so a compromised renderer
+// context (e.g. story / LLM JS reaching `electronAPI`) cannot read or destroy
+// arbitrary files. Seeded with app-owned dirs once the app is ready; extended at
+// runtime by native dialog results (an unforgeable user gesture) and by
+// `fs:registerRoots` for user-CONFIGURED external dirs (e.g. a typed ComfyUI
+// workflows folder that never passes through a dialog).
+const allowedRoots = new Set<string>();
+
+function addAllowedRoot(p: string | null | undefined): void {
+  if (!p) return;
+  try { allowedRoots.add(path.resolve(p)); } catch { /* ignore unresolvable path */ }
+}
+
+function pathAllowed(p: string): boolean {
+  try { return isInsideAnyRoot(p, allowedRoots); } catch { return false; }
+}
+
+/** Throws for read/write/destructive ops on a path outside every allowed root. */
+function guardPath(p: string, op: string): void {
+  if (!pathAllowed(p)) {
+    console.warn(`[path-guard] blocked ${op}: ${p}`);
+    throw new Error(`EPERM: path outside allowed roots (${op})`);
+  }
+}
+
+/** Decoded filesystem path from a `localfile://` URL, with the leading slash that
+ *  Windows drive paths carry ("/D:/x") stripped so it matches stored roots ("D:\\x"). */
+function localfileFsPath(url: string): string {
+  const decoded = decodeURIComponent(url.replace(/^localfile:\/\//, ''));
+  return /^\/[A-Za-z]:/.test(decoded) ? decoded.slice(1) : decoded;
+}
 
 // ─── App config (title bar style + window layout) ───────────────────────────
 
@@ -164,6 +209,10 @@ function trackWindowBounds(bw: BrowserWindow, key: 'main') {
 let win: BrowserWindow | null;
 let splashWin: BrowserWindow | null = null;
 let splashStart = 0;
+
+// Current Play-preview document, served by the `purl-play` protocol so the iframe
+// loads from a distinct origin instead of inheriting the renderer's via `srcDoc`.
+let playDoc = '';
 
 // ─── Animation Helper ─────────────────────────────────────────────────────────
 
@@ -351,14 +400,29 @@ function createWindow() {
 app.whenReady().then(async () => {
   await loadAppConfig();
 
+  // Seed path-confinement roots with app-owned dirs (needs app paths → after ready).
+  addAllowedRoot(PROJECTS_DIR);
+  addAllowedRoot(app.getPath('userData'));
+  addAllowedRoot(process.env.APP_ROOT);
+  addAllowedRoot(process.resourcesPath);
+
   if (appConfig.titleBarStyle === 'custom') {
     Menu.setApplicationMenu(null);
   }
 
   protocol.handle('localfile', (request) => {
     const filePath = decodeURIComponent(request.url.replace('localfile://', ''));
+    if (!pathAllowed(localfileFsPath(request.url))) {
+      console.warn(`[path-guard] blocked localfile: ${filePath}`);
+      return new Response('Forbidden', { status: 403 });
+    }
     return net.fetch('file://' + filePath);
   });
+
+  // Serve the Play-preview document from its own origin (any path returns the
+  // current doc — the iframe loads `purl-play://play/index.html?v=…`).
+  protocol.handle('purl-play', () =>
+    new Response(playDoc, { headers: { 'content-type': 'text/html; charset=utf-8' } }));
 
   fs.mkdir(PROJECTS_DIR, { recursive: true }).catch(() => {});
 
@@ -376,43 +440,64 @@ ipcMain.handle('fs:getExampleWorkflowsDir', () =>
     : path.join(process.resourcesPath, 'example-workflows')
 );
 
+// Renderer registers user-CONFIGURED external dirs (e.g. a typed ComfyUI workflows
+// folder) that never pass through a native dialog. Trusted because the Play iframe
+// is origin-isolated (see PlayPanel sandbox) — only real app code reaches this.
+ipcMain.handle('fs:registerRoots', (_e, roots: string[]) => {
+  if (Array.isArray(roots)) for (const r of roots) addAllowedRoot(r);
+});
+
+// Stash the built Play-preview HTML for the `purl-play` protocol to serve.
+ipcMain.handle('play:setDoc', (_e, html: string) => { playDoc = typeof html === 'string' ? html : ''; });
+
 ipcMain.handle('fs:readFile', async (_e, filePath: string) => {
+  guardPath(filePath, 'readFile');
   return fs.readFile(filePath, 'utf-8');
 });
 
 ipcMain.handle('fs:readFileBinary', async (_e, filePath: string) => {
+  guardPath(filePath, 'readFileBinary');
   const buf = await fs.readFile(filePath);
   return Array.from(buf);
 });
 
 ipcMain.handle('fs:writeFile', async (_e, filePath: string, content: string) => {
+  guardPath(filePath, 'writeFile');
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, 'utf-8');
 });
 
 ipcMain.handle('fs:writeFileBinary', async (_e, filePath: string, bytes: number[]) => {
+  guardPath(filePath, 'writeFileBinary');
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, Buffer.from(bytes));
 });
 
 ipcMain.handle('fs:copyFile', async (_e, src: string, dest: string) => {
+  guardPath(src, 'copyFile(src)');
+  guardPath(dest, 'copyFile(dest)');
   await fs.mkdir(path.dirname(dest), { recursive: true });
   await fs.copyFile(src, dest);
 });
 
 ipcMain.handle('fs:mkdir', async (_e, dirPath: string) => {
+  guardPath(dirPath, 'mkdir');
   await fs.mkdir(dirPath, { recursive: true });
 });
 
 ipcMain.handle('fs:exists', async (_e, filePath: string) => {
+  if (!pathAllowed(filePath)) return false;
   try { await fs.access(filePath); return true; } catch { return false; }
 });
 
 ipcMain.handle('fs:rename', async (_e, oldPath: string, newPath: string) => {
+  guardPath(oldPath, 'rename(old)');
+  guardPath(newPath, 'rename(new)');
   await fs.rename(oldPath, newPath);
 });
 
 ipcMain.handle('fs:listDir', async (_e, dirPath: string) => {
+  if (!pathAllowed(dirPath)) return [];
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     return entries.map(e => ({ name: e.name, isDir: e.isDirectory() }));
@@ -420,14 +505,17 @@ ipcMain.handle('fs:listDir', async (_e, dirPath: string) => {
 });
 
 ipcMain.handle('fs:deleteFile', async (_e, filePath: string) => {
+  guardPath(filePath, 'deleteFile');
   await fs.unlink(filePath);
 });
 
 ipcMain.handle('fs:deleteDir', async (_e, dirPath: string) => {
+  guardPath(dirPath, 'deleteDir');
   await fs.rm(dirPath, { recursive: true, force: true });
 });
 
 ipcMain.handle('fs:stat', async (_e, filePath: string) => {
+  guardPath(filePath, 'stat');
   const st = await fs.stat(filePath);
   return { size: st.size, mtimeMs: st.mtimeMs };
 });
@@ -437,13 +525,19 @@ ipcMain.handle('fs:stat', async (_e, filePath: string) => {
 ipcMain.handle('dialog:openFile', async (_e, options: Electron.OpenDialogOptions) => {
   if (!win) return null;
   const result = await dialog.showOpenDialog(win, { properties: ['openFile'], ...options });
-  return result.canceled ? null : result.filePaths[0];
+  if (result.canceled || !result.filePaths[0]) return null;
+  // User picked this file via a native dialog → trust its directory as a root
+  // (covers opening a .purl outside PROJECTS_DIR, importing assets, etc.).
+  addAllowedRoot(path.dirname(result.filePaths[0]));
+  return result.filePaths[0];
 });
 
 ipcMain.handle('dialog:openFiles', async (_e, options: Electron.OpenDialogOptions) => {
   if (!win) return [];
   const result = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], ...options });
-  return result.canceled ? [] : result.filePaths;
+  if (result.canceled) return [];
+  for (const fp of result.filePaths) addAllowedRoot(path.dirname(fp));
+  return result.filePaths;
 });
 
 ipcMain.handle('dialog:openFolder', async (_e, defaultPath?: string) => {
@@ -452,18 +546,25 @@ ipcMain.handle('dialog:openFolder', async (_e, defaultPath?: string) => {
     properties: ['openDirectory'],
     ...(defaultPath ? { defaultPath } : {}),
   });
-  return result.canceled ? null : result.filePaths[0];
+  if (result.canceled || !result.filePaths[0]) return null;
+  // The chosen folder (and thus anything created inside it, e.g. a new project
+  // sub-folder) becomes an allowed root.
+  addAllowedRoot(result.filePaths[0]);
+  return result.filePaths[0];
 });
 
 ipcMain.handle('dialog:saveFile', async (_e, options: Electron.SaveDialogOptions) => {
   if (!win) return null;
   const result = await dialog.showSaveDialog(win, options);
-  return result.canceled ? null : result.filePath ?? null;
+  if (result.canceled || !result.filePath) return null;
+  addAllowedRoot(path.dirname(result.filePath));
+  return result.filePath;
 });
 
 // ─── IPC: shell ───────────────────────────────────────────────────────────────
 
 ipcMain.handle('shell:openPath', async (_e, filePath: string) => {
+  guardPath(filePath, 'openPath');
   await shell.openPath(filePath);
 });
 
@@ -475,6 +576,11 @@ ipcMain.handle('http:request', async (_e, req: {
   headers?: Record<string, string>;
   body?: string;
 }) => {
+  // Block non-http(s) schemes (e.g. file://) so the proxy can't be turned into a
+  // local-file reader. Host allow-listing is intentionally NOT done here: users
+  // configure arbitrary LLM/ComfyUI endpoints, so a host whitelist would break
+  // legitimate setups (see optimization roadmap 2.3).
+  if (!/^https?:\/\//i.test(req.url)) throw new Error('EPERM: unsupported URL scheme');
   const res = await fetch(req.url, {
     method: req.method ?? 'GET',
     headers: req.headers,
@@ -493,7 +599,10 @@ ipcMain.handle('http:requestBinary', async (_e, req: {
   body?: string;
 }) => {
   // net.fetch handles custom Electron protocols (e.g. localfile://); native fetch does not
-  const fetcher = req.url.startsWith('localfile://') ? net.fetch : fetch;
+  const isLocal = req.url.startsWith('localfile://');
+  if (isLocal) guardPath(localfileFsPath(req.url), 'http.localfile');
+  else if (!/^https?:\/\//i.test(req.url)) throw new Error('EPERM: unsupported URL scheme');
+  const fetcher = isLocal ? net.fetch : fetch;
   const res = await fetcher(req.url, {
     method: req.method ?? 'GET',
     headers: req.headers,

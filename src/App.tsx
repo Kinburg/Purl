@@ -1,10 +1,18 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { useProjectStore } from './store/projectStore';
-import { useEditorStore } from './store/editorStore';
-import { useEditorPrefsStore } from './store/editorPrefsStore';
-import { usePluginStore } from './store/pluginStore';
-import { Header } from './components/layout/Header';
-import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
+import {lazy, Suspense, useEffect, useMemo, useState} from 'react';
+import {useProjectStore} from './store/projectStore';
+import {useEditorStore} from './store/editorStore';
+import {useEditorPrefsStore} from './store/editorPrefsStore';
+import {usePluginStore} from './store/pluginStore';
+import {Header} from './components/layout/Header';
+import {WorkspaceLayout} from './components/layout/WorkspaceLayout';
+import {useAutosave} from './hooks/useAutosave';
+import {toast, Toaster} from 'sonner';
+import {useT} from './i18n';
+import {fsApi, joinPath, safeName} from './lib/fsApi';
+import {pickNewProjectDir} from './lib/projectDir';
+import {FolderConflictModal} from './components/shared/FolderConflictModal';
+import {injectPreviewCSS} from './utils/previewCss';
+import {useDebouncedValue} from './utils/useDebouncedValue';
 
 // Modals are lazy-loaded: they each pull in their own dependencies (icon
 // generators, prefs UI, plugin builder…) that are useless until the user
@@ -14,15 +22,6 @@ const EditorPrefsModal     = lazy(() => import('./components/editor/EditorPrefsM
 const AISettingsModal      = lazy(() => import('./components/editor/LLMSettingsModal').then(m => ({ default: m.AISettingsModal })));
 const PluginEditorModal    = lazy(() => import('./components/plugins/PluginEditorModal').then(m => ({ default: m.PluginEditorModal })));
 const ReplaceModal         = lazy(() => import('./components/editor/ReplaceModal').then(m => ({ default: m.ReplaceModal })));
-
-import { useAutosave } from './hooks/useAutosave';
-import { Toaster, toast } from 'sonner';
-import { useT } from './i18n';
-import { fsApi, joinPath, safeName } from './lib/fsApi';
-import { pickNewProjectDir } from './lib/projectDir';
-import { FolderConflictModal } from './components/shared/FolderConflictModal';
-import { injectPreviewCSS } from './utils/previewCss';
-import { useDebouncedValue } from './utils/useDebouncedValue';
 
 export default function App() {
   // Use narrow selectors instead of destructuring the whole store — the previous
@@ -55,6 +54,8 @@ export default function App() {
   const compactMode = useEditorPrefsStore(s => s.compactMode);
   const knitTheme   = useEditorPrefsStore(s => s.knitTheme);
   const saveOnExit  = useEditorPrefsStore(s => s.saveOnExit);
+  const comfyUiWorkflowsDir = useEditorPrefsStore(s => s.comfyUiWorkflowsDir);
+  const comfyUiOutputDir    = useEditorPrefsStore(s => s.comfyUiOutputDir);
 
   const t = useT();
   const [closeModalOpen, setCloseModalOpen] = useState(false);
@@ -69,6 +70,14 @@ export default function App() {
   useEffect(() => {
     usePluginStore.getState().loadFromDisk(projectDir);
   }, [projectDir]);
+
+  // Register user-configured external dirs as path-confinement roots in the main
+  // process. The project dir is also allow-listed via the open/create dialogs, but
+  // typed ComfyUI folders never pass through a dialog. See electron/main.ts.
+  useEffect(() => {
+    const roots = [projectDir, comfyUiWorkflowsDir, comfyUiOutputDir].filter(Boolean) as string[];
+    if (roots.length) window.electronAPI?.registerRoots?.(roots);
+  }, [projectDir, comfyUiWorkflowsDir, comfyUiOutputDir]);
 
   // Inject story preview CSS into the editor whenever the relevant project state
   // changes. Covers characters (dialogue cascade), scenes (per-block Std + spot
@@ -102,8 +111,7 @@ export default function App() {
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.onCloseRequested) return;
-    const unsubscribe = api.onCloseRequested(() => setCloseModalOpen(true));
-    return unsubscribe;
+    return api.onCloseRequested(() => setCloseModalOpen(true));
   }, []);
 
   async function handleSaveAndExit() {

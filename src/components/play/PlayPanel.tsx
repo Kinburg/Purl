@@ -127,6 +127,25 @@ export function PlayPanel() {
   const [docVersion, setDocVersion] = useState(0);
   useEffect(() => { if (doc) setDocVersion(v => v + 1); }, [doc]);
 
+  // Push the built doc to the main process, then point the iframe at the distinct
+  // `purl-play` origin. Loading via `src` from a different origin (instead of
+  // `srcDoc`, which inherits the renderer's origin) is what blocks story / LLM JS
+  // inside the preview from reaching `parent.electronAPI`. `allow-same-origin` in
+  // the sandbox now scopes to the iframe's OWN purl-play origin, so SugarCube keeps
+  // the web storage it needs. A monotonic seq makes each (re)load URL unique and
+  // guarantees the doc is stashed before the iframe loads.
+  const loadSeq = useRef(0);
+  const [srcUrl, setSrcUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!doc) { setSrcUrl(null); return; }
+    let cancelled = false;
+    const seq = ++loadSeq.current;
+    Promise.resolve(window.electronAPI?.setPlayDoc?.(doc)).then(() => {
+      if (!cancelled) setSrcUrl(`purl-play://play/index.html?v=${seq}`);
+    });
+    return () => { cancelled = true; };
+  }, [doc, reloadKey]);
+
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   // ── Inspector / error capture (fed by the in-iframe bridge) ────────────────
@@ -244,12 +263,12 @@ export function PlayPanel() {
             <div className="h-full flex items-center justify-center px-4 text-center text-slate-500 text-xs">
               {t.play.notBuilt}
             </div>
-          ) : doc ? (
+          ) : srcUrl ? (
             <iframe
               ref={iframeRef}
-              key={`${reloadKey}-${docVersion}`}
+              key={srcUrl}
               title="play"
-              srcDoc={doc}
+              src={srcUrl}
               sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms"
               className="w-full h-full border-0 bg-white"
             />

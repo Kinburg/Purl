@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -88,18 +88,29 @@ export function PluginBodyEditor({ blocks, onChange, params, collapsed: collapse
     }
   };
 
-  const updateAt = (index: number, patch: Partial<Block>) => {
-    onChange(blocks.map((b, i) => i === index ? ({ ...b, ...patch } as Block) : b));
-  };
-  const deleteAt = (index: number) => {
-    onChange(blocks.filter((_, i) => i !== index));
-  };
-  const duplicateAt = (index: number) => {
-    const copy = cloneBlockWithNewIds(blocks[index]);
-    const next = [...blocks];
-    next.splice(index + 1, 0, copy);
-    onChange(next);
-  };
+  // Latest blocks/onChange via refs so the id-based handlers below stay referentially
+  // STABLE across edits. Passing stable refs to BlockItem keeps its React.memo intact —
+  // per-block inline arrows (keyed by index) change identity every render and re-render
+  // every block on any single change.
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const updateById = useCallback((id: string, patch: Partial<Block>) => {
+    onChangeRef.current(blocksRef.current.map(b => b.id === id ? ({ ...b, ...patch } as Block) : b));
+  }, []);
+  const deleteById = useCallback((id: string) => {
+    onChangeRef.current(blocksRef.current.filter(b => b.id !== id));
+  }, []);
+  const duplicateById = useCallback((id: string) => {
+    const cur = blocksRef.current;
+    const index = cur.findIndex(b => b.id === id);
+    if (index === -1) return;
+    const next = [...cur];
+    next.splice(index + 1, 0, cloneBlockWithNewIds(cur[index]));
+    onChangeRef.current(next);
+  }, []);
   const insertAt = (block: Block, insertIndex: number) => {
     const next = [...blocks];
     next.splice(insertIndex, 0, block);
@@ -148,9 +159,9 @@ export function PluginBodyEditor({ blocks, onChange, params, collapsed: collapse
                 sceneId={PLUGIN_SCENE_ID}
                 collapsed={collapsed.has(block.id)}
                 onToggleCollapse={toggleBlock}
-                onUpdate={patch => updateAt(i, patch)}
-                onDelete={() => deleteAt(i)}
-                onDuplicate={() => duplicateAt(i)}
+                onUpdate={updateById}
+                onDelete={deleteById}
+                onDuplicate={duplicateById}
               />
               <InsertZone
                 sceneId={PLUGIN_SCENE_ID}
