@@ -19,6 +19,9 @@ interface ElectronAPI {
   deleteFile(filePath: string): Promise<void>;
   deleteDir(dirPath: string): Promise<void>;
   stat(filePath: string): Promise<{ size: number; mtimeMs: number }>;
+  /** Register additional allowed filesystem roots (user-configured external dirs
+   *  such as a typed ComfyUI workflows folder). Path-confinement (main process). */
+  registerRoots(paths: string[]): Promise<void>;
 
   // Dialogs
   openFileDialog(options?: {
@@ -56,6 +59,9 @@ interface ElectronAPI {
     headers?: Record<string, string>;
     body?: string;
   }): Promise<{ status: number; headers: Record<string, string>; bytes: number[] }>;
+
+  // Play preview — stash the built doc for the `purl-play` origin to serve.
+  setPlayDoc(html: string): Promise<void>;
 
   // Window controls (custom title bar)
   minimizeWindow(): Promise<void>;

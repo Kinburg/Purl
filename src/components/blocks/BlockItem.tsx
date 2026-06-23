@@ -153,12 +153,12 @@ interface Props {
    *  `toggleBlock`) instead of a per-block inline arrow — the latter changes identity
    *  every render and defeats this component's React.memo for every block. */
   onToggleCollapse?: (blockId: string) => void;
-  /** Override patch handler (used when block lives outside a scene, e.g. plugin body). */
-  onUpdate?: (patch: Partial<Block>) => void;
-  /** Override delete handler — bypasses projectStore when provided. */
-  onDelete?: () => void;
-  /** Override duplicate handler — bypasses projectStore when provided. */
-  onDuplicate?: () => void;
+  /** Override handlers for blocks living outside a scene (e.g. plugin body), where the
+   *  projectStore fallbacks don't apply. All receive the block id so callers can pass
+   *  STABLE refs (see onToggleCollapse) instead of per-block inline arrows. */
+  onUpdate?: (blockId: string, patch: Partial<Block>) => void;
+  onDelete?: (blockId: string) => void;
+  onDuplicate?: (blockId: string) => void;
 }
 
 function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
@@ -232,7 +232,7 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
           <button
             className="text-slate-600 hover:text-indigo-400 text-sm transition-colors cursor-pointer"
             title={t.block.duplicate}
-            onClick={() => onDuplicate ? onDuplicate() : duplicateBlock(sceneId, block.id)}
+            onClick={() => onDuplicate ? onDuplicate(block.id) : duplicateBlock(sceneId, block.id)}
           >
             ⧉
           </button>
@@ -240,7 +240,7 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
             className="text-slate-600 hover:text-red-400 text-sm transition-colors cursor-pointer"
             title={t.block.delete}
             onClick={() => {
-              const doDelete = () => onDelete ? onDelete() : deleteBlock(sceneId, block.id);
+              const doDelete = () => onDelete ? onDelete(block.id) : deleteBlock(sceneId, block.id);
               if (confirmDeleteBlock) {
                 ask({ message: `${t.block.delete}?`, variant: 'danger' }, doDelete);
               } else {
@@ -260,7 +260,7 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
           if (!Editor) return <div className="text-red-400 text-xs">Unknown block type: {block.type}</div>;
           return (
             <Suspense fallback={<BlockEditorFallback />}>
-              <Editor block={block} sceneId={sceneId} onUpdate={onUpdate as never} />
+              <Editor block={block} sceneId={sceneId} onUpdate={(onUpdate ? (p: Partial<Block>) => onUpdate(block.id, p) : undefined) as never} />
             </Suspense>
           );
         })()}

@@ -47,6 +47,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stat: (filePath: string): Promise<{ size: number; mtimeMs: number }> =>
     ipcRenderer.invoke('fs:stat', filePath),
 
+  registerRoots: (paths: string[]): Promise<void> =>
+    ipcRenderer.invoke('fs:registerRoots', paths),
+
   // Dialogs
   openFileDialog: (options?: Electron.OpenDialogOptions): Promise<string | null> =>
     ipcRenderer.invoke('dialog:openFile', options),
@@ -80,6 +83,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     body?: string;
   }): Promise<{ status: number; headers: Record<string, string>; bytes: number[] }> =>
     ipcRenderer.invoke('http:requestBinary', req),
+
+  // Play preview (served from a distinct origin by the main process)
+  setPlayDoc: (html: string): Promise<void> =>
+    ipcRenderer.invoke('play:setDoc', html),
 
   // Window controls (custom title bar)
   minimizeWindow:    (): Promise<void>    => ipcRenderer.invoke('window:minimize'),
