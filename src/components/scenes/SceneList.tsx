@@ -19,6 +19,7 @@ import { useProjectStore, flattenVariables } from '../../store/projectStore';
 import { useEditorStore } from '../../store/editorStore';
 import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { sceneMatchesQuery } from '../../utils/searchUtils';
+import { useDebouncedValue } from '../../utils/useDebouncedValue';
 import { useT } from '../../i18n';
 import { SYSTEM_TAGS, SYSTEM_TAG_COLORS, SYSTEM_TAG_KIND, START_TAG, START_TAG_COLOR } from '../../types';
 import type { Scene, SceneGroup, SystemTag } from '../../types';
@@ -255,7 +256,9 @@ type GroupModalState =
 // ─── Main SceneList ───────────────────────────────────────────────────────────
 
 export function SceneList() {
-  const project                    = useProjectStore(s => s.project);
+  const scenes                     = useProjectStore(s => s.project.scenes);
+  const sceneGroups                = useProjectStore(s => s.project.sceneGroups);
+  const variableNodes              = useProjectStore(s => s.project.variableNodes);
   const activeSceneId              = useProjectStore(s => s.activeSceneId);
   const setActiveScene             = useProjectStore(s => s.setActiveScene);
   const addSceneWithData           = useProjectStore(s => s.addSceneWithData);
@@ -272,6 +275,7 @@ export function SceneList() {
 
   const searchQuery     = useEditorStore(s => s.searchQuery);
   const setSearchQuery  = useEditorStore(s => s.setSearchQuery);
+  const debouncedQuery  = useDebouncedValue(searchQuery, 150);
   const confirmDeleteScene    = useEditorPrefsStore(s => s.confirmDeleteScene);
   const confirmDeleteGroup    = useEditorPrefsStore(s => s.confirmDeleteGroup);
   const deleteGroupWithScenes = useEditorPrefsStore(s => s.deleteGroupWithScenes);
@@ -285,15 +289,15 @@ export function SceneList() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const variables = useMemo(
-    () => flattenVariables(project.variableNodes ?? []),
-    [project.variableNodes],
+    () => flattenVariables(variableNodes ?? []),
+    [variableNodes],
   );
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    for (const sc of project.scenes) for (const tag of sc.tags) if (tag !== START_TAG) tags.add(tag);
+    for (const sc of scenes) for (const tag of sc.tags) if (tag !== START_TAG) tags.add(tag);
     return [...tags].sort();
-  }, [project.scenes]);
+  }, [scenes]);
 
   const toggleTag = (tag: string) => {
     setActiveTags(prev => {
@@ -303,22 +307,22 @@ export function SceneList() {
     });
   };
 
-  const isFiltering = activeTags.size > 0 || searchQuery.trim() !== '';
+  const isFiltering = activeTags.size > 0 || debouncedQuery.trim() !== '';
 
   const visibleScenes = useMemo(() => {
-    let scenes = project.scenes;
+    let list = scenes;
     if (activeTags.size > 0) {
-      scenes = scenes.filter(sc =>
+      list = list.filter(sc =>
         filterMode === 'or'
           ? sc.tags.some(tag => activeTags.has(tag))
           : [...activeTags].every(tag => sc.tags.includes(tag)),
       );
     }
-    if (searchQuery.trim()) {
-      scenes = scenes.filter(sc => sceneMatchesQuery(sc, searchQuery, variables));
+    if (debouncedQuery.trim()) {
+      list = list.filter(sc => sceneMatchesQuery(sc, debouncedQuery, variables));
     }
-    return scenes;
-  }, [project.scenes, activeTags, filterMode, searchQuery, variables]);
+    return list;
+  }, [scenes, activeTags, filterMode, debouncedQuery, variables]);
 
   // ── DnD ──────────────────────────────────────────────────────────────────────
 
@@ -326,19 +330,19 @@ export function SceneList() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const activeScene = project.scenes.find(s => s.id === active.id);
+    const activeScene = scenes.find(s => s.id === active.id);
     if (!activeScene) return;
 
     const activeGroupId = activeScene.groupId ?? null;
     const overId = String(over.id);
 
     // Dropped onto another scene
-    const overScene = project.scenes.find(s => s.id === overId);
+    const overScene = scenes.find(s => s.id === overId);
     if (overScene) {
       const overGroupId = overScene.groupId ?? null;
       if (activeGroupId === overGroupId) {
         // Same container — reorder
-        const groupScenes = project.scenes.filter(s => (s.groupId ?? null) === activeGroupId);
+        const groupScenes = scenes.filter(s => (s.groupId ?? null) === activeGroupId);
         const oldIdx = groupScenes.findIndex(s => s.id === active.id);
         const newIdx = groupScenes.findIndex(s => s.id === overId);
         if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
@@ -353,7 +357,7 @@ export function SceneList() {
 
     // Dropped onto a group container or ungrouped container
     const targetGroupId = overId === '__ungrouped__' ? null
-      : project.sceneGroups.find(g => g.id === overId) ? overId
+      : sceneGroups.find(g => g.id === overId) ? overId
       : null;
 
     if (targetGroupId !== activeGroupId) {
@@ -364,14 +368,14 @@ export function SceneList() {
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
   const takenSceneNames = (excludeId?: string) =>
-    project.scenes.filter(s => s.id !== excludeId).map(s => s.name);
+    scenes.filter(s => s.id !== excludeId).map(s => s.name);
 
   const takenGroupNames = (excludeId?: string) =>
-    project.sceneGroups.filter(g => g.id !== excludeId).map(g => g.name);
+    sceneGroups.filter(g => g.id !== excludeId).map(g => g.name);
 
   const itemCallbacks = (scene: Scene) => ({
     isActive:    scene.id === activeSceneId,
-    canDelete:   project.scenes.length > 1 && !scene.tags.includes(START_TAG),
+    canDelete:   scenes.length > 1 && !scene.tags.includes(START_TAG),
     onSelect:    () => setActiveScene(scene.id),
     onEdit:      () => setSceneModal({ mode: 'edit', scene }),
     onDuplicate: () => duplicateScene(scene.id),
@@ -386,18 +390,18 @@ export function SceneList() {
 
   const defaultSceneName = () => {
     const base = 'Scene';
-    const existing = project.scenes.map(s => s.name);
-    let name = base; let i = project.scenes.length + 1;
+    const existing = scenes.map(s => s.name);
+    let name = base; let i = scenes.length + 1;
     while (existing.includes(name)) { name = `${base} ${i}`; i++; }
     return name;
   };
 
   // Scenes grouped by groupId. System scenes (start, sidebar, etc.) are pulled
   // into a pinned virtual "System" group at the top — they don't show up here.
-  const systemScenes    = project.scenes.filter(isSystemScene)
+  const systemScenes    = scenes.filter(isSystemScene)
     .sort((a, b) => systemSceneOrder(a) - systemSceneOrder(b));
-  const ungroupedScenes = project.scenes.filter(s => !s.groupId && !isSystemScene(s));
-  const scenesInGroup   = (groupId: string) => project.scenes.filter(s => s.groupId === groupId && !isSystemScene(s));
+  const ungroupedScenes = scenes.filter(s => !s.groupId && !isSystemScene(s));
+  const scenesInGroup   = (groupId: string) => scenes.filter(s => s.groupId === groupId && !isSystemScene(s));
   const hasSidebarScene       = systemScenes.some(s => s.tags.includes('sidebar'));
   const hasTitleScene         = systemScenes.some(s => s.tags.includes('title'));
   const hasMenuScene          = systemScenes.some(s => s.tags.includes('menu'));
@@ -591,7 +595,7 @@ export function SceneList() {
           )}
 
           {/* Groups */}
-          {project.sceneGroups.map(group => {
+          {sceneGroups.map(group => {
             const groupScenes = scenesInGroup(group.id);
             return (
               <div key={group.id} className="mb-1">
