@@ -5,7 +5,7 @@ import electron from 'vite-plugin-electron/simple';
 import pkg from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   define: {
     // Expose just the version string at build time instead of importing the
     // full package.json into the renderer bundle (pulled in deps, build config,
@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => ({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: {
+    // The committed sample project (resources/sample-project) is used for manual
+    // dev testing. Its generated output (release/, history/, …) lives inside vite's
+    // root, so exporting a story would write into the watched tree and trigger a
+    // full page reload — which wipes in-progress UI (e.g. the "open export folder?"
+    // prompt and toasts). Real projects live OUTSIDE the repo and never hit this.
+    watch: { ignored: ['**/resources/sample-project/**'] },
     proxy: {
       '/pollinations': {
         target: 'https://gen.pollinations.ai',
@@ -34,13 +40,11 @@ export default defineConfig(({ mode }) => ({
       renderer: {},
     }),
   ],
-  esbuild: mode === 'production' ? {
-    // Strip `console.*` and `debugger` from production builds only — dev/HMR
-    // keeps all logging intact. `console.error` inside autosave etc. is
-    // useless in packaged Electron anyway (no DevTools available to the end
-    // user) and bloats the bundle.
-    drop: ['console', 'debugger'],
-  } : {},
+  // NOTE: the previous `esbuild: { drop: ['console','debugger'] }` prod console-strip
+  // was removed in the vite 8 migration — vite 8 bundles with rolldown (oxc), not
+  // esbuild, so the `esbuild.drop` option no longer applies. It can be re-added via
+  // rolldown's minify (`dropConsole` / `dropDebugger`) if desired; it's only a minor
+  // bundle optimization (packaged Electron has no end-user DevTools anyway).
   build: {
     // Single-chunk renderer was 1.8 MB pre-split. manualChunks separates heavy
     // libs that aren't always needed at first paint — graph (xyflow + dagre)
@@ -51,12 +55,13 @@ export default defineConfig(({ mode }) => ({
     // came out empty under React 19 + the `react()` plugin's runtime.
     rollupOptions: {
       output: {
-        manualChunks: {
-          'graph':  ['@xyflow/react', '@dagrejs/dagre'],
-          'dnd':    ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          'llm':    ['@google/genai'],
-          'panels': ['react-resizable-panels'],
-          'toast':  ['sonner'],
+        // Function form (rolldown / vite 8 dropped the `{ name: [pkgs] }` object form).
+        manualChunks: (id) => {
+          if (id.includes('@xyflow/react') || id.includes('@dagrejs/dagre')) return 'graph';
+          if (id.includes('@dnd-kit/')) return 'dnd';
+          if (id.includes('@google/genai')) return 'llm';
+          if (id.includes('react-resizable-panels')) return 'panels';
+          if (id.includes('sonner')) return 'toast';
         },
       },
     },
