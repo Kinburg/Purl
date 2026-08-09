@@ -445,6 +445,8 @@ export interface Translations {
     expand: string;
     paste: (typeName: string) => string;
     unsupportedNested: string;
+    dropZone: string;
+    dropHere: string;
   };
 
   addBlock: {

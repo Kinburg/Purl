@@ -7,6 +7,7 @@ import { useEditorPrefsStore } from '../../store/editorPrefsStore';
 import { useConfirm } from '../shared/ConfirmModal';
 import { useT, blockTypeLabel } from '../../i18n';
 import type { Block } from '../../types';
+import type { ContainerKind } from '../../utils/blockTree';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { blockPalette } from '../../utils/blockPalette';
 import { YarnSpinner } from '../shared/YarnArt';
@@ -159,9 +160,16 @@ interface Props {
   onUpdate?: (blockId: string, patch: Partial<Block>) => void;
   onDelete?: (blockId: string) => void;
   onDuplicate?: (blockId: string) => void;
+  /** Drag payload for the scene's single DndContext (drag-to-nest). Passed as
+   *  primitives (not an object) so React.memo isn't defeated by a fresh ref each
+   *  render. Omitted by non-scene hosts (e.g. the plugin body editor), which run
+   *  their own DndContext. */
+  containerId?: string;
+  containerKind?: ContainerKind;
+  index?: number;
 }
 
-function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate }: Props) {
+function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, onDelete, onDuplicate, containerId, containerKind, index }: Props) {
   // Selector pattern — Zustand caches stable action refs, so this hook does
   // NOT re-render BlockItem on every project change (the old `useProjectStore()`
   // without selector was subscribing to the entire store).
@@ -171,7 +179,12 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
   const confirmDeleteBlock = useEditorPrefsStore(s => s.confirmDeleteBlock);
   const { ask, modal: confirmModal } = useConfirm();
   const t = useT();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+    data: containerId !== undefined
+      ? { type: 'block', containerId, containerKind, index, blockType: block.type }
+      : undefined,
+  });
 
   // For plugin blocks, pull the custom color from the plugin definition (if any).
   const pluginDef = usePluginStore((s) =>
@@ -179,10 +192,14 @@ function BlockItemImpl({ block, sceneId, collapsed, onToggleCollapse, onUpdate, 
   );
 
   const style: React.CSSProperties = {
-    // Translate only (NOT CSS.Transform, which also applies dnd-kit's scaleX/scaleY) —
-    // otherwise dragging a short block past a much taller neighbour stretches the ghost.
-    transform: CSS.Translate.toString(transform),
-    transition,
+    // In the scene (containerId set) we DON'T apply the sortable reorder transform:
+    // shifting tall container blocks (IF/tabs/section) to preview a reorder makes them
+    // "run away" from the pointer, so you can't hover into them to nest. The list stays
+    // static during drag — the DragOverlay follows the cursor and drop targets highlight.
+    // In the plugin-body editor (no containerId, flat list, own DndContext) keep the
+    // usual reorder preview. Translate only (not CSS.Transform → no scaleX/scaleY stretch).
+    transform: containerId === undefined ? CSS.Translate.toString(transform) : undefined,
+    transition: containerId === undefined ? transition : undefined,
     opacity: isDragging ? 0.5 : 1,
   };
   // Tint the whole block with the plugin's color (soft alpha overlay).

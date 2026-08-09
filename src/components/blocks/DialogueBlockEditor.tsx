@@ -1,27 +1,9 @@
 import { useState, useEffect } from 'react';
-import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { useProjectStore } from '../../store/projectStore';
+import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
+import { useEditorStore } from '../../store/editorStore';
 import { useT } from '../../i18n';
 import { toLocalFileUrl, resolveAssetPath } from '../../lib/fsApi';
-import type {
-  DialogueBlock, Block,
-  TextBlock, VariableSetBlock, ImageBlock,
-  VideoBlock, RawBlock, TableBlock, NoteBlock,
-} from '../../types';
-import { AddBlockMenu } from './AddBlockMenu';
-import { TextBlockEditor } from './TextBlockEditor';
-import { VariableSetBlockEditor } from './VariableSetBlockEditor';
-import { ImageBlockEditor } from './ImageBlockEditor';
-import { VideoBlockEditor } from './VideoBlockEditor';
-import { RawBlockEditor } from './RawBlockEditor';
-import { TableBlockEditor } from './TableBlockEditor';
-import { NoteBlockEditor } from './NoteBlockEditor';
+import type { DialogueBlock } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { RichTextArea } from '../shared/RichTextArea';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
@@ -29,6 +11,7 @@ import { DIALOGUE_FIELD_SCHEMA, DIALOGUE_RAW_CSS_HELP } from '../../utils/styleC
 import { useVariableNodes } from '../shared/VariableScope';
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { dialogueElementClasses, buildDialogueSpotStyleBlock } from '../../utils/styleCascade';
+import { NestedBlockList } from './NestedBlockList';
 
 /**
  * Converts an avatar src value to a URL the editor renderer can actually load:
@@ -50,98 +33,10 @@ function resolveEditorSrc(src: string, projectDir: string | null): string {
   return ''; // can't resolve local path without projectDir
 }
 
-// ─── Inner block renderer ──────────────────────────────────────────────────────
-
-function InnerBlockEditor({
-  block,
-  sceneId,
-  dialogueBlockId,
-}: {
-  block: Block;
-  sceneId: string;
-  dialogueBlockId: string;
-}) {
-  const updateDialogueInnerBlock = useProjectStore(s => s.updateDialogueInnerBlock);
-  const t = useT();
-  const onUpdate = (patch: Partial<Block>) =>
-    updateDialogueInnerBlock(sceneId, dialogueBlockId, block.id, patch);
-
-  switch (block.type) {
-    case 'text':
-      return <TextBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TextBlock>) => void} />;
-    case 'variable-set':
-      return <VariableSetBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VariableSetBlock>) => void} />;
-    case 'image':
-      return <ImageBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ImageBlock>) => void} />;
-    case 'video':
-      return <VideoBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VideoBlock>) => void} />;
-    case 'raw':
-      return <RawBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RawBlock>) => void} />;
-    case 'table':
-      return <TableBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
-    case 'note':
-      return <NoteBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<NoteBlock>) => void} />;
-    default:
-      return <span className="text-xs text-slate-500">{t.block.unsupportedNested}</span>;
-  }
-}
-
-// ─── Sortable inner block item ─────────────────────────────────────────────────
-
-function SortableInnerBlock({
-  block,
-  sceneId,
-  dialogueBlockId,
-  onDelete,
-}: {
-  block: Block;
-  sceneId: string;
-  dialogueBlockId: string;
-  onDelete: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: block.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex gap-1 items-start group border border-slate-700/60 rounded bg-slate-900/40 p-1.5"
-    >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="text-slate-600 hover:text-slate-400 text-xs cursor-grab active:cursor-grabbing shrink-0 mt-0.5 px-0.5"
-        title="Drag to reorder"
-      >
-        ⠿
-      </button>
-
-      {/* Block editor */}
-      <div className="flex-1 min-w-0">
-        <InnerBlockEditor block={block} sceneId={sceneId} dialogueBlockId={dialogueBlockId} />
-      </div>
-
-      {/* Delete */}
-      <button
-        className="text-slate-600 hover:text-red-400 text-xs cursor-pointer shrink-0 mt-0.5"
-        onClick={onDelete}
-        title="Delete"
-      >
-        <EmojiIcon name="close" size={20} />
-      </button>
-    </div>
-  );
-}
-
 // ─── Inner blocks section ──────────────────────────────────────────────────────
+// Uses the shared NestedBlockList (drag / add / edit / delete / duplicate); the
+// dialogue-specific type policy (no dialogue/condition/choice/button/input-field)
+// is enforced centrally via containerKind='dialogue'.
 
 function InnerBlocksList({
   block,
@@ -151,22 +46,21 @@ function InnerBlocksList({
   sceneId: string;
 }) {
   const addDialogueInnerBlock      = useProjectStore(s => s.addDialogueInnerBlock);
+  const updateDialogueInnerBlock   = useProjectStore(s => s.updateDialogueInnerBlock);
   const deleteDialogueInnerBlock   = useProjectStore(s => s.deleteDialogueInnerBlock);
   const reorderDialogueInnerBlocks = useProjectStore(s => s.reorderDialogueInnerBlocks);
+  const copyToClipboard            = useEditorStore(s => s.copyToClipboard);
   const t = useT();
 
   const innerBlocks = block.innerBlocks ?? [];
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIdx = innerBlocks.findIndex(b => b.id === active.id);
-    const newIdx = innerBlocks.findIndex(b => b.id === over.id);
-    if (oldIdx === -1 || newIdx === -1) return;
-    reorderDialogueInnerBlocks(sceneId, block.id, arrayMove(innerBlocks, oldIdx, newIdx));
-  }
+  const handleDuplicate = (id: string) => {
+    const idx = innerBlocks.findIndex(b => b.id === id);
+    if (idx < 0) return;
+    const next = [...innerBlocks];
+    next.splice(idx + 1, 0, deepCloneBlock(innerBlocks[idx]));
+    reorderDialogueInnerBlocks(sceneId, block.id, next);
+  };
 
   return (
     <div className="flex flex-col gap-1 mt-1">
@@ -178,31 +72,17 @@ function InnerBlocksList({
         <div className="flex-1 h-px bg-slate-700/60" />
       </div>
 
-      {/* Blocks list */}
-      {innerBlocks.length > 0 && (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={innerBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-1">
-              {innerBlocks.map(ib => (
-                <SortableInnerBlock
-                  key={ib.id}
-                  block={ib}
-                  sceneId={sceneId}
-                  dialogueBlockId={block.id}
-                  onDelete={() => deleteDialogueInnerBlock(sceneId, block.id, ib.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
-
-      {/* Add block menu — exclude types that don't make sense inside a dialogue
-          or would create circular imports (condition, choice, dialogue) */}
-      <AddBlockMenu
+      <NestedBlockList
         sceneId={sceneId}
-        excludeTypes={['dialogue', 'condition', 'choice', 'button', 'input-field']}
-        onAdd={newBlock => addDialogueInnerBlock(sceneId, block.id, newBlock)}
+        containerId={block.id}
+        containerKind="dialogue"
+        blocks={innerBlocks}
+        onAdd={nb => addDialogueInnerBlock(sceneId, block.id, nb)}
+        onUpdate={(id, patch) => updateDialogueInnerBlock(sceneId, block.id, id, patch)}
+        onDelete={id => deleteDialogueInnerBlock(sceneId, block.id, id)}
+        onDuplicate={handleDuplicate}
+        onCopy={b => copyToClipboard(deepCloneBlock(b))}
+        onPaste={src => addDialogueInnerBlock(sceneId, block.id, deepCloneBlock(src))}
       />
     </div>
   );

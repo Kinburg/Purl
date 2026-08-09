@@ -21,7 +21,7 @@ import type { TableBlock, SidebarRow, SidebarCell, PanelStyle, Block } from '../
 import { EmojiIcon } from '../shared/EmojiIcons';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { AddBlockMenu } from './AddBlockMenu';
-import { InnerBlockEditor } from './TabsBlockEditor';
+import { InnerBlockEditor } from './InnerBlockEditor';
 import NumericInput from '../shared/NumericInput';
 
 // ─── Root ─────────────────────────────────────────────────────────────────────

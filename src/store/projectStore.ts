@@ -50,6 +50,10 @@ import type {
   PaperdollSlot, PaperdollConfig,
 } from '../types';
 import { START_TAG, SYSTEM_TAGS, SYSTEM_TAG_KIND, SINGLETON_TAG_PASSAGE_NAME, type SystemTag } from '../types';
+import {
+  ROOT_CONTAINER, containerAccepts, removeBlockById, insertIntoContainer,
+  type ContainerKind,
+} from '../utils/blockTree';
 
 /**
  * Singleton system tags (e.g. 'sidebar' → ::StoryCaption). A singleton tag must live
@@ -346,6 +350,13 @@ interface ProjectState {
   reorderBlocks: (sceneId: string, blocks: Block[]) => void;
   duplicateBlock: (sceneId: string, blockId: string) => void;
   pasteToScene: (sceneId: string, block: Block, insertIndex?: number) => void;
+  /** Move a block from wherever it lives in the scene tree into any container
+   *  (drag-to-nest). `target.containerId` is ROOT_CONTAINER for scene root, else a
+   *  branch/tab/cell id or the own id of a dialogue/section/for block. `index` is the
+   *  final resting index in the target array after removal (undefined ⇒ append).
+   *  No-op (no undo step) if the block/container is missing, the container is inside
+   *  the moved subtree (cycle), or the type isn't accepted. */
+  moveBlockToContainer: (sceneId: string, activeId: string, target: { containerId: string; kind: ContainerKind; index?: number }) => void;
 
   // Nested blocks (condition branches)
   addNestedBlock: (sceneId: string, blockId: string, branchId: string, block: Block) => void;
@@ -1007,6 +1018,32 @@ export const useProjectStore = create<ProjectState>()(
         pasteToScene: (sceneId, block, insertIndex) => {
           get().saveSnapshot();
           set(s => ({ project: updateScene(s.project, sceneId, sc => editBlockContainer(sc, { kind: 'scene' }, insertBlockOp(deepCloneBlock(block), insertIndex))) }));
+        },
+
+        moveBlockToContainer: (sceneId, activeId, target) => {
+          const { containerId, kind, index } = target;
+          const scene = get().project.scenes.find(sc => sc.id === sceneId);
+          if (!scene) return;
+          // 1. Pull the active block out of wherever it lives (id + children preserved).
+          const { blocks: without, removed } = removeBlockById(scene.blocks, activeId);
+          if (!removed) return;
+          // 2. Reject types the target container can't hold.
+          if (!containerAccepts(kind, removed.type)) return;
+          // 3. Re-insert. ROOT lives on scene.blocks; otherwise find the container by id.
+          let nextBlocks: Block[];
+          if (containerId === ROOT_CONTAINER) {
+            const at = index === undefined ? without.length : Math.max(0, Math.min(index, without.length));
+            nextBlocks = [...without];
+            nextBlocks.splice(at, 0, removed);
+          } else {
+            const res = insertIntoContainer(without, containerId, index, removed);
+            // ok=false ⇒ container vanished with the removed subtree (drop into own
+            // descendant) ⇒ abort without touching history.
+            if (!res.ok) return;
+            nextBlocks = res.blocks;
+          }
+          get().saveSnapshot();
+          set(s => ({ project: updateScene(s.project, sceneId, sc => ({ ...sc, blocks: nextBlocks })) }));
         },
 
         // ── Nested blocks ─────────────────────────────────────────────────────
