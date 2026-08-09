@@ -424,6 +424,8 @@ a:hover { background: rgba(99,102,241,0.15); }`,
     expand:           'Розгорнути блок',
     paste:            (typeName) => `Вставити «${typeName}»`,
     unsupportedNested: 'Вкладений тип не підтримується',
+    dropZone:          'Перетягніть блок сюди',
+    dropHere:          'Відпустіть, щоб вкласти',
   },
 
   addBlock: {

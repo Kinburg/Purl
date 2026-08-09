@@ -424,6 +424,8 @@ a:hover { background: rgba(99,102,241,0.15); }`,
     expand:           'Expand block',
     paste:            (typeName) => `Paste «${typeName}»`,
     unsupportedNested: 'Nested type not supported',
+    dropZone:          'Drop a block here',
+    dropHere:          'Release to drop',
   },
 
   addBlock: {

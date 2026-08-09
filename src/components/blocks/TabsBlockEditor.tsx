@@ -1,171 +1,18 @@
 import { useState, useRef } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
 import { useEditorStore } from '../../store/editorStore';
-import { useT, blockTypeLabel } from '../../i18n';
-import { EmojiIcon } from '../shared/EmojiIcons';
+import { useT } from '../../i18n';
 import { VariablePicker } from '../shared/VariablePicker';
 import { useVariableNodes } from '../shared/VariableScope';
-import type {
-  TabsBlock, TabsTab, Block,
-  TextBlock, DialogueBlock, ChoiceBlock, ConditionBlock, VariableSetBlock, SetObjectBlock, ForBlock,
-  ImageBlock, VideoBlock, ButtonBlock, LinkBlock, MenuLinkBlock, FunctionBlock, PopupBlock,
-  AudioBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, SectionBlock, ProgressBlock,
-  AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
-  CheckboxBlock, RadioBlock, InputFieldBlock, NoteBlock, SaveBlock,
-} from '../../types';
-import { AddBlockMenu } from './AddBlockMenu';
+import type { TabsBlock, TabsTab, Block } from '../../types';
 import { BlockEffectsPanel } from './BlockEffectsPanel';
 import { StyleOverrideEditor } from '../shared/StyleOverrideEditor';
 import { TABS_FIELD_SCHEMA, TABS_RAW_CSS_HELP } from '../../utils/styleCascade';
+import { NestedBlockList } from './NestedBlockList';
 
-// ── Inner editors ───────────────────────────────────────────────────────────
-// Same pattern as ConditionBlockEditor's NestedBlockEditor — bundled subset of
-// editors that make sense inside a tab. Heavier scene-level blocks (inventory,
-// paperdoll, container, plugin) are intentionally excluded.
-import { TextBlockEditor } from './TextBlockEditor';
-import { DialogueBlockEditor } from './DialogueBlockEditor';
-import { ChoiceBlockEditor } from './ChoiceBlockEditor';
-import { ConditionBlockEditor } from './ConditionBlockEditor';
-import { VariableSetBlockEditor } from './VariableSetBlockEditor';
-import { SetObjectBlockEditor } from './SetObjectBlockEditor';
-import { ForBlockEditor } from './ForBlockEditor';
-import { ImageBlockEditor } from './ImageBlockEditor';
-import { VideoBlockEditor } from './VideoBlockEditor';
-import { ButtonBlockEditor } from './ButtonBlockEditor';
-import { LinkBlockEditor } from './LinkBlockEditor';
-import { MenuLinkBlockEditor } from './MenuLinkBlockEditor';
-import { SpacerBlockEditor } from './SpacerBlockEditor';
-import { SectionBlockEditor } from './SectionBlockEditor';
-import { ProgressBlockEditor } from './ProgressBlockEditor';
-import { AudioVolumeBlockEditor } from './AudioVolumeBlockEditor';
-import { DateTimeBlockEditor } from './DateTimeBlockEditor';
-import { CalloutBlockEditor } from './CalloutBlockEditor';
-import { SelectBlockEditor } from './SelectBlockEditor';
-import { SliderBlockEditor } from './SliderBlockEditor';
-import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
-import { FunctionBlockEditor } from './FunctionBlockEditor';
-import { PopupBlockEditor } from './PopupBlockEditor';
-import { AudioBlockEditor } from './AudioBlockEditor';
-import { RawBlockEditor } from './RawBlockEditor';
-import { TableBlockEditor } from './TableBlockEditor';
-import { IncludeBlockEditor } from './IncludeBlockEditor';
-import { DividerBlockEditor } from './DividerBlockEditor';
-import { CheckboxBlockEditor } from './CheckboxBlockEditor';
-import { RadioBlockEditor } from './RadioBlockEditor';
-import { InputFieldBlockEditor } from './InputFieldBlockEditor';
-import { NoteBlockEditor } from './NoteBlockEditor';
-import { SaveBlockEditor } from './SaveBlockEditor';
-
-// ── Nested editor switch ────────────────────────────────────────────────────
-
-/** Exported so SectionBlockEditor reuses the exact same nested-block editor switch. */
-export function InnerBlockEditor({
-  block, sceneId, onUpdate,
-}: {
-  block: Block;
-  sceneId: string;
-  onUpdate: (patch: Partial<Block>) => void;
-}) {
-  const t = useT();
-  switch (block.type) {
-    case 'text':         return <TextBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TextBlock>) => void} />;
-    case 'dialogue':     return <DialogueBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DialogueBlock>) => void} />;
-    case 'choice':       return <ChoiceBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ChoiceBlock>) => void} />;
-    case 'condition':    return <ConditionBlockEditor    block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ConditionBlock>) => void} />;
-    case 'variable-set': return <VariableSetBlockEditor  block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VariableSetBlock>) => void} />;
-    case 'set-object':   return <SetObjectBlockEditor    block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SetObjectBlock>) => void} />;
-    case 'for':          return <ForBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ForBlock>) => void} />;
-    case 'image':        return <ImageBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ImageBlock>) => void} />;
-    case 'video':        return <VideoBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VideoBlock>) => void} />;
-    case 'button':       return <ButtonBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ButtonBlock>) => void} />;
-    case 'link':         return <LinkBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<LinkBlock>) => void} />;
-    case 'menu-link':    return <MenuLinkBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<MenuLinkBlock>) => void} />;
-    case 'function':     return <FunctionBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<FunctionBlock>) => void} />;
-    case 'popup':        return <PopupBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<PopupBlock>) => void} />;
-    case 'audio':        return <AudioBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioBlock>) => void} />;
-    case 'raw':          return <RawBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RawBlock>) => void} />;
-    case 'table':        return <TableBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
-    case 'include':      return <IncludeBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<IncludeBlock>) => void} />;
-    case 'divider':      return <DividerBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DividerBlock>) => void} />;
-    case 'spacer':       return <SpacerBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SpacerBlock>) => void} />;
-    case 'section':      return <SectionBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SectionBlock>) => void} />;
-    case 'progress':     return <ProgressBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ProgressBlock>) => void} />;
-    case 'audio-volume': return <AudioVolumeBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
-    case 'date-time':    return <DateTimeBlockEditor      block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
-    case 'callout':      return <CalloutBlockEditor       block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
-    case 'save':         return <SaveBlockEditor          block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SaveBlock>) => void} />;
-    case 'select':       return <SelectBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
-    case 'slider':       return <SliderBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
-    case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;
-    case 'checkbox':     return <CheckboxBlockEditor     block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CheckboxBlock>) => void} />;
-    case 'radio':        return <RadioBlockEditor        block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RadioBlock>) => void} />;
-    case 'input-field':  return <InputFieldBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<InputFieldBlock>) => void} />;
-    case 'note':         return <NoteBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<NoteBlock>) => void} />;
-    // Recursive: nested TabsBlock inside a tab renders a full TabsBlockEditor in
-    // local-mode (mutations bubble up via onUpdate to the parent's store action).
-    case 'tabs':         return <TabsBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TabsBlock>) => void} />;
-    default:             return <span className="text-xs text-slate-500">{t.block.unsupportedNested}</span>;
-  }
-}
-
-// ── Sortable wrapper for a tab's nested block ───────────────────────────────
-
-function SortableInnerBlock({
-  block, sceneId, onUpdate, onCopy, onDuplicate, onDelete,
-}: {
-  block: Block;
-  sceneId: string;
-  onUpdate: (patch: Partial<Block>) => void;
-  onCopy: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-}) {
-  const t = useT();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-  return (
-    <div ref={setNodeRef} style={style} className="rounded border border-slate-700 bg-slate-800/50 overflow-hidden">
-      <div className="flex items-center justify-between px-2 py-1 bg-slate-800/80 border-b border-slate-700">
-        <div className="flex items-center gap-1.5">
-          <span
-            {...listeners}
-            {...attributes}
-            className="drag-handle text-slate-600 hover:text-slate-400 text-xs select-none cursor-grab active:cursor-grabbing"
-            title={t.block.drag}
-          >⠿</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider">{blockTypeLabel(t, block.type)}</span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button className="text-slate-600 hover:text-slate-300 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.copy} onClick={onCopy}>
-            <EmojiIcon name="clipboard" size={20} />
-          </button>
-          <button className="text-slate-600 hover:text-indigo-400 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.duplicate} onClick={onDuplicate}>⧉</button>
-          <button className="text-slate-600 hover:text-red-400 text-xs cursor-pointer px-0.5 transition-colors" title={t.block.delete} onClick={onDelete}>
-            <EmojiIcon name="close" size={20} />
-          </button>
-        </div>
-      </div>
-      <div className="p-2">
-        <InnerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate} />
-      </div>
-    </div>
-  );
-}
+// The nested block list (drag / add / edit / delete / duplicate) lives in the shared
+// NestedBlockList; drag REORDER/MOVE is handled by SceneEditor's single DndContext.
+// `InnerBlockEditor` (the shared nested-editor switch) lives in ./InnerBlockEditor.
 
 // ── Main editor ─────────────────────────────────────────────────────────────
 
@@ -190,7 +37,6 @@ export function TabsBlockEditor({
   const addBlockToTab        = useProjectStore(s => s.addBlockToTab);
   const updateBlockInTab     = useProjectStore(s => s.updateBlockInTab);
   const deleteBlockFromTab   = useProjectStore(s => s.deleteBlockFromTab);
-  const reorderBlocksInTab   = useProjectStore(s => s.reorderBlocksInTab);
   const duplicateBlockInTab  = useProjectStore(s => s.duplicateBlockInTab);
   const saveSnapshot         = useProjectStore(s => s.saveSnapshot);
   const copyToClipboard      = useEditorStore(s => s.copyToClipboard);
@@ -299,23 +145,6 @@ export function TabsBlockEditor({
     copyToClipboard(deepCloneBlock(nb));
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    if (!activeTab) return;
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIdx = activeTab.blocks.findIndex(nb => nb.id === active.id);
-    const newIdx = activeTab.blocks.findIndex(nb => nb.id === over.id);
-    if (oldIdx < 0 || newIdx < 0) return;
-    const reordered = arrayMove(activeTab.blocks, oldIdx, newIdx);
-    if (isLocal) {
-      patch({ tabs: block.tabs.map(tb => tb.id === activeTab.id ? { ...tb, blocks: reordered } : tb) });
-    } else {
-      reorderBlocksInTab(sceneId, block.id, activeTab.id, reordered);
-    }
-  };
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -384,26 +213,18 @@ export function TabsBlockEditor({
       {/* Tab body — nested block list */}
       {activeTab && (
         <div className="flex flex-col gap-2 pl-1">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={activeTab.blocks.map(nb => nb.id)} strategy={verticalListSortingStrategy}>
-              {activeTab.blocks.length === 0 && (
-                <p className="text-xs text-slate-600 italic py-2">{t.tabsBlock.emptyTab}</p>
-              )}
-              {activeTab.blocks.map(nb => (
-                <SortableInnerBlock
-                  key={nb.id}
-                  block={nb}
-                  sceneId={sceneId}
-                  onUpdate={p => handleUpdateNested(nb.id, p)}
-                  onCopy={() => handleCopyNested(nb)}
-                  onDuplicate={() => handleDuplicateNested(nb.id)}
-                  onDelete={() => handleDeleteNested(nb.id)}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-
-          <AddBlockMenu sceneId={sceneId} onAdd={handleAddBlock} />
+          <NestedBlockList
+            sceneId={sceneId}
+            containerId={activeTab.id}
+            containerKind="tab"
+            blocks={activeTab.blocks}
+            onAdd={handleAddBlock}
+            onUpdate={handleUpdateNested}
+            onDelete={handleDeleteNested}
+            onDuplicate={handleDuplicateNested}
+            onCopy={handleCopyNested}
+            emptyLabel={t.tabsBlock.emptyTab}
+          />
         </div>
       )}
 

@@ -1,56 +1,17 @@
 import { useRef } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from '@dnd-kit/sortable';
 import { EmojiIcon } from '../shared/EmojiIcons';
-import { CSS } from '@dnd-kit/utilities';
 import { useProjectStore, deepCloneBlock } from '../../store/projectStore';
 import { useFlatVariablesOf } from '../../hooks/useFlatVariables';
 import { useEditorStore } from '../../store/editorStore';
 import { VariablePicker } from '../shared/VariablePicker';
 import { VarInsertButton } from '../shared/VarInsertButton';
 import { useVariableNodes } from '../shared/VariableScope';
-import { useT, blockTypeLabel } from '../../i18n';
+import { useT } from '../../i18n';
 import type {
   ConditionBlock, ConditionBranch, ConditionBranchType, ConditionOperator, Block, ArrayAccessor,
-  TextBlock, DialogueBlock, ChoiceBlock, VariableSetBlock, SetObjectBlock, ImageBlock, VideoBlock, RawBlock, TableBlock, IncludeBlock, DividerBlock, SpacerBlock, ProgressBlock,
-  AudioVolumeBlock, DateTimeBlock, CalloutBlock, SelectBlock, SliderBlock, DisplayObjectBlock,
-  ForBlock, SaveBlock,
 } from '../../types';
-import { AddBlockMenu } from './AddBlockMenu';
-import { TextBlockEditor } from './TextBlockEditor';
-import { DialogueBlockEditor } from './DialogueBlockEditor';
-import { ChoiceBlockEditor } from './ChoiceBlockEditor';
-import { VariableSetBlockEditor } from './VariableSetBlockEditor';
-import { SetObjectBlockEditor } from './SetObjectBlockEditor';
-import { ForBlockEditor } from './ForBlockEditor';
-import { ImageBlockEditor } from './ImageBlockEditor';
-import { VideoBlockEditor } from './VideoBlockEditor';
-import { RawBlockEditor } from './RawBlockEditor';
-import { TableBlockEditor } from './TableBlockEditor';
-import { IncludeBlockEditor } from './IncludeBlockEditor';
-import { DividerBlockEditor } from './DividerBlockEditor';
-import { SpacerBlockEditor } from './SpacerBlockEditor';
-import { ProgressBlockEditor } from './ProgressBlockEditor';
-import { AudioVolumeBlockEditor } from './AudioVolumeBlockEditor';
-import { DateTimeBlockEditor } from './DateTimeBlockEditor';
-import { CalloutBlockEditor } from './CalloutBlockEditor';
-import { SelectBlockEditor } from './SelectBlockEditor';
-import { SliderBlockEditor } from './SliderBlockEditor';
-import { DisplayObjectBlockEditor } from './DisplayObjectBlockEditor';
-import { SaveBlockEditor } from './SaveBlockEditor';
 import { ArrayAccessorInput } from './ArrayAccessorInput';
+import { NestedBlockList } from './NestedBlockList';
 
 /**
  * Single-line input with an adjacent VarInsertButton.
@@ -131,120 +92,6 @@ function operatorNeedsValue(op: ConditionOperator): boolean {
   return op !== 'empty' && op !== '!empty';
 }
 
-/** Simplified block renderer for nested blocks (no further nesting) */
-function NestedBlockEditor({
-  block,
-  sceneId,
-  onUpdate,
-}: {
-  block: Block;
-  sceneId: string;
-  onUpdate: (patch: Partial<Block>) => void;
-}) {
-  const t = useT();
-
-  switch (block.type) {
-    case 'text':         return <TextBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TextBlock>) => void} />;
-    case 'dialogue':     return <DialogueBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DialogueBlock>) => void} />;
-    case 'choice':       return <ChoiceBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ChoiceBlock>) => void} />;
-    case 'variable-set': return <VariableSetBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VariableSetBlock>) => void} />;
-    case 'set-object':   return <SetObjectBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SetObjectBlock>) => void} />;
-    case 'for':          return <ForBlockEditor         block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ForBlock>) => void} />;
-    case 'image':        return <ImageBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ImageBlock>) => void} />;
-    case 'video':        return <VideoBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<VideoBlock>) => void} />;
-    case 'raw':          return <RawBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<RawBlock>) => void} />;
-    case 'table':        return <TableBlockEditor   block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<TableBlock>) => void} />;
-    case 'include':      return <IncludeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<IncludeBlock>) => void} />;
-    case 'divider':      return <DividerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DividerBlock>) => void} />;
-    case 'spacer':       return <SpacerBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SpacerBlock>) => void} />;
-    case 'progress':     return <ProgressBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ProgressBlock>) => void} />;
-    case 'audio-volume': return <AudioVolumeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<AudioVolumeBlock>) => void} />;
-    case 'date-time':    return <DateTimeBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DateTimeBlock>) => void} />;
-    case 'callout':      return <CalloutBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<CalloutBlock>) => void} />;
-    case 'save':         return <SaveBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SaveBlock>) => void} />;
-    case 'select':       return <SelectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SelectBlock>) => void} />;
-    case 'slider':       return <SliderBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<SliderBlock>) => void} />;
-    case 'display-object': return <DisplayObjectBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<DisplayObjectBlock>) => void} />;
-    // Recursive: a ConditionBlock nested inside a branch renders the full
-    // ConditionBlockEditor in local-mode — all mutations route up through the
-    // parent's `onUpdate` chain, so the store sees a single patch at the top.
-    case 'condition':    return <ConditionBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate as (p: Partial<ConditionBlock>) => void} />;
-    default:             return <span className="text-xs text-slate-500">{t.block.unsupportedNested}</span>;
-  }
-}
-
-/** Sortable wrapper for a nested block with drag handle, copy, duplicate, delete */
-function SortableNestedBlock({
-  block,
-  sceneId,
-  onUpdate,
-  onDuplicate,
-  onCopy,
-  onDelete,
-}: {
-  block: Block;
-  sceneId: string;
-  onUpdate: (patch: Partial<Block>) => void;
-  onDuplicate: () => void;
-  onCopy: () => void;
-  onDelete: () => void;
-}) {
-  const t = useT();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="rounded border border-slate-700 bg-slate-800/50 overflow-hidden">
-      <div className="flex items-center justify-between px-2 py-1 bg-slate-800/80 border-b border-slate-700">
-        <div className="flex items-center gap-1.5">
-          <span
-            {...listeners}
-            {...attributes}
-            className="drag-handle text-slate-600 hover:text-slate-400 text-xs select-none cursor-grab active:cursor-grabbing"
-            title={t.block.drag}
-          >
-            ⠿
-          </span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider">
-            {blockTypeLabel(t, block.type)}
-          </span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            className="text-slate-600 hover:text-slate-300 text-xs cursor-pointer px-0.5 transition-colors"
-            title={t.block.copy}
-            onClick={onCopy}
-          >
-            <EmojiIcon name="clipboard" size={20} />
-          </button>
-          <button
-            className="text-slate-600 hover:text-indigo-400 text-xs cursor-pointer px-0.5 transition-colors"
-            title={t.block.duplicate}
-            onClick={onDuplicate}
-          >
-            ⧉
-          </button>
-          <button
-            className="text-slate-600 hover:text-red-400 text-xs cursor-pointer px-0.5 transition-colors"
-            title={t.block.delete}
-            onClick={onDelete}
-          >
-            <EmojiIcon name="close" size={20} />
-          </button>
-        </div>
-      </div>
-      <div className="p-2">
-        <NestedBlockEditor block={block} sceneId={sceneId} onUpdate={onUpdate} />
-      </div>
-    </div>
-  );
-}
-
 export function ConditionBlockEditor({
   block,
   sceneId,
@@ -266,15 +113,11 @@ export function ConditionBlockEditor({
   const deleteNestedBlock     = useProjectStore(s => s.deleteNestedBlock);
   const duplicateNestedBlock  = useProjectStore(s => s.duplicateNestedBlock);
   const pasteToNested         = useProjectStore(s => s.pasteToNested);
-  const reorderNestedBlocks   = useProjectStore(s => s.reorderNestedBlocks);
   const saveSnapshot          = useProjectStore(s => s.saveSnapshot);
-  const clipboardBlock        = useEditorStore(s => s.clipboardBlock);
   const copyToClipboard       = useEditorStore(s => s.copyToClipboard);
   const t = useT();
   const variableNodes = useVariableNodes();
   const variables = useFlatVariablesOf(variableNodes);
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const hasElse = block.branches.some(b => b.branchType === 'else');
   const isLocal = !!onUpdate;
@@ -342,11 +185,6 @@ export function ConditionBlockEditor({
     ));
   };
 
-  const doReorderNested = (branchId: string, blocks: Block[]) => {
-    if (!isLocal) return reorderNestedBlocks(sceneId, block.id, branchId, blocks);
-    setBranches(block.branches.map(br => br.id === branchId ? { ...br, blocks } : br));
-  };
-
   const addElseBranch = () => {
     if (isLocal) {
       setBranches([
@@ -372,16 +210,6 @@ export function ConditionBlockEditor({
         }
       }
     }, 0);
-  };
-
-  const handleNestedDragEnd = (event: DragEndEvent, branchId: string, branchBlocks: Block[]) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = branchBlocks.findIndex(b => b.id === active.id);
-    const newIndex = branchBlocks.findIndex(b => b.id === over.id);
-    if (oldIndex !== -1 && newIndex !== -1) {
-      doReorderNested(branchId, arrayMove(branchBlocks, oldIndex, newIndex));
-    }
   };
 
   return (
@@ -584,45 +412,19 @@ export function ConditionBlockEditor({
           </div>
 
           {/* Nested blocks */}
-          <div className="p-2 flex flex-col gap-1.5 bg-slate-900/20">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(e) => handleNestedDragEnd(e, branch.id, branch.blocks)}
-            >
-              <SortableContext
-                items={branch.blocks.map(nb => nb.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {branch.blocks.map(nb => (
-                  <SortableNestedBlock
-                    key={nb.id}
-                    block={nb}
-                    sceneId={sceneId}
-                    onUpdate={(patch) => doUpdateNested(branch.id, nb.id, patch)}
-                    onDuplicate={() => doDuplicateNested(branch.id, nb.id)}
-                    onCopy={() => copyToClipboard(nb)}
-                    onDelete={() => doDeleteNested(branch.id, nb.id)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-
-            <AddBlockMenu
+          <div className="p-2 bg-slate-900/20">
+            <NestedBlockList
               sceneId={sceneId}
-              excludeTypes={['note']}
+              containerId={branch.id}
+              containerKind="branch"
+              blocks={branch.blocks}
               onAdd={(nb) => doAddNested(branch.id, nb)}
+              onUpdate={(id, patch) => doUpdateNested(branch.id, id, patch)}
+              onDelete={(id) => doDeleteNested(branch.id, id)}
+              onDuplicate={(id) => doDuplicateNested(branch.id, id)}
+              onCopy={(nb) => copyToClipboard(nb)}
+              onPaste={(src) => doPasteNested(branch.id, src)}
             />
-
-            {clipboardBlock && (
-              <button
-                className="text-xs text-indigo-400 hover:text-indigo-300 hover:bg-slate-800/50 rounded px-2 py-1 transition-colors cursor-pointer text-left border border-dashed border-indigo-800/50"
-                title={t.block.paste(blockTypeLabel(t, clipboardBlock.type))}
-                onClick={() => doPasteNested(branch.id, clipboardBlock)}
-              >
-                {t.block.paste(blockTypeLabel(t, clipboardBlock.type))}
-              </button>
-            )}
           </div>
         </div>
       ))}
